@@ -41,7 +41,8 @@ public class BridgeAssist extends Module {
 	private static final double UNDER_CORNER_MARGIN = 0.25D;
 	private static final float MIN_TURN = 30.0F;
 	private static final int STILL_TICKS = 3;
-	private static final double ALIGN_START = 0.15D;
+	private static final double ALIGN_START = 0.2D;
+	private static final double ALIGN_STOP = 0.1D;
 	private static final float INPUT_SCALE = 0.98F;
 	private static final float SNEAK_SCALE = 0.3F;
 	private static final double AIR_SPEED = 0.02D;
@@ -79,10 +80,6 @@ public class BridgeAssist extends Module {
 	@Slider(value = "Pre-Sneak Distance", min = 0.0F, max = 0.5F)
 	public float preSneakDistance = 0.5F;
 
-	@Description("Strafes you onto the block diagonal when bridging diagonally backwards.")
-	@Check("Strafe Align")
-	public boolean strafeAlign = false;
-
 	@Description("Also sneaks as you come down from a jump that would land you past an edge.")
 	@Check("Sneak On Jump")
 	public boolean sneakOnJump = false;
@@ -96,6 +93,10 @@ public class BridgeAssist extends Module {
 	@Requires("sneakOnJump")
 	@Check("Only While Moving")
 	public boolean onlyWhileMoving = true;
+
+	@Description("Strafes you onto the block diagonal when bridging diagonally backwards.")
+	@Check("Strafe Align")
+	public boolean strafeAlign = false;
 
 	@Description("Only places near block corners while sneaking diagonally backwards.")
 	@Check("Avoid Double-Sneaking")
@@ -132,7 +133,8 @@ public class BridgeAssist extends Module {
 	private float turned;
 	private int stillTicks;
 	private boolean preSneaking;
-	private boolean aligning;
+	private boolean bridged;
+	private int alignDirection;
 	private double groundY;
 
 	@Override
@@ -149,9 +151,9 @@ public class BridgeAssist extends Module {
 		edge = sneaking = placed = false;
 		unsneakTicks = 0;
 		blockSlot = -1;
-		tracking = preSneaking = aligning = false;
+		tracking = preSneaking = bridged = false;
 		turned = 0.0F;
-		stillTicks = 0;
+		stillTicks = alignDirection = 0;
 	}
 
 	@Listen
@@ -178,8 +180,8 @@ public class BridgeAssist extends Module {
 		boolean holding = ItemUtils.isBlock(inventory.getSelectedItem());
 		blockSlot = holding ? inventory.selectedSlot : -1;
 		if (!active || holdingBlocks && !holding) {
-			edge = sneaking = preSneaking = aligning = false;
-			unsneakTicks = 0;
+			edge = sneaking = preSneaking = bridged = false;
+			unsneakTicks = alignDirection = 0;
 			return;
 		}
 
@@ -203,17 +205,18 @@ public class BridgeAssist extends Module {
 	@Listen
 	public void onUseItem(UseItemEvent event) {
 		LocalClientPlayerEntity player = minecraft.player;
-		if (!avoidDoubleSneaking || !sneaking || placed || !ItemUtils.isBlock(player.inventory.getSelectedItem())) return;
-		if (midFace(player)) {
+		HitResult target = minecraft.crosshairTarget;
+		if (target == null || target.type != HitResult.Type.BLOCK || !ItemUtils.isBlock(player.inventory.getSelectedItem())) return;
+		if (avoidDoubleSneaking && sneaking && !placed && midFace(player, target)) {
 			event.cancelled = true;
-		} else {
-			placed = true;
+			return;
 		}
+		placed = bridged = true;
+		preSneaking = false;
 	}
 
-	private boolean midFace(LocalClientPlayerEntity player) {
-		HitResult target = minecraft.crosshairTarget;
-		if (target == null || target.type != HitResult.Type.BLOCK || !target.face.getAxis().isHorizontal()) return false;
+	private boolean midFace(LocalClientPlayerEntity player, HitResult target) {
+		if (!target.face.getAxis().isHorizontal()) return false;
 		InputState input = IllusionClient.INPUT.player;
 		if (!player.onGround || !input.back || input.left || input.right) return false;
 		if (angleFrom(player.yaw, 90.0F, 45.0F) > PLACE_DIAGONAL_TOLERANCE) return false;
@@ -255,11 +258,13 @@ public class BridgeAssist extends Module {
 
 	private void updatePreSneak(LocalClientPlayerEntity player) {
 		InputState input = IllusionClient.INPUT.player;
-		if (edge || !player.onGround || input.forward || input.jump || edgeDistance(player) >= preSneakDistance) {
-			preSneaking = false;
+		if (!player.onGround || input.forward || input.jump || edgeDistance(player) >= preSneakDistance) {
+			preSneaking = bridged = false;
 			return;
 		}
-		if (!preSneaking) {
+		if (edge || bridged) {
+			preSneaking = false;
+		} else if (!preSneaking) {
 			preSneaking = turned >= MIN_TURN && player.pitch >= LOOKING_DOWN_PITCH
 				&& angleFrom(player.yaw, BRIDGE_ANGLE, 0.0F) <= BRIDGE_ANGLE_TOLERANCE;
 		}
@@ -285,7 +290,7 @@ public class BridgeAssist extends Module {
 		InputState input = IllusionClient.INPUT.player;
 		if (!input.back || input.forward || input.left || input.right
 			|| angleFrom(player.yaw, 90.0F, 45.0F) > DIAGONAL_TOLERANCE) {
-			aligning = false;
+			alignDirection = 0;
 			return;
 		}
 
@@ -296,11 +301,16 @@ public class BridgeAssist extends Module {
 		double settle = 1.0D / (1.0D - (player.onGround ? GROUND_DRAG : AIR_DRAG));
 		double line = player.x - slope * player.z + (player.velocityX + back[0] - slope * (player.velocityZ + back[1])) * settle;
 		double error = line - Math.round(line);
-		if (!aligning && Math.abs(error) <= ALIGN_START) return;
+		if (alignDirection == 0) {
+			if (Math.abs(error) <= ALIGN_START) return;
+			alignDirection = error > 0.0D ? 1 : -1;
+		}
 
 		double shift = (backLeft[0] - back[0] - slope * (backLeft[1] - back[1])) * settle;
-		aligning = Math.abs(error) > Math.abs(shift) / 2.0D;
-		if (!aligning) return;
+		if (error * alignDirection <= Math.max(ALIGN_STOP, Math.abs(shift) / 2.0D)) {
+			alignDirection = 0;
+			return;
+		}
 		client.left = error * shift < 0.0D;
 		client.right = error * shift > 0.0D;
 	}
