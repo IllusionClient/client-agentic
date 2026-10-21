@@ -22,7 +22,7 @@ public class Frame extends Group {
 	public final Category category;
 	private final String title;
 	private boolean dragging, placed;
-	private int dragX, dragY;
+	private int dragX, dragY, lastHeight;
 
 	public Frame(Category category) {
 		this.category = category;
@@ -94,6 +94,41 @@ public class Frame extends Group {
 		return placed;
 	}
 
+	public boolean dragging() {
+		return dragging;
+	}
+
+	public int x() {
+		return x;
+	}
+
+	public int y() {
+		return y;
+	}
+
+	public int width() {
+		return width;
+	}
+
+	public boolean grew() {
+		int height = height();
+		boolean grew = height > lastHeight;
+		lastHeight = height;
+		return grew;
+	}
+
+	public boolean overlaps(int x, int y, int width, int height) {
+		return x < this.x + this.width && this.x < x + width && y < this.y + height() && this.y < y + height;
+	}
+
+	public boolean overlaps(Frame other) {
+		return overlaps(other.x, other.y, other.width, other.height());
+	}
+
+	public void unplace() {
+		placed = false;
+	}
+
 	public void moveTo(int x, int y) {
 		this.x = x;
 		this.y = y;
@@ -113,20 +148,23 @@ public class Frame extends Group {
 		}
 
 		JsonObject json = new JsonObject();
-		json.addProperty("x", x);
-		json.addProperty("y", y);
+		if (placed) {
+			json.addProperty("x", x);
+			json.addProperty("y", y);
+		}
 		json.addProperty("open", open);
 		json.add("expanded", expanded);
 		return json;
 	}
 
 	public void load(JsonObject json) {
-		int savedX = json.get("x").getAsInt(), savedY = json.get("y").getAsInt();
+		boolean savedPlace = json.has("x");
+		int savedX = savedPlace ? json.get("x").getAsInt() : 0, savedY = savedPlace ? json.get("y").getAsInt() : 0;
 		boolean savedOpen = json.get("open").getAsBoolean();
 		Set<String> expanded = new HashSet<>();
 		for (JsonElement key : json.getAsJsonArray("expanded")) expanded.add(key.getAsString());
 
-		moveTo(savedX, savedY);
+		if (savedPlace) moveTo(savedX, savedY);
 		open = savedOpen;
 		for (Component child : children) {
 			ModuleComponent module = (ModuleComponent) child;

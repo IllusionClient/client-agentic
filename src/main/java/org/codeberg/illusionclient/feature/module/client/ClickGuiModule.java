@@ -45,16 +45,24 @@ public class ClickGuiModule extends Module {
 		super.setBind(bind == Keyboard.KEY_NONE ? Keyboard.KEY_RSHIFT : bind);
 	}
 
+	public void resetPositions() {
+		frames().resetPositions();
+		panel().resetPosition();
+	}
+
+	private FramesGui frames() {
+		if (frames == null) frames = new FramesGui();
+		return frames;
+	}
+
+	private PanelGui panel() {
+		if (panel == null) panel = new PanelGui();
+		return panel;
+	}
+
 	@Override
 	public void onEnable() {
-		Screen gui;
-		if (style.equals("Frames")) {
-			if (frames == null) frames = new FramesGui();
-			gui = frames;
-		} else {
-			if (panel == null) panel = new PanelGui();
-			gui = panel;
-		}
+		Screen gui = style.equals("Frames") ? frames() : panel();
 
 		Minecraft minecraft = Minecraft.getInstance();
 		minecraft.openScreen(minecraft.screen instanceof FramesGui || minecraft.screen instanceof PanelGui ? null : gui);

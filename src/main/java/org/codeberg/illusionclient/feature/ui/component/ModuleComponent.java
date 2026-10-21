@@ -27,6 +27,10 @@ public class ModuleComponent extends Group {
 		return module.getBind() != Keyboard.KEY_NONE && !(module instanceof ClickGuiModule) && !KeybindComponent.listening(module) && (module.isHold() || hovered);
 	}
 
+	public static int keyWidth(String label) {
+		return Draw.width(label) + 10;
+	}
+
 	public static void drawKey(int x, int y, String label, boolean listening, boolean bound, boolean hovered) {
 		int fill, color;
 		if (listening) {
@@ -39,7 +43,7 @@ public class ModuleComponent extends Group {
 			fill = hovered ? Draw.CONTAINER_HIGH : Draw.CONTAINER;
 			color = hovered ? Draw.TEXT : Draw.FAINT;
 		}
-		Draw.rounded(x, y, Draw.width(label) + 10, KEY_HEIGHT, 4.0F, fill);
+		Draw.rounded(x, y, keyWidth(label), KEY_HEIGHT, 4.0F, fill);
 		Draw.text(label, x + 5, Draw.textY(y, KEY_HEIGHT), color);
 	}
 
@@ -54,6 +58,7 @@ public class ModuleComponent extends Group {
 				case null, default -> components.add(new ColorComponent(option));
 			}
 		}
+		if (module instanceof ClickGuiModule gui) components.add(new ButtonComponent("Positions", "Reset", gui::resetPositions));
 		components.add(new KeybindComponent(module));
 		return components;
 	}

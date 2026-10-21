@@ -2,6 +2,8 @@ package org.codeberg.illusionclient.feature.ui;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
+import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import org.codeberg.illusionclient.IllusionClient;
 import org.codeberg.illusionclient.feature.module.api.Category;
@@ -38,18 +40,74 @@ public class FramesGui extends ClickScreen {
 
 	@Override
 	public void init() {
-		int x = Component.PADDING, y = Component.PADDING;
+		int x = Component.PADDING, y = Component.PADDING, row = 0;
 		for (Frame frame : frames) {
 			if (!frame.placed()) {
 				if (x > Component.PADDING && x + Component.WIDTH > width - Component.PADDING) {
 					x = Component.PADDING;
-					y += Frame.TITLE + Component.PADDING;
+					y += row + Component.PADDING;
+					row = 0;
 				}
 				frame.moveTo(x, y);
+				row = Math.max(row, frame.height());
 				x += Component.WIDTH + Component.PADDING;
 			}
 			frame.clamp(width, height);
 		}
+		for (Frame frame : frames) relocate(frame);
+	}
+
+	public void resetPositions() {
+		for (Frame frame : frames) frame.unplace();
+		if (minecraft != null && minecraft.screen == this) init();
+		save();
+	}
+
+	private void pushAway(Frame grown) {
+		for (Frame frame : frames) {
+			if (frame != grown && !frame.dragging() && frame.overlaps(grown)) relocate(frame);
+		}
+	}
+
+	private void relocate(Frame frame) {
+		int frameHeight = frame.height();
+		if (free(frame, frame.x(), frame.y(), frameHeight)) return;
+
+		IntList xs = new IntArrayList(), ys = new IntArrayList();
+		xs.add(frame.x());
+		ys.add(frame.y());
+		for (Frame other : frames) {
+			if (other == frame || other.dragging()) continue;
+			xs.add(other.x() - frame.width() - Component.PADDING);
+			xs.add(other.x() + other.width() + Component.PADDING);
+			ys.add(other.y() - frameHeight - Component.PADDING);
+			ys.add(other.y() + other.height() + Component.PADDING);
+		}
+
+		int maxX = Math.max(0, width - frame.width()), minY = Math.min(0, frame.y()), maxY = Math.max(0, height - Frame.TITLE);
+		long best = Long.MAX_VALUE;
+		int bestX = frame.x(), bestY = frame.y();
+		for (int i = 0; i < xs.size(); i++) {
+			int x = Math.clamp(xs.getInt(i), 0, maxX);
+			for (int j = 0; j < ys.size(); j++) {
+				int y = Math.clamp(ys.getInt(j), minY, maxY);
+				long dx = x - frame.x(), dy = y - frame.y();
+				long distance = dx * dx + dy * dy;
+				if (distance < best && free(frame, x, y, frameHeight)) {
+					best = distance;
+					bestX = x;
+					bestY = y;
+				}
+			}
+		}
+		frame.moveTo(bestX, bestY);
+	}
+
+	private boolean free(Frame frame, int x, int y, int frameHeight) {
+		for (Frame other : frames) {
+			if (other != frame && !other.dragging() && other.overlaps(x, y, frame.width(), frameHeight)) return false;
+		}
+		return true;
 	}
 
 	@Override
@@ -59,6 +117,9 @@ public class FramesGui extends ClickScreen {
 		renderWatermark();
 		Draw.flush();
 
+		for (Frame frame : frames) {
+			if (!frame.dragging() && frame.grew()) pushAway(frame);
+		}
 		for (Frame frame : frames) {
 			frame.render(mouseX, mouseY);
 			Draw.flush();
@@ -86,7 +147,12 @@ public class FramesGui extends ClickScreen {
 	@Override
 	protected void mouseReleased(int mouseX, int mouseY, int button) {
 		for (Frame frame : frames) {
+			boolean dropped = frame.dragging();
 			frame.mouseReleased();
+			if (dropped) {
+				frame.clamp(width, height);
+				relocate(frame);
+			}
 		}
 	}
 
@@ -115,11 +181,13 @@ public class FramesGui extends ClickScreen {
 	@Override
 	public void removed() {
 		KeybindComponent.stopListening();
+		for (Frame frame : frames) frame.mouseReleased();
+		save();
+	}
+
+	private void save() {
 		JsonObject state = new JsonObject();
-		for (Frame frame : frames) {
-			frame.mouseReleased();
-			state.add(frame.category.name(), frame.save());
-		}
+		for (Frame frame : frames) state.add(frame.category.name(), frame.save());
 		IllusionClient.CONFIG.gui.add(STATE, state);
 		IllusionClient.CONFIG.save();
 	}

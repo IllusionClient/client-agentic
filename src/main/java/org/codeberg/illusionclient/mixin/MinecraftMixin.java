@@ -6,6 +6,7 @@ import net.minecraft.client.Minecraft;
 import org.codeberg.illusionclient.IllusionClient;
 import org.codeberg.illusionclient.event.*;
 import org.codeberg.illusionclient.feature.module.api.Module;
+import org.codeberg.illusionclient.util.KeyboardUtils;
 import org.codeberg.illusionclient.util.MouseUtils;
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.input.Mouse;
@@ -76,6 +77,7 @@ public class MinecraftMixin {
 
 	@Inject(method = "tick", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/Minecraft;handleGuiKeyBindings()V"))
 	private void illusion$keyPress(CallbackInfo ci) {
+		if (KeyboardUtils.synthetic()) return;
 		IllusionClient.BUS.publish(KeyPressEvent.of(Keyboard.getEventKey(), Keyboard.getEventKeyState()));
 	}
 

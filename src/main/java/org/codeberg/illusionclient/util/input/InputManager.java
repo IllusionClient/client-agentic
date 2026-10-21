@@ -5,6 +5,7 @@ import net.minecraft.client.options.GameOptions;
 import net.minecraft.client.options.KeyBinding;
 import org.codeberg.illusionclient.IllusionClient;
 import org.codeberg.illusionclient.event.InputEvent;
+import org.codeberg.illusionclient.util.KeyboardUtils;
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.input.Mouse;
 
@@ -29,19 +30,29 @@ public final class InputManager {
 		player.sneak = held(options.sneakKey);
 		client.copy(player);
 		IllusionClient.BUS.publish(InputEvent.INSTANCE);
+		sync(options.forwardKey, player.forward, client.forward);
+		sync(options.backKey, player.back, client.back);
+		sync(options.leftKey, player.left, client.left);
+		sync(options.rightKey, player.right, client.right);
+		sync(options.jumpKey, player.jump, client.jump);
+		sync(options.sneakKey, player.sneak, client.sneak);
+	}
+
+	private static void sync(KeyBinding key, boolean player, boolean client) {
+		if (player != client || KeyboardUtils.overridden(key)) KeyboardUtils.set(key, client);
 	}
 
 	public boolean resolve(KeyBinding key, boolean pressed) {
-		if (key == options.forwardKey) return resolve(player.forward, client.forward, pressed);
-		if (key == options.backKey) return resolve(player.back, client.back, pressed);
-		if (key == options.leftKey) return resolve(player.left, client.left, pressed);
-		if (key == options.rightKey) return resolve(player.right, client.right, pressed);
-		if (key == options.jumpKey) return resolve(player.jump, client.jump, pressed);
-		if (key == options.sneakKey) return resolve(player.sneak, client.sneak, pressed);
+		if (key == options.forwardKey) return resolve(key, player.forward, client.forward, pressed);
+		if (key == options.backKey) return resolve(key, player.back, client.back, pressed);
+		if (key == options.leftKey) return resolve(key, player.left, client.left, pressed);
+		if (key == options.rightKey) return resolve(key, player.right, client.right, pressed);
+		if (key == options.jumpKey) return resolve(key, player.jump, client.jump, pressed);
+		if (key == options.sneakKey) return resolve(key, player.sneak, client.sneak, pressed);
 		return pressed;
 	}
 
-	private static boolean resolve(boolean player, boolean client, boolean pressed) {
-		return player == client ? pressed : client;
+	private static boolean resolve(KeyBinding key, boolean player, boolean client, boolean pressed) {
+		return player == client && !KeyboardUtils.overridden(key) ? pressed : client;
 	}
 }

@@ -119,14 +119,15 @@ public class PanelGui extends ClickScreen {
 
 		try {
 			JsonObject state = saved.getAsJsonObject();
-			int savedX = state.get("x").getAsInt(), savedY = state.get("y").getAsInt();
 			Category savedCategory = state.has("category") ? Category.valueOf(state.get("category").getAsString()) : null;
 			String moduleKey = state.has("module") ? state.get("module").getAsString() : null;
 			Module savedModule = moduleKey == null ? null
 				: IllusionClient.MODULES.modules.stream().filter(entry -> entry.key.equals(moduleKey)).findFirst().orElse(null);
 
-			x = savedX;
-			y = savedY;
+			if (state.has("x")) {
+				x = state.get("x").getAsInt();
+				y = state.get("y").getAsInt();
+			}
 			if (savedCategory != null && modules.containsKey(savedCategory)) {
 				history.add(new Page(savedCategory, savedModule != null && savedModule.category == savedCategory ? savedModule : null));
 				page = 1;
@@ -550,10 +551,21 @@ public class PanelGui extends ClickScreen {
 	public void removed() {
 		Keyboard.enableRepeatEvents(false);
 		release();
+		save();
+	}
 
+	public void resetPosition() {
+		x = Integer.MIN_VALUE;
+		if (minecraft != null && minecraft.screen == this) init();
+		save();
+	}
+
+	private void save() {
 		JsonObject state = new JsonObject();
-		state.addProperty("x", x);
-		state.addProperty("y", y);
+		if (x != Integer.MIN_VALUE) {
+			state.addProperty("x", x);
+			state.addProperty("y", y);
+		}
 		if (category != null) state.addProperty("category", category.name());
 		if (module != null) state.addProperty("module", module.key);
 		IllusionClient.CONFIG.gui.add(STATE, state);

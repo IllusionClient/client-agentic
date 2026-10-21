@@ -105,7 +105,12 @@ public final class LagManager {
 
 	private void flush(Queue<Held> packets, long now) {
 		while (!packets.isEmpty() && !holds(packets.peek(), now)) {
-			packets.poll().release.run();
+			Held held = packets.poll();
+			try {
+				held.release.run();
+			} catch (RuntimeException e) {
+				IllusionClient.LOGGER.error("Failed to release held {}", held.packet.getClass().getSimpleName(), e);
+			}
 		}
 	}
 
