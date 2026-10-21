@@ -39,7 +39,7 @@ jobs:
             ${{ runner.os }}-gradle-
 
       - name: Build
-        run: ./gradlew build docs --no-daemon
+        run: ./gradlew build --no-daemon
 
       - name: Upload artifact
         uses: forgejo/upload-artifact@v4
@@ -50,13 +50,17 @@ jobs:
             !build/libs/*-sources.jar
           if-no-files-found: error
 
+      - name: Build docs
+        id: docs
+        continue-on-error: true
+        run: ./gradlew docs --no-daemon -Pversion="nightly-${GITHUB_SHA::7}" -Pchannel=nightly
+
       - name: Publish nightly docs
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' && steps.docs.outcome == 'success'
         env:
           TOKEN: ${{ secrets.PAGES_TOKEN }}
           OWNER: ${{ github.repository_owner }}
         run: |
-          ./gradlew docs --no-daemon -Pversion="nightly-${GITHUB_SHA::7}" -Pchannel=nightly
           cd build/docs
           git init -q -b nightly
           git add index.html
