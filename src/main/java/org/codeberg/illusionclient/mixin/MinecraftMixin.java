@@ -36,6 +36,17 @@ public class MinecraftMixin {
 		if (event.resetCooldown) attackCooldown = 0;
 	}
 
+	@Inject(
+		method = "doAttack",
+		at = @At(value = "INVOKE", target = "Lnet/minecraft/client/entity/living/player/LocalClientPlayerEntity;swingArm()V"),
+		cancellable = true
+	)
+	private void illusion$swing(CallbackInfo ci) {
+		SwingEvent event = SwingEvent.of();
+		IllusionClient.BUS.publish(event);
+		if (event.cancelled) ci.cancel();
+	}
+
 	@ModifyExpressionValue(
 		method = "handleMouseDown",
 		at = @At(value = "FIELD", target = "Lnet/minecraft/client/Minecraft;attackCooldown:I", opcode = Opcodes.GETFIELD)
