@@ -16,7 +16,7 @@ import org.codeberg.illusionclient.feature.module.api.Category;
 import org.codeberg.illusionclient.feature.module.api.Description;
 import org.codeberg.illusionclient.feature.module.api.Module;
 import org.codeberg.illusionclient.feature.module.api.ModuleInfo;
-import org.codeberg.illusionclient.feature.render.EspRenderer;
+import org.codeberg.illusionclient.util.render.EspRenderer;
 import org.codeberg.illusionclient.feature.ui.Draw;
 import org.codeberg.illusionclient.util.ColorUtils;
 import org.codeberg.illusionclient.util.PlayerUtils;

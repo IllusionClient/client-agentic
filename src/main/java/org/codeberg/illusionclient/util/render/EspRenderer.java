@@ -1,4 +1,4 @@
-package org.codeberg.illusionclient.feature.render;
+package org.codeberg.illusionclient.util.render;
 
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import net.minecraft.client.Minecraft;
