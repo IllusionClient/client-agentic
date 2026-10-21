@@ -58,7 +58,7 @@ jobs:
       - name: Publish nightly docs
         if: github.event_name == 'push' && steps.docs.outcome == 'success'
         env:
-          TOKEN: ${{ secrets.PAGES_TOKEN }}
+          TOKEN: ${{ secrets.NIGHTLY_PAGES_TOKEN }}
           OWNER: ${{ github.repository_owner }}
         run: |
           cd build/docs

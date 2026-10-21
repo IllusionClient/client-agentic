@@ -19,6 +19,7 @@ import org.codeberg.illusionclient.feature.module.combat.AutoClicker;
 import org.codeberg.illusionclient.feature.module.combat.Backtrack;
 import org.codeberg.illusionclient.feature.module.combat.HitSelect;
 import org.codeberg.illusionclient.feature.module.combat.NoHitDelay;
+import org.codeberg.illusionclient.feature.module.combat.SprintReset;
 import org.codeberg.illusionclient.feature.module.combat.TimerRange;
 import org.codeberg.illusionclient.feature.module.combat.Weapons;
 import org.codeberg.illusionclient.feature.module.movement.NullMove;
@@ -59,6 +60,7 @@ public final class ModuleManager {
 			new Backtrack(),
 			new HitSelect(),
 			new NoHitDelay(),
+			new SprintReset(),
 			new TimerRange(),
 			new Weapons(),
 			new NoJumpDelay(),

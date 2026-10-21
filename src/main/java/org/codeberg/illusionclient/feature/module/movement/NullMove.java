@@ -27,10 +27,14 @@ public class NullMove extends Module {
 		InputState client = IllusionClient.INPUT.client;
 		float forward = this.forward.resolve(player.forward, player.back);
 		float sideways = this.sideways.resolve(player.left, player.right);
-		client.forward = forward > 0.0F;
-		client.back = forward < 0.0F;
-		client.left = sideways > 0.0F;
-		client.right = sideways < 0.0F;
+		if (player.forward && player.back) {
+			client.forward = forward > 0.0F;
+			client.back = forward < 0.0F;
+		}
+		if (player.left && player.right) {
+			client.left = sideways > 0.0F;
+			client.right = sideways < 0.0F;
+		}
 	}
 
 	private static final class Axis {

@@ -4,6 +4,16 @@ import net.minecraft.client.entity.living.player.Input;
 import net.minecraft.client.entity.living.player.LocalClientPlayerEntity;
 
 public final class MoveUtils {
+	private static boolean sprintBlocked;
+
+	public static boolean isSprintBlocked() {
+		return sprintBlocked;
+	}
+
+	public static void setSprintBlocked(boolean blocked) {
+		sprintBlocked = blocked;
+	}
+
 	public static double[] inputDirection(LocalClientPlayerEntity player) {
 		Input input = player.input;
 		return inputDirection(player.yaw, input.movementForward, input.movementSideways);

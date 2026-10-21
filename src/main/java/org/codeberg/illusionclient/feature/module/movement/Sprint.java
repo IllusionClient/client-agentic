@@ -11,6 +11,7 @@ import org.codeberg.illusionclient.feature.module.api.Category;
 import org.codeberg.illusionclient.feature.module.api.Description;
 import org.codeberg.illusionclient.feature.module.api.Module;
 import org.codeberg.illusionclient.feature.module.api.ModuleInfo;
+import org.codeberg.illusionclient.util.MoveUtils;
 
 @ModuleInfo(name = "Sprint", category = Category.MOVEMENT)
 @Description("Sprints without holding the sprint key.")
@@ -46,7 +47,7 @@ public class Sprint extends Module {
 	@Listen
 	public void onUpdateSprint(UpdateSprintEvent event) {
 		sprinting = shouldSprint(minecraft.player);
-		event.sprinting |= sprinting;
+		if (!MoveUtils.isSprintBlocked()) event.sprinting |= sprinting;
 	}
 
 	@Listen
