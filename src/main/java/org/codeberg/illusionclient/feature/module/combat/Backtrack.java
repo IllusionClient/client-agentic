@@ -29,6 +29,7 @@ import org.codeberg.illusionclient.util.lag.LagManager;
 public class Backtrack extends Module {
 	private static final int MILLIS_PER_TICK = 50;
 	private static final double POSITION_SCALE = 32.0D;
+	private static final int GHOST_LINGER_TICKS = 4;
 	private final Minecraft minecraft = Minecraft.getInstance();
 	private final LagManager.Lag lag = IllusionClient.LAG.create();
 
@@ -69,6 +70,7 @@ public class Backtrack extends Module {
 	private GhostPlayer ghost;
 	private boolean lagging;
 	private long readyAt;
+	private int lingerTicks;
 
 	@Override
 	public String details() {
@@ -79,6 +81,7 @@ public class Backtrack extends Module {
 	public void onDisable() {
 		target = null;
 		stop();
+		ghost = null;
 	}
 
 	@Listen
@@ -90,7 +93,7 @@ public class Backtrack extends Module {
 	@Listen
 	public void onPacketReceive(PacketReceiveEvent event) {
 		if (lagging && disableOnHit && isKnockback(event.packet())) stop();
-		if (lagging && ghost != null) ghost.handle(event.packet());
+		if (ghost != null) ghost.handle(event.packet());
 	}
 
 	@Listen
@@ -118,15 +121,20 @@ public class Backtrack extends Module {
 			ghost.tick();
 			lag.holdKeepAlives(!pingFix);
 			lag.hold((long) maximumDelay);
-		} else {
-			stop();
+			return;
 		}
+
+		if (lagging) stop();
+		if (ghost == null) return;
+
+		ghost.tick();
+		if (--lingerTicks <= 0) ghost = null;
 	}
 
 	private void stop() {
 		if (lagging) readyAt = System.currentTimeMillis() + (long) (cooldown * 1000.0F);
 		lagging = false;
-		ghost = null;
+		lingerTicks = GHOST_LINGER_TICKS;
 		lag.release();
 	}
 

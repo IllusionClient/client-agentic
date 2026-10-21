@@ -114,7 +114,8 @@ public final class GhostPlayer extends RemoteClientPlayerEntity {
 			}
 		} else if (packet instanceof EntityDataS2CPacket data && data.getId() == player.getNetworkId()) {
 			if (data.getDataEntries() != null) getSyncedData().update(data.getDataEntries());
-		} else if (packet instanceof EntityEquipmentS2CPacket equipment && equipment.getId() == player.getNetworkId()) {
+		} else if (packet instanceof EntityEquipmentS2CPacket equipment && equipment.getId() == player.getNetworkId()
+			&& equipment.getEquipmentSlot() >= 0 && equipment.getEquipmentSlot() < EQUIPMENT_SLOTS) {
 			setEquipment(equipment.getEquipmentSlot(), equipment.getItem());
 		}
 	}
@@ -136,7 +137,7 @@ public final class GhostPlayer extends RemoteClientPlayerEntity {
 
 		minecraft.gameRenderer.enableLightMap();
 		Lighting.turnOn();
-		GLX.multiTexCoord2f(GLX.GL_TEXTURE1, light % 65536, light / 65536);
+		GLX.multiTexCoord2f(GLX.GL_TEXTURE1, (float) (light % 65536), (float) (light / 65536));
 		GlStateManager.color4f(1.0F, 1.0F, 1.0F, 1.0F);
 
 		EntityRenderer<GhostPlayer> renderer = dispatcher.getRenderer(this);
