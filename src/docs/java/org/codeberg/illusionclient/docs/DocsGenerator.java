@@ -1,7 +1,9 @@
 package org.codeberg.illusionclient.docs;
 
+import org.codeberg.illusionclient.IllusionClient;
 import org.codeberg.illusionclient.feature.config.api.Option;
 import org.codeberg.illusionclient.feature.config.api.Requires;
+import org.codeberg.illusionclient.feature.lag.LagManager;
 import org.codeberg.illusionclient.feature.module.ModuleManager;
 import org.codeberg.illusionclient.feature.module.api.Category;
 import org.codeberg.illusionclient.feature.module.api.Description;
@@ -26,6 +28,7 @@ public final class DocsGenerator {
 		String version = args[1];
 		String channel = args[2];
 
+		IllusionClient.LAG = new LagManager();
 		Map<Category, List<Module>> byCategory = new TreeMap<>();
 		for (Module module : ModuleManager.builtIn()) {
 			if (module.description == null) {
