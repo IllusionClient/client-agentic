@@ -23,7 +23,10 @@ public final class CombatUtils {
 	}
 
 	public static double distanceTo(Box box) {
-		Vec3d eye = Minecraft.getInstance().player.getEyePosition(1.0F);
+		return distanceTo(Minecraft.getInstance().player.getEyePosition(1.0F), box);
+	}
+
+	public static double distanceTo(Vec3d eye, Box box) {
 		double x = eye.x - Math.clamp(eye.x, box.minX, box.maxX);
 		double y = eye.y - Math.clamp(eye.y, box.minY, box.maxY);
 		double z = eye.z - Math.clamp(eye.z, box.minZ, box.maxZ);

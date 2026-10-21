@@ -69,6 +69,11 @@ public class MinecraftMixin {
 		return !event.cancelled;
 	}
 
+	@Inject(method = "tick", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/render/GameRenderer;pick(F)V", shift = At.Shift.AFTER))
+	private void illusion$pick(CallbackInfo ci) {
+		IllusionClient.BUS.publish(PickEvent.INSTANCE);
+	}
+
 	@Inject(method = "tick", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/Minecraft;handleGuiKeyBindings()V"))
 	private void illusion$keyPress(CallbackInfo ci) {
 		IllusionClient.BUS.publish(KeyPressEvent.of(Keyboard.getEventKey(), Keyboard.getEventKeyState()));
