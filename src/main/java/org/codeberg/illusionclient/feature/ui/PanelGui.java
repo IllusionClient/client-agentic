@@ -38,9 +38,10 @@ public class PanelGui extends ClickScreen {
 	private static final int ENTRY = 20;
 	private static final int PADDING = 10;
 	private static final int HEADER = 40;
-	private static final int CARD = 32;
+	private static final int CARD = 38;
 	private static final int CARD_GAP = 4;
-	private static final int KEY_Y = 9;
+	private static final int KEY_Y = (CARD - ModuleComponent.KEY_HEIGHT) / 2;
+	private static final int LINE_GAP = 4;
 	private static final int STAT = 20;
 	private static final int STAT_GAP = 2;
 	private static final int CHIP_HEIGHT = 16;
@@ -320,8 +321,9 @@ public class PanelGui extends ClickScreen {
 
 		String text = entry.description.value();
 		String trimmed = ellipsize(text, textRight - textX);
-		Draw.text(entry.name, textX, top + 7, nameColor);
-		Draw.text(trimmed, textX, top + 18, Draw.color(entry.description.type()), Draw.Weight.REGULAR);
+		float nameY = twoLineY(top, CARD);
+		Draw.text(entry.name, textX, nameY, nameColor);
+		Draw.text(trimmed, textX, nameY + Draw.textHeight() + LINE_GAP, Draw.color(entry.description.type()), Draw.Weight.REGULAR);
 		if (hovered && !trimmed.equals(text)) Tooltip.show(entry.description);
 	}
 
@@ -332,7 +334,8 @@ public class PanelGui extends ClickScreen {
 		boolean enabled = module.isEnabled();
 		int fill = enabled ? hovered ? Draw.PRIMARY_CONTAINER_HOVER : Draw.PRIMARY_CONTAINER : hovered ? Draw.CONTAINER_HIGHEST : Draw.CONTAINER_HIGH;
 		Draw.rounded(left, top, width, HEADER, Component.RADIUS, 0.0F, fill);
-		Draw.text(module.name, left + PADDING, top + 9, enabled ? Draw.ON_PRIMARY_CONTAINER : Draw.TEXT);
+		float nameY = module.description == null ? Draw.textY(top, HEADER) : twoLineY(top, HEADER);
+		Draw.text(module.name, left + PADDING, nameY, enabled ? Draw.ON_PRIMARY_CONTAINER : Draw.TEXT);
 
 		int textRight = left + width - PADDING;
 
@@ -340,7 +343,7 @@ public class PanelGui extends ClickScreen {
 			String text = module.description.value();
 			String trimmed = ellipsize(text, textRight - left - PADDING);
 			int color = enabled && module.description.type() == Description.Type.INFO ? Draw.ON_PRIMARY_CONTAINER : Draw.color(module.description.type());
-			Draw.text(trimmed, left + PADDING, top + 23, color, Draw.Weight.REGULAR);
+			Draw.text(trimmed, left + PADDING, nameY + Draw.textHeight() + LINE_GAP, color, Draw.Weight.REGULAR);
 			if (hovered && !trimmed.equals(text)) Tooltip.show(module.description);
 		}
 
@@ -695,6 +698,10 @@ public class PanelGui extends ClickScreen {
 		if (listening) return "Press a key...";
 		if (entry.getBind() != Keyboard.KEY_NONE) return entry.bindName();
 		return hovered ? "None" : null;
+	}
+
+	private static float twoLineY(int top, int height) {
+		return Draw.textY(top, height) - (Draw.textHeight() + LINE_GAP) / 2.0F;
 	}
 
 	private int keyRight(int left, int width) {
