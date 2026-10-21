@@ -6,7 +6,10 @@ import net.minecraft.client.entity.living.player.LocalClientPlayerEntity;
 import net.minecraft.entity.living.player.PlayerInventory;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
+import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.HitResult;
 import org.codeberg.illusionclient.IllusionClient;
 import org.codeberg.illusionclient.event.InputEvent;
 import org.codeberg.illusionclient.event.UseItemEvent;
@@ -29,11 +32,13 @@ import java.util.Random;
 public class BridgeAssist extends Module {
 	private static final float LOOKING_DOWN_PITCH = 45.0F;
 	private static final double DIAGONAL_RATIO = Math.sin(Math.toRadians(22.5D));
-	private static final double SECOND_EDGE_REACH = 0.5D;
 	private static final float MS_PER_TICK = 50.0F;
 	private static final float BRIDGE_ANGLE = 45.0F;
 	private static final float BRIDGE_ANGLE_TOLERANCE = 7.5F;
 	private static final float DIAGONAL_TOLERANCE = 10.0F;
+	private static final float PLACE_DIAGONAL_TOLERANCE = 15.0F;
+	private static final double CORNER_MARGIN = 0.15D;
+	private static final double UNDER_CORNER_MARGIN = 0.25D;
 	private static final float MIN_TURN = 30.0F;
 	private static final int STILL_TICKS = 3;
 	private static final double ALIGN_START = 0.15D;
@@ -92,7 +97,7 @@ public class BridgeAssist extends Module {
 	@Check("Only While Moving")
 	public boolean onlyWhileMoving = true;
 
-	@Description("Waits for the second edge when bridging diagonally.")
+	@Description("Only places near block corners while sneaking diagonally backwards.")
 	@Check("Avoid Double-Sneaking")
 	public boolean avoidDoubleSneaking = false;
 
@@ -153,6 +158,7 @@ public class BridgeAssist extends Module {
 	public void onInput(InputEvent event) {
 		LocalClientPlayerEntity player = minecraft.player;
 		PlayerInventory inventory = player.inventory;
+		placed = false;
 		boolean active = active(player);
 		trackRotation(player);
 		if (player.onGround) groundY = player.y;
@@ -172,7 +178,7 @@ public class BridgeAssist extends Module {
 		boolean holding = ItemUtils.isBlock(inventory.getSelectedItem());
 		blockSlot = holding ? inventory.selectedSlot : -1;
 		if (!active || holdingBlocks && !holding) {
-			edge = sneaking = placed = preSneaking = aligning = false;
+			edge = sneaking = preSneaking = aligning = false;
 			unsneakTicks = 0;
 			return;
 		}
@@ -180,7 +186,6 @@ public class BridgeAssist extends Module {
 		float spread = randomize ? jitter : 0.0F;
 		offset = edgeOffset / 100.0F * (1.0F - spread * 0.3F);
 		edge = player.onGround && overEdge(player);
-		if (!edge) placed = false;
 		if (preSneak) updatePreSneak(player);
 		boolean jump = sneakOnJump && !player.onGround && player.velocityY < 0.0D
 			&& player.y - groundY <= jumpSneakHeight * (1.0F - spread * 0.3F)
@@ -197,25 +202,31 @@ public class BridgeAssist extends Module {
 
 	@Listen
 	public void onUseItem(UseItemEvent event) {
-		if (!avoidDoubleSneaking || !edge || placed) return;
-
 		LocalClientPlayerEntity player = minecraft.player;
-		InputState input = IllusionClient.INPUT.player;
-		float forward = input.forwardAxis();
-		double[] direction = MoveUtils.inputDirection(player.yaw, forward, forward == 0.0F ? input.sidewaysAxis() : 0.0F);
-		double x = direction[0];
-		double z = direction[1];
-
-		double[] move = move(player);
-		boolean edgeX = unsupported(player, move[0], 0.0D);
-		boolean edgeZ = unsupported(player, 0.0D, move[1]);
-
-		if (Math.min(Math.abs(x), Math.abs(z)) > DIAGONAL_RATIO * Math.hypot(x, z) && edgeX != edgeZ
-			&& unsupported(player, edgeX ? 0.0D : Math.signum(x) * SECOND_EDGE_REACH, edgeX ? Math.signum(z) * SECOND_EDGE_REACH : 0.0D)) {
+		if (!avoidDoubleSneaking || !sneaking || placed || !ItemUtils.isBlock(player.inventory.getSelectedItem())) return;
+		if (midFace(player)) {
 			event.cancelled = true;
 		} else {
 			placed = true;
 		}
+	}
+
+	private boolean midFace(LocalClientPlayerEntity player) {
+		HitResult target = minecraft.crosshairTarget;
+		if (target == null || target.type != HitResult.Type.BLOCK || !target.face.getAxis().isHorizontal()) return false;
+		InputState input = IllusionClient.INPUT.player;
+		if (!player.onGround || !input.back || input.left || input.right) return false;
+		if (angleFrom(player.yaw, 90.0F, 45.0F) > PLACE_DIAGONAL_TOLERANCE) return false;
+
+		Vec3d hit = target.facePos;
+		if (Math.abs(hit.x - player.x) > 1.0D || Math.abs(hit.z - player.z) > 1.0D || hit.y > player.y || hit.y < player.y - 1.0D) return false;
+
+		BlockPos cell = target.getPos().offset(target.face);
+		boolean under = cell.getX() < player.x && player.x < cell.getX() + 1 && cell.getZ() < player.z && player.z < cell.getZ() + 1;
+		double margin = under ? UNDER_CORNER_MARGIN : CORNER_MARGIN;
+		double along = target.face.getAxis() == Direction.Axis.X ? hit.z : hit.x;
+		double fraction = along - Math.floor(along);
+		return fraction >= margin && fraction <= 1.0D - margin;
 	}
 
 	private boolean active(LocalClientPlayerEntity player) {
