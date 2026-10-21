@@ -1,4 +1,4 @@
-package org.codeberg.illusionclient.feature.stats;
+package org.codeberg.illusionclient.util.stats;
 
 import io.github.nevalackin.radbus.Listen;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;

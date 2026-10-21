@@ -5,10 +5,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.codeberg.illusionclient.event.Event;
 import org.codeberg.illusionclient.feature.config.ConfigManager;
-import org.codeberg.illusionclient.feature.input.InputManager;
-import org.codeberg.illusionclient.feature.lag.LagManager;
 import org.codeberg.illusionclient.feature.module.ModuleManager;
-import org.codeberg.illusionclient.feature.stats.Statistics;
+import org.codeberg.illusionclient.util.input.InputManager;
+import org.codeberg.illusionclient.util.lag.LagManager;
+import org.codeberg.illusionclient.util.stats.Statistics;
 
 public final class IllusionClient {
 	public static final String ID = "illusion";

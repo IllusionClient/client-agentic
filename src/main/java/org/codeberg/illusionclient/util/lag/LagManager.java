@@ -1,4 +1,4 @@
-package org.codeberg.illusionclient.feature.lag;
+package org.codeberg.illusionclient.util.lag;
 
 import io.github.nevalackin.radbus.Listen;
 import net.minecraft.client.Minecraft;

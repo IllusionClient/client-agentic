@@ -1,4 +1,4 @@
-package org.codeberg.illusionclient.feature.input;
+package org.codeberg.illusionclient.util.input;
 
 public final class InputState {
 	public boolean forward;

@@ -1,4 +1,4 @@
-package org.codeberg.illusionclient.feature.input;
+package org.codeberg.illusionclient.util.input;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.options.GameOptions;

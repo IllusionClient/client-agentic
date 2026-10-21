@@ -3,11 +3,11 @@ package org.codeberg.illusionclient.feature.module.movement;
 import io.github.nevalackin.radbus.Listen;
 import org.codeberg.illusionclient.IllusionClient;
 import org.codeberg.illusionclient.event.InputEvent;
-import org.codeberg.illusionclient.feature.input.InputState;
 import org.codeberg.illusionclient.feature.module.api.Category;
 import org.codeberg.illusionclient.feature.module.api.Description;
 import org.codeberg.illusionclient.feature.module.api.Module;
 import org.codeberg.illusionclient.feature.module.api.ModuleInfo;
+import org.codeberg.illusionclient.util.input.InputState;
 
 @ModuleInfo(name = "Null Move", category = Category.MOVEMENT)
 @Description("Opposite keys move you toward the last one pressed (SOCD).")

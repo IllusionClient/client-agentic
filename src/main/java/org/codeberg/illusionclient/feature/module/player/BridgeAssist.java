@@ -14,13 +14,13 @@ import org.codeberg.illusionclient.feature.config.api.Check;
 import org.codeberg.illusionclient.feature.config.api.Combo;
 import org.codeberg.illusionclient.feature.config.api.Requires;
 import org.codeberg.illusionclient.feature.config.api.Slider;
-import org.codeberg.illusionclient.feature.input.InputState;
 import org.codeberg.illusionclient.feature.module.api.Category;
 import org.codeberg.illusionclient.feature.module.api.Description;
 import org.codeberg.illusionclient.feature.module.api.Module;
 import org.codeberg.illusionclient.feature.module.api.ModuleInfo;
 import org.codeberg.illusionclient.util.ItemUtils;
 import org.codeberg.illusionclient.util.MoveUtils;
+import org.codeberg.illusionclient.util.input.InputState;
 
 import java.util.Random;
 

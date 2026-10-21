@@ -16,13 +16,13 @@ import org.codeberg.illusionclient.feature.config.api.Check;
 import org.codeberg.illusionclient.feature.config.api.RangeSlider;
 import org.codeberg.illusionclient.feature.config.api.Requires;
 import org.codeberg.illusionclient.feature.config.api.Slider;
-import org.codeberg.illusionclient.feature.lag.LagManager;
 import org.codeberg.illusionclient.feature.module.api.Category;
 import org.codeberg.illusionclient.feature.module.api.Description;
 import org.codeberg.illusionclient.feature.module.api.Module;
 import org.codeberg.illusionclient.feature.module.api.ModuleInfo;
 import org.codeberg.illusionclient.util.CombatUtils;
 import org.codeberg.illusionclient.util.GhostPlayer;
+import org.codeberg.illusionclient.util.lag.LagManager;
 
 @ModuleInfo(name = "Backtrack", category = Category.COMBAT)
 @Description("Lags players leaving your range for extra hits.")
