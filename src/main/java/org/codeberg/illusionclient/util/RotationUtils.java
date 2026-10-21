@@ -24,6 +24,16 @@ public final class RotationUtils {
 		return Math.hypot(MathHelper.wrapDegrees(yaw(x, z) - yaw), pitch(x, y, z) - pitch);
 	}
 
+	public static float mouseScale() {
+		float sensitivity = Minecraft.getInstance().options.mouseSensitivity * 0.6F + 0.2F;
+		return sensitivity * sensitivity * sensitivity * 8.0F;
+	}
+
+	public static int mouseCounts(float degrees, float limit, float gcd) {
+		int max = (int) (limit / gcd);
+		return Math.clamp((int) (degrees / gcd), Math.min(max, 0), Math.max(max, 0));
+	}
+
 	private static float yaw(double x, double z) {
 		return (float) Math.toDegrees(Math.atan2(z, x)) - 90.0F;
 	}

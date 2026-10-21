@@ -109,7 +109,7 @@ public class Backtrack extends Module {
 		}
 
 		if (!lagging && System.currentTimeMillis() >= readyAt) {
-			target = findTarget();
+			target = CombatUtils.best(this::shouldLag, CombatUtils::distanceTo);
 			lagging = target != null;
 			if (lagging) ghost = new GhostPlayer(target);
 		}
@@ -133,21 +133,6 @@ public class Backtrack extends Module {
 	private boolean isKnockback(Packet<?> packet) {
 		LocalClientPlayerEntity player = minecraft.player;
 		return player != null && packet instanceof EntityVelocityS2CPacket velocity && velocity.getId() == player.getNetworkId();
-	}
-
-	private PlayerEntity findTarget() {
-		PlayerEntity best = null;
-		double bestDistance = Double.MAX_VALUE;
-		for (PlayerEntity player : minecraft.world.players) {
-			if (player == minecraft.player || !shouldLag(player)) continue;
-
-			double distance = CombatUtils.distanceTo(player);
-			if (distance < bestDistance) {
-				best = player;
-				bestDistance = distance;
-			}
-		}
-		return best;
 	}
 
 	private boolean shouldLag(PlayerEntity player) {

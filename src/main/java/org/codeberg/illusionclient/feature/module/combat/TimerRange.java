@@ -119,7 +119,7 @@ public class TimerRange extends Module {
 		}
 		if (frozenTicks > 0 || queuedSkip > 0) return;
 
-		PlayerEntity nearest = findTarget(player);
+		PlayerEntity nearest = CombatUtils.best(other -> other.isAlive() && CombatUtils.isTarget(other), CombatUtils::distanceTo);
 		double distance = nearest == null ? 0.0D : CombatUtils.distanceTo(nearest);
 		double closing = nearest == target ? lastDistance - distance : 0.0D;
 		target = nearest;
@@ -184,20 +184,5 @@ public class TimerRange extends Module {
 		if (leftMousePressed && !IllusionClient.INPUT.held(minecraft.options.attackKey)) return false;
 		if (weaponsOnly && !Weapons.isWeapons(player.getItemInHand())) return false;
 		return !notUsingItem || player.getItemInUse() == null;
-	}
-
-	private PlayerEntity findTarget(LocalClientPlayerEntity self) {
-		PlayerEntity best = null;
-		double bestDistance = Double.MAX_VALUE;
-		for (PlayerEntity player : minecraft.world.players) {
-			if (player == self || !player.isAlive() || !CombatUtils.isTarget(player)) continue;
-
-			double distance = CombatUtils.distanceTo(player);
-			if (distance < bestDistance) {
-				best = player;
-				bestDistance = distance;
-			}
-		}
-		return best;
 	}
 }
