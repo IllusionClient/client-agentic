@@ -2,6 +2,7 @@ package org.codeberg.illusionclient.util.lag;
 
 import io.github.nevalackin.radbus.Listen;
 import net.minecraft.client.Minecraft;
+import net.minecraft.network.handler.PacketHandler;
 import net.minecraft.network.packet.Packet;
 import org.codeberg.illusionclient.IllusionClient;
 import org.codeberg.illusionclient.event.PacketReceiveEvent;
@@ -57,8 +58,10 @@ public final class LagManager {
 	public void onPacketReceive(PacketReceiveEvent event) {
 		if (inbound.isEmpty() && !wanted(event.packet(), false)) return;
 
+		Packet<PacketHandler> packet = event.packet();
+		PacketHandler listener = event.listener();
 		event.cancelled = true;
-		inbound.add(new Held(event.packet(), false, () -> event.packet().handle(event.listener()), System.currentTimeMillis()));
+		inbound.add(new Held(packet, false, () -> packet.handle(listener), System.currentTimeMillis()));
 	}
 
 	@Listen
