@@ -94,6 +94,7 @@ public class SprintReset extends Module {
 	private int minEnd;
 	private int maxEnd;
 	private double spacing;
+	private double gap;
 	private boolean waiting;
 	private boolean offensive;
 	private int zestHits;
@@ -205,7 +206,10 @@ public class SprintReset extends Module {
 			maxEnd++;
 		}
 		if (ticks < start) return false;
-		if (ticks < minEnd || ticks < maxEnd && target != null && CombatUtils.distanceTo(target) < spacing) return true;
+		double distance = target == null ? Double.MAX_VALUE : CombatUtils.distanceTo(target);
+		boolean opening = distance < spacing && distance >= gap;
+		gap = distance;
+		if (ticks < minEnd || ticks < maxEnd && opening) return true;
 
 		tap = null;
 		return false;
@@ -256,6 +260,7 @@ public class SprintReset extends Module {
 	private void plan(Tap tap, int delay, int duration, int maxDuration, double spacing) {
 		this.tap = tap;
 		this.spacing = spacing;
+		gap = 0.0D;
 		start = hitTick + 1 + delay;
 		minEnd = start + duration;
 		maxEnd = start + Math.max(duration, maxDuration);
