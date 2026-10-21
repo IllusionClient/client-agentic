@@ -62,7 +62,7 @@ jobs:
           OWNER: ${{ github.repository_owner }}
         run: |
           cd build/docs
-          git init -q -b nightly
+          git init -q -b pages
           git add index.html
           git -c user.name=forgejo-actions -c user.email=actions@noreply.codeberg.org commit -q -m "docs: nightly ${GITHUB_SHA::7}"
-          git push -f "https://token:${TOKEN}@${GITHUB_SERVER_URL#https://}/${OWNER}/docs.git" nightly
+          git push -f "https://token:${TOKEN}@${GITHUB_SERVER_URL#https://}/${OWNER}/nightly.git" pages
