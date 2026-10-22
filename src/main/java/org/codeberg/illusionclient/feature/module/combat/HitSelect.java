@@ -1,19 +1,14 @@
 package org.codeberg.illusionclient.feature.module.combat;
 
 import io.github.nevalackin.radbus.Listen;
-import it.unimi.dsi.fastutil.objects.Reference2LongMap;
-import it.unimi.dsi.fastutil.objects.Reference2LongOpenHashMap;
+import net.minecraft.block.Blocks;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.living.player.LocalClientPlayerEntity;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.living.LivingEntity;
-import net.minecraft.network.packet.Packet;
-import net.minecraft.network.packet.c2s.play.PlayerInteractEntityC2SPacket;
-import net.minecraft.network.packet.s2c.play.EntityEventS2CPacket;
-import net.minecraft.network.packet.s2c.play.EntityVelocityS2CPacket;
+import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.HitResult;
-import org.codeberg.illusionclient.event.PacketReceiveEvent;
-import org.codeberg.illusionclient.event.PacketSendEvent;
+import org.codeberg.illusionclient.event.PickEvent;
 import org.codeberg.illusionclient.event.PlayerTickEvent;
 import org.codeberg.illusionclient.event.SwingEvent;
 import org.codeberg.illusionclient.event.WorldLoadEvent;
@@ -26,18 +21,16 @@ import org.codeberg.illusionclient.feature.module.api.Description;
 import org.codeberg.illusionclient.feature.module.api.Module;
 import org.codeberg.illusionclient.feature.module.api.ModuleInfo;
 import org.codeberg.illusionclient.mixin.LivingEntityAccessor;
-import org.codeberg.illusionclient.util.CombatUtils;
 
 import java.util.Random;
 
 @ModuleInfo(name = "Hit Select", category = Category.COMBAT)
 @Description("Cancels clicks that wouldn't deal damage.")
 public class HitSelect extends Module {
-	private static final long ENGAGE_TIMEOUT_MS = 3000L;
-	private static final int KNOCKBACK_GRACE_TICKS = 2;
+	private static final int NO_PAUSE = 1001;
+	private static final int HURT_TICKS = 10;
 	private final Minecraft minecraft = Minecraft.getInstance();
 	private final Random random = new Random();
-	private final Reference2LongMap<Entity> lastHit = new Reference2LongOpenHashMap<>();
 
 	@Description("The longest clicks are held back after a hit.")
 	@Slider(value = "Pause Duration (ms)", min = 0.0F, max = 1000.0F)
@@ -47,12 +40,12 @@ public class HitSelect extends Module {
 	@Combo(value = "Mode", options = {"Burst", "Criticals"})
 	public String mode = "Burst";
 
-	@Description("Holds your first hit until you get hit or this time passes.")
+	@Description("Holds your first hit on a fresh target for this long.")
 	@Requires(value = "mode", is = "Burst")
 	@Slider(value = "Wait For First Hit (ms)", min = 0.0F, max = 1000.0F)
 	public float waitForFirstHit = 0.0F;
 
-	@Description("Holds later hits in a trade until you get hit or this time passes.")
+	@Description("Pauses this much longer while you're trading hits without getting hit.")
 	@Requires(value = "mode", is = "Burst")
 	@Slider(value = "Hit Later In Trades (ms)", min = 0.0F, max = 500.0F)
 	public float hitLaterInTrades = 0.0F;
@@ -71,6 +64,14 @@ public class HitSelect extends Module {
 	@Check("Use Server Attack Time")
 	public boolean useServerAttackTime = false;
 
+	@Description("Only cancels clicks while you sprint.")
+	@Check("Sprinting")
+	public boolean sprinting = false;
+
+	@Description("Only cancels clicks while you hold a weapon.")
+	@Check("Holding Weapon")
+	public boolean holdingWeapon = false;
+
 	@Description("Still plays the swing animation for cancelled clicks.")
 	@Check("Fake Swing")
 	public boolean fakeSwing = false;
@@ -83,13 +84,15 @@ public class HitSelect extends Module {
 	@Slider(value = "Cancel Rate Missed Swings (%)", min = 0.0F, max = 100.0F)
 	public float cancelRateMissedSwings = 0.0F;
 
-	private Entity engaged;
-	private long engagedAt;
-	private long lastAttempt;
-	private long lastHurt;
-	private long critHoldStart = -1L;
-	private boolean takingKnockback;
-	private int knockbackGrace;
+	private boolean decided;
+	private boolean cancelling;
+	private int undamagedTicks;
+	private int clock = NO_PAUSE;
+	private boolean serverReset;
+	private int waitingHits;
+	private Entity target;
+	private double targetDistance = Double.MAX_VALUE;
+	private boolean closing;
 
 	@Override
 	public String details() {
@@ -107,96 +110,106 @@ public class HitSelect extends Module {
 	}
 
 	@Listen
-	public void onSwing(SwingEvent event) {
+	public void onPick(PickEvent event) {
 		LocalClientPlayerEntity player = minecraft.player;
-		HitResult target = minecraft.crosshairTarget;
-		if (player == null || target == null) return;
-
-		boolean cancel = switch (target.type) {
-			case MISS -> roll(cancelRateMissedSwings);
-			case ENTITY -> target.entity instanceof LivingEntity && holdAttack(player, target.entity);
-			default -> false;
-		};
-		if (!cancel) return;
-
-		event.cancelled = true;
-		if (fakeSwing) swingLocally(player);
+		decided = false;
+		undamagedTicks = player != null && minecraft.focused && player.damagedTimer == 0 ? undamagedTicks + 1 : 0;
 	}
 
 	@Listen
-	public void onPacketSend(PacketSendEvent event) {
-		if (useServerAttackTime || minecraft.world == null) return;
-		if (!(event.packet() instanceof PlayerInteractEntityC2SPacket packet)) return;
-		if (packet.getAction() != PlayerInteractEntityC2SPacket.Action.ATTACK) return;
-
-		Entity attacked = packet.getInteractTarget(minecraft.world);
-		long now = System.currentTimeMillis();
-		if (attacked != null && !invulnerable(attacked, now)) lastHit.put(attacked, now);
-	}
-
-	@Listen
-	public void onPacketReceive(PacketReceiveEvent event) {
+	public void onSwing(SwingEvent event) {
 		LocalClientPlayerEntity player = minecraft.player;
 		if (player == null || minecraft.world == null) return;
 
-		Packet<?> received = event.packet();
-		if (received instanceof EntityVelocityS2CPacket velocity && velocity.getId() == player.getNetworkId()) {
-			takingKnockback = true;
-			knockbackGrace = KNOCKBACK_GRACE_TICKS;
-			return;
+		if (!decided) {
+			cancelling = cancel(player);
+			decided = true;
 		}
-		if (!(received instanceof EntityEventS2CPacket packet) || packet.getEvent() != CombatUtils.HURT) return;
+		if (!cancelling) return;
 
-		Entity entity = packet.getEntity(minecraft.world);
-		if (entity == player) lastHurt = System.currentTimeMillis();
-		else if (entity != null && useServerAttackTime) lastHit.put(entity, System.currentTimeMillis());
+		event.cancelled = true;
+		if (fakeSwing && player.getItemInUse() == null) swingLocally(player);
 	}
 
 	@Listen
 	public void onPlayerTick(PlayerTickEvent event) {
 		LocalClientPlayerEntity player = minecraft.player;
-		if (player == null) return;
+		if (player == null || minecraft.world == null) return;
 
-		if (knockbackGrace > 0) knockbackGrace--;
-		else if (player.onGround) takingKnockback = false;
-		lastHit.keySet().removeIf(entity -> entity.removed);
+		if (target != null && target.removed) target = null;
+		boolean changed = false;
+		HitResult crosshair = minecraft.crosshairTarget;
+		if (crosshair != null && crosshair.entity instanceof LivingEntity hovered) {
+			changed = target == null || hovered.getNetworkId() != target.getNetworkId();
+			target = hovered;
+		}
+
+		double distance = target == null ? Double.MAX_VALUE : Math.hypot(target.x - player.x, target.z - player.z);
+		closing = !changed && distance < targetDistance;
+		targetDistance = distance;
+
+		updateClock(player, changed);
 	}
 
-	private boolean holdAttack(LocalClientPlayerEntity player, Entity target) {
-		long now = System.currentTimeMillis();
-		boolean fresh = target != engaged || now - lastAttempt > ENGAGE_TIMEOUT_MS;
-		if (fresh) {
-			engaged = target;
-			engagedAt = now;
-		}
-		lastAttempt = now;
+	private boolean cancel(LocalClientPlayerEntity player) {
+		if (sprinting && !player.isSprinting()) return false;
+		if (holdingWeapon && !Weapons.isWeapons(player.getItemInHand())) return false;
 
-		if (invulnerable(target, now)) {
-			critHoldStart = -1L;
-			return roll(cancelRateInCombat);
-		}
-		if (mode.equals("Criticals")) return holdForCritical(player, now);
+		HitResult crosshair = minecraft.crosshairTarget;
+		if (crosshair == null) return false;
+		if (crosshair.type == HitResult.Type.MISS) return roll(cancelRateMissedSwings);
+		if (crosshair.type != HitResult.Type.ENTITY || crosshair.entity == null) return false;
 
-		long last = lastHit.getLong(target);
-		boolean firstHit = now - last > ENGAGE_TIMEOUT_MS;
-		long readyAt = firstHit ? engagedAt : last + (long) pauseDuration;
-		float wait = firstHit ? waitForFirstHit : hitLaterInTrades;
-		return lastHurt < readyAt && now - readyAt < wait;
+		int pause = roundRandomly(pauseDuration / MS_PER_TICK);
+		boolean closer = (!player.onGround || player.velocityY > 0.0D) && closing;
+
+		if (mode.equals("Criticals")) {
+			boolean cycle = clock < 2 || clock > 8 || useServerAttackTime;
+			if (!player.onGround && player.fallDistance > 0.0F && cycle) return false;
+			if (closer && (!cycle || disableDuringKnockback)) return false;
+			if (minecraft.world.getBlockState(new BlockPos(player)).getBlock() != Blocks.AIR) return false;
+			if (!player.onGround && player.velocityY > 0.0D && !(onlyWhileDamaged && player.damagedTimer == 0)) return true;
+		} else {
+			if (closer) return false;
+			if (clock < 15) waitingHits = 0;
+			else if (++waitingHits <= Math.round(waitForFirstHit / MS_PER_TICK)) return true;
+
+			if (undamagedTicks < 10) pause += Math.round(hitLaterInTrades / MS_PER_TICK);
+			if (serverReset) {
+				serverReset = false;
+				return false;
+			}
+		}
+		return clock + 1 < pause && roll(cancelRateInCombat);
 	}
 
-	private boolean holdForCritical(LocalClientPlayerEntity player, long now) {
-		boolean rising = !player.onGround && player.velocityY > 0.0D;
-		boolean skip = disableDuringKnockback && takingKnockback || onlyWhileDamaged && player.damagedTimer <= 0;
-		if (!rising || skip) {
-			critHoldStart = -1L;
-			return false;
+	private void updateClock(LocalClientPlayerEntity player, boolean changed) {
+		if (useServerAttackTime) {
+			if (target != null && target.isAlive() && ((LivingEntity) target).damagedTimer == HURT_TICKS) {
+				clock = 0;
+				serverReset = true;
+			} else {
+				tickClock();
+			}
+			return;
 		}
-		if (critHoldStart < 0L) critHoldStart = now;
-		return now - critHoldStart < pauseDuration;
+
+		if (changed) {
+			clock = NO_PAUSE;
+		} else {
+			tickClock();
+			if (clock < HURT_TICKS) return;
+		}
+		if (player.getLastAttackTime() == player.ticks - 1) clock = 0;
 	}
 
-	private boolean invulnerable(Entity target, long now) {
-		return now - lastHit.getLong(target) < pauseDuration;
+	private void tickClock() {
+		clock = Math.min(clock + 1, NO_PAUSE);
+	}
+
+	private int roundRandomly(float value) {
+		int whole = (int) value;
+		return random.nextFloat() < value - whole ? whole + 1 : whole;
 	}
 
 	private boolean roll(float percent) {
@@ -211,12 +224,13 @@ public class HitSelect extends Module {
 	}
 
 	private void reset() {
-		lastHit.clear();
-		engaged = null;
-		lastAttempt = 0L;
-		lastHurt = 0L;
-		critHoldStart = -1L;
-		takingKnockback = false;
-		knockbackGrace = 0;
+		decided = false;
+		undamagedTicks = 0;
+		clock = NO_PAUSE;
+		serverReset = false;
+		waitingHits = 0;
+		target = null;
+		targetDistance = Double.MAX_VALUE;
+		closing = false;
 	}
 }
