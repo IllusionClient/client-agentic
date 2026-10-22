@@ -107,10 +107,6 @@ public final class SimulatedPlayer {
 		return sneaking ? 1.54F : 1.62F;
 	}
 
-	public Vec3d position() {
-		return new Vec3d(x(), y(), z());
-	}
-
 	public Vec3d eyePosition() {
 		return new Vec3d(x(), y() + eyeHeight(), z());
 	}

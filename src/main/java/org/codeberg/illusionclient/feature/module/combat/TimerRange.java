@@ -33,7 +33,6 @@ import org.codeberg.illusionclient.util.lag.LagManager;
 @ModuleInfo(name = "Timer Range", category = Category.COMBAT)
 @Description("Skips and pauses ticks to land the first hit in a trade.")
 public class TimerRange extends Module {
-	private static final float MILLIS_PER_TICK = 50.0F;
 	private static final double REACH = 3.0D;
 	private static final double TARGET_RANGE = 15.0D;
 	private static final double TARGET_FOV = 70.0D;
@@ -263,7 +262,7 @@ public class TimerRange extends Module {
 	}
 
 	private int durationTicks() {
-		return Math.max(1, Math.round((legit() ? legitDuration : duration) / MILLIS_PER_TICK));
+		return Math.max(1, Math.round((legit() ? legitDuration : duration) / MS_PER_TICK));
 	}
 
 	private void reset() {

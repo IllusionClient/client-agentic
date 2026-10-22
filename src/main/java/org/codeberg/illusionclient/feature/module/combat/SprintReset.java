@@ -33,8 +33,6 @@ import java.util.Random;
 @ModuleInfo(name = "Sprint Reset", category = Category.COMBAT)
 @Description("Resets your sprint after a hit so the next one deals full knockback.")
 public class SprintReset extends Module {
-	private static final byte HURT = 2;
-	private static final float MS_PER_TICK = 50.0F;
 	private static final int HITTABLE_TICKS = 10;
 	private static final int TRADE_TICKS = 10;
 	private static final int EQUAL_TRADE_TICKS = 2;
@@ -147,7 +145,7 @@ public class SprintReset extends Module {
 	@Listen
 	public void onPacketReceive(PacketReceiveEvent event) {
 		Packet<?> received = event.packet();
-		if (!(received instanceof EntityEventS2CPacket packet) || packet.getEvent() != HURT || minecraft.world == null) return;
+		if (!(received instanceof EntityEventS2CPacket packet) || packet.getEvent() != CombatUtils.HURT || minecraft.world == null) return;
 		if (packet.getEntity(minecraft.world) != minecraft.player) return;
 
 		hurtTick = ticks;

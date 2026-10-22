@@ -10,7 +10,6 @@ import org.codeberg.illusionclient.feature.ui.Draw;
 import org.codeberg.illusionclient.feature.ui.Icon;
 
 import java.util.HashSet;
-import java.util.Locale;
 import java.util.Set;
 
 public class Frame extends Group {
@@ -20,13 +19,11 @@ public class Frame extends Group {
 	private static final float WINDOW_RADIUS = 8.0F;
 
 	public final Category category;
-	private final String title;
 	private boolean dragging, placed;
 	private int dragX, dragY, lastHeight;
 
 	public Frame(Category category) {
 		this.category = category;
-		this.title = category.name().charAt(0) + category.name().substring(1).toLowerCase(Locale.ROOT);
 
 		for (Module module : IllusionClient.MODULES.modules) {
 			if (module.category == category) children.add(new ModuleComponent(module));
@@ -68,7 +65,7 @@ public class Frame extends Group {
 		Icon icon = Icon.of(category);
 		float headingY = Draw.headingY(y, TITLE);
 		icon.draw(x + PADDING + 2, y + (TITLE - icon.height) / 2, Draw.accent().getRGB());
-		Draw.heading(title, x + PADDING + 2 + icon.width + 7, headingY, Draw.TEXT);
+		Draw.heading(category.title(), x + PADDING + 2 + icon.width + 7, headingY, Draw.TEXT);
 
 		long on = children.stream().filter(child -> ((ModuleComponent) child).module.isEnabled()).count();
 		Draw.textRight(on + " of " + children.size() + " on", x + width - PADDING - 2, Draw.headingBaseline(headingY), Draw.FAINT, Draw.Weight.REGULAR);

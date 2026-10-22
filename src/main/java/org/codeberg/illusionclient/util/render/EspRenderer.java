@@ -26,6 +26,7 @@ public final class EspRenderer<T> {
 	private static final BufferBuilder FACES = new BufferBuilder(16384);
 
 	private final List<T> targets = new ObjectArrayList<>();
+	private final float[] screen = new float[2];
 	private float[] bounds = new float[64];
 	private FrustumCuller frustum;
 	private float[] clip;
@@ -50,6 +51,18 @@ public final class EspRenderer<T> {
 	public static void box(int left, int top, int right, int bottom, int color) {
 		outline(left, top, right, bottom, 3.0F, OUTLINE);
 		outline(left + 1, top + 1, right - 1, bottom - 1, 1.0F, color);
+	}
+
+	public static boolean project(float[] clip, float x, float y, float z, float halfWidth, float halfHeight, float[] screen) {
+		float w = clip[3] * x + clip[7] * y + clip[11] * z + clip[15];
+		if (w <= 0.0F) return false;
+
+		float depth = (clip[2] * x + clip[6] * y + clip[10] * z + clip[14]) / w;
+		if (depth < -1.0F || depth >= 1.0F) return false;
+
+		screen[0] = ((clip[0] * x + clip[4] * y + clip[8] * z + clip[12]) / w + 1.0F) * halfWidth;
+		screen[1] = (1.0F - (clip[1] * x + clip[5] * y + clip[9] * z + clip[13]) / w) * halfHeight;
+		return true;
 	}
 
 	public void begin() {
@@ -81,19 +94,12 @@ public final class EspRenderer<T> {
 			float x = (float) (((corner & 1) == 0 ? box.minX : box.maxX) - cameraX);
 			float y = (float) (((corner & 2) == 0 ? box.minY : box.maxY) - cameraY);
 			float z = (float) (((corner & 4) == 0 ? box.minZ : box.maxZ) - cameraZ);
+			if (!project(clip, x, y, z, halfWidth, halfHeight, screen)) continue;
 
-			float w = clip[3] * x + clip[7] * y + clip[11] * z + clip[15];
-			if (w == 0.0F) continue;
-
-			float depth = (clip[2] * x + clip[6] * y + clip[10] * z + clip[14]) / w;
-			if (depth < -1.0F || depth >= 1.0F) continue;
-
-			float screenX = ((clip[0] * x + clip[4] * y + clip[8] * z + clip[12]) / w + 1.0F) * halfWidth;
-			float screenY = (1.0F - (clip[1] * x + clip[5] * y + clip[9] * z + clip[13]) / w) * halfHeight;
-			minX = Math.min(minX, screenX);
-			minY = Math.min(minY, screenY);
-			maxX = Math.max(maxX, screenX);
-			maxY = Math.max(maxY, screenY);
+			minX = Math.min(minX, screen[0]);
+			minY = Math.min(minY, screen[1]);
+			maxX = Math.max(maxX, screen[0]);
+			maxY = Math.max(maxY, screen[1]);
 		}
 		if (maxX < minX) return;
 

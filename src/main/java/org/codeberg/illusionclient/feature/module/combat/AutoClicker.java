@@ -67,18 +67,10 @@ public class AutoClicker extends Module {
 	private long lastFrame;
 	private boolean inScreen;
 	private int inventoryClicks;
-	private String details;
-	private String detailsPattern;
-	private float detailsCps;
 
 	@Override
 	public String details() {
-		if (details == null || targetCps != detailsCps || !clickPattern.equals(detailsPattern)) {
-			detailsPattern = clickPattern;
-			detailsCps = targetCps;
-			details = clickPattern + " " + number(targetCps) + "cps";
-		}
-		return details;
+		return clickPattern + " " + number(targetCps) + "cps";
 	}
 
 	@Override

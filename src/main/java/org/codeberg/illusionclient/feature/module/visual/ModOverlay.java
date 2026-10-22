@@ -18,7 +18,6 @@ import org.codeberg.illusionclient.feature.ui.Draw;
 import java.awt.*;
 import java.util.List;
 import java.util.Locale;
-import java.util.Objects;
 
 @ModuleInfo(name = "Mod Overlay", category = Category.VISUAL)
 @Description("Lists enabled modules in the corner.")
@@ -82,7 +81,9 @@ public class ModOverlay extends Module {
 			if (!module.isEnabled()) continue;
 			if (onlyBoundModules && module.getBind() == 0) continue;
 
-			row.update(lowercase, showDetails ? module.details() : null);
+			String details = showDetails ? module.details() : null;
+			row.name = style(module.name);
+			row.details = details == null ? null : style(details);
 			row.nameWidth = Draw.width(row.name);
 			float textWidth = row.nameWidth + (row.details == null ? 0 : gap + Draw.width(row.details));
 			row.width = Math.round(textWidth * textSize + paddingX * 2.0F);
@@ -118,31 +119,19 @@ public class ModOverlay extends Module {
 		GlStateManager.enableBlend();
 	}
 
+	private String style(String text) {
+		return lowercase ? text.toLowerCase(Locale.ROOT) : text;
+	}
+
 	private static final class Row {
 		final Module module;
 		String name;
 		String details;
 		int nameWidth;
 		int width;
-		private String detailsSource;
-		private boolean lowercase;
 
 		Row(Module module) {
 			this.module = module;
-		}
-
-		void update(boolean lowercase, String source) {
-			boolean restyle = name == null || lowercase != this.lowercase;
-			this.lowercase = lowercase;
-			if (restyle) name = style(module.name);
-			if (restyle || !Objects.equals(source, detailsSource)) {
-				detailsSource = source;
-				details = source == null ? null : style(source);
-			}
-		}
-
-		private String style(String text) {
-			return lowercase ? text.toLowerCase(Locale.ROOT) : text;
 		}
 	}
 }

@@ -25,13 +25,7 @@ public enum Icon {
 	}
 
 	public static Icon of(Category category) {
-		return switch (category) {
-			case CLIENT -> CLIENT;
-			case COMBAT -> COMBAT;
-			case MOVEMENT -> MOVEMENT;
-			case PLAYER -> PLAYER;
-			case VISUAL -> VISUAL;
-		};
+		return valueOf(category.name());
 	}
 
 	public void draw(int x, int y, int color) {

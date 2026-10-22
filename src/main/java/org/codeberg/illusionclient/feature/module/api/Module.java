@@ -9,6 +9,8 @@ import java.lang.reflect.Field;
 import java.util.List;
 
 public abstract class Module {
+	protected static final float MS_PER_TICK = 50.0F;
+
 	public final String name;
 	public final String key = getClass().getSimpleName();
 	public final Category category;

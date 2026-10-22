@@ -18,7 +18,6 @@ import org.codeberg.illusionclient.feature.module.api.Module;
 import org.codeberg.illusionclient.feature.module.api.ModuleInfo;
 import org.codeberg.illusionclient.util.render.EspRenderer;
 import org.codeberg.illusionclient.feature.ui.Draw;
-import org.codeberg.illusionclient.util.ColorUtils;
 import org.codeberg.illusionclient.util.PlayerUtils;
 
 import java.awt.*;
@@ -201,6 +200,11 @@ public class Esp extends Module {
 	}
 
 	private int pulse(int color) {
-		return ColorUtils.darken(color, pulseFactor);
+		if (pulseFactor == 1.0F) return color;
+
+		return color & 0xFF000000
+			| (int) ((color >> 16 & 255) * pulseFactor) << 16
+			| (int) ((color >> 8 & 255) * pulseFactor) << 8
+			| (int) ((color & 255) * pulseFactor);
 	}
 }

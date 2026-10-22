@@ -19,7 +19,6 @@ import org.codeberg.illusionclient.feature.module.api.Category;
 import org.codeberg.illusionclient.feature.module.api.Description;
 import org.codeberg.illusionclient.feature.module.api.Module;
 import org.codeberg.illusionclient.feature.module.api.ModuleInfo;
-import org.codeberg.illusionclient.util.AimPoint;
 import org.codeberg.illusionclient.util.CombatUtils;
 import org.codeberg.illusionclient.util.NoiseUtils;
 import org.codeberg.illusionclient.util.RotationUtils;
@@ -35,6 +34,7 @@ public class AimAssist extends Module {
 	private static final double CLOSE_RANGE = 3.5D;
 	private static final double NOISE_PER_DEGREE = 0.03D;
 	private static final double TARGETING_MARGIN = 0.1D;
+	private static final double EDGE_INSET = 0.05D;
 	private final Minecraft minecraft = Minecraft.getInstance();
 
 	@Description("Regular eases in, Linear is steady, Lock-on snaps.")
@@ -275,9 +275,18 @@ public class AimAssist extends Module {
 		float near = (float) Math.min(1.0D, CombatUtils.distanceTo(box) / CLOSE_RANGE);
 		float spread = randomization / 100.0F * (0.1F + 0.9F * near);
 		float multipoint = horizontalMultipoint * near;
-		double x = AimPoint.axis(eye.x, (box.minX + box.maxX) / 2.0D, box.minX, box.maxX, multipoint, spread * 0.4F, NoiseUtils.noise(noiseSeed));
-		double y = AimPoint.axis(eye.y, box.minY + target.getEyeHeight(), box.minY, box.maxY, verticalMultipoint, spread * 0.3F, NoiseUtils.noise(noiseSeed + 10000.0D));
-		double z = AimPoint.axis(eye.z, (box.minZ + box.maxZ) / 2.0D, box.minZ, box.maxZ, multipoint, spread * 0.4F, NoiseUtils.noise(noiseSeed + 20000.0D));
+		double x = axis(eye.x, (box.minX + box.maxX) / 2.0D, box.minX, box.maxX, multipoint, spread * 0.4F, NoiseUtils.noise(noiseSeed));
+		double y = axis(eye.y, box.minY + target.getEyeHeight(), box.minY, box.maxY, verticalMultipoint, spread * 0.3F, NoiseUtils.noise(noiseSeed + 10000.0D));
+		double z = axis(eye.z, (box.minZ + box.maxZ) / 2.0D, box.minZ, box.maxZ, multipoint, spread * 0.4F, NoiseUtils.noise(noiseSeed + 20000.0D));
 		return new Vec3d(x, y, z);
+	}
+
+	private static double axis(double eye, double center, double min, double max, float multipoint, float spread, float noise) {
+		double size = max - min;
+		double inset = Math.min(EDGE_INSET, size / 2.0D);
+		double reach = Math.min(size * spread, size / 2.0D - inset);
+		double closest = Math.clamp(eye, min + inset + reach, max - inset - reach);
+		double point = center + (closest - center) * multipoint / 100.0F + reach * noise;
+		return Math.clamp(point, min + inset, max - inset);
 	}
 }

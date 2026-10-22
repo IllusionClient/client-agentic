@@ -26,13 +26,13 @@ import org.codeberg.illusionclient.feature.module.api.Description;
 import org.codeberg.illusionclient.feature.module.api.Module;
 import org.codeberg.illusionclient.feature.module.api.ModuleInfo;
 import org.codeberg.illusionclient.mixin.LivingEntityAccessor;
+import org.codeberg.illusionclient.util.CombatUtils;
 
 import java.util.Random;
 
 @ModuleInfo(name = "Hit Select", category = Category.COMBAT)
 @Description("Cancels clicks that wouldn't deal damage.")
 public class HitSelect extends Module {
-	private static final byte HURT = 2;
 	private static final long ENGAGE_TIMEOUT_MS = 3000L;
 	private static final int KNOCKBACK_GRACE_TICKS = 2;
 	private final Minecraft minecraft = Minecraft.getInstance();
@@ -145,7 +145,7 @@ public class HitSelect extends Module {
 			knockbackGrace = KNOCKBACK_GRACE_TICKS;
 			return;
 		}
-		if (!(received instanceof EntityEventS2CPacket packet) || packet.getEvent() != HURT) return;
+		if (!(received instanceof EntityEventS2CPacket packet) || packet.getEvent() != CombatUtils.HURT) return;
 
 		Entity entity = packet.getEntity(minecraft.world);
 		if (entity == player) lastHurt = System.currentTimeMillis();

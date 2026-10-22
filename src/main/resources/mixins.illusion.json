@@ -6,7 +6,6 @@
     "LivingEntityMixin"
   ],
   "client": [
-    "ClientChunkCacheAccessor",
     "ClientChunkCacheMixin",
     "ClientPlayNetworkHandlerMixin",
     "EntityAccessor",
@@ -17,7 +16,6 @@
     "KeyboardMixin",
     "LivingEntityAccessor",
     "LocalClientPlayerEntityMixin",
-    "MinecraftAccessor",
     "MinecraftMixin",
     "MouseMixin",
     "PacketUtilsMixin",

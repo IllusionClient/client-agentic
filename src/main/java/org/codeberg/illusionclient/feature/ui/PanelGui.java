@@ -8,7 +8,6 @@ import it.unimi.dsi.fastutil.objects.Reference2ObjectOpenHashMap;
 import net.minecraft.client.Minecraft;
 import org.codeberg.illusionclient.IllusionClient;
 import org.codeberg.illusionclient.feature.module.api.Category;
-import org.codeberg.illusionclient.feature.module.api.Description;
 import org.codeberg.illusionclient.feature.module.api.Module;
 import org.codeberg.illusionclient.feature.module.client.ClickGuiModule;
 import org.codeberg.illusionclient.feature.ui.component.Component;
@@ -51,7 +50,6 @@ public class PanelGui extends ClickScreen {
 	private static final int FORWARD_BUTTON = 4;
 	private static final float RADIUS = 8.0F;
 
-	private final List<Category> categories = new ObjectArrayList<>();
 	private final Map<Category, List<Module>> modules = new EnumMap<>(Category.class);
 	private final Reference2ObjectMap<Module, List<Component>> components = new Reference2ObjectOpenHashMap<>();
 	private final List<Card> cards = new ObjectArrayList<>();
@@ -71,11 +69,7 @@ public class PanelGui extends ClickScreen {
 
 	public PanelGui() {
 		for (Category category : Category.values()) {
-			List<Module> list = IllusionClient.MODULES.modules.stream().filter(module -> module.category == category).toList();
-			if (list.isEmpty()) continue;
-
-			categories.add(category);
-			modules.put(category, list);
+			modules.put(category, IllusionClient.MODULES.modules.stream().filter(module -> module.category == category).toList());
 		}
 		history.add(new Page(null, null));
 		load();
@@ -90,16 +84,8 @@ public class PanelGui extends ClickScreen {
 		return minutes < 60 ? minutes + "m " + millis / 1000 % 60 + "s" : minutes / 60 + "h " + minutes % 60 + "m";
 	}
 
-	private static String title(Category category) {
-		return category.name().charAt(0) + category.name().substring(1).toLowerCase(Locale.ROOT);
-	}
-
 	private static String normalize(String text) {
 		return text.replace(" ", "").toLowerCase(Locale.ROOT);
-	}
-
-	private static boolean toggleable(Module module) {
-		return !(module instanceof ClickGuiModule);
 	}
 
 	@Override
@@ -129,7 +115,7 @@ public class PanelGui extends ClickScreen {
 				x = state.get("x").getAsInt();
 				y = state.get("y").getAsInt();
 			}
-			if (savedCategory != null && modules.containsKey(savedCategory)) {
+			if (savedCategory != null) {
 				history.add(new Page(savedCategory, savedModule != null && savedModule.category == savedCategory ? savedModule : null));
 				page = 1;
 				category = history.get(page).category;
@@ -174,9 +160,9 @@ public class PanelGui extends ClickScreen {
 		boolean browsing = search.isEmpty();
 		int rowY = listTop();
 		entry(Icon.HOME, "Home", browsing && category == null, mouseX, mouseY, rowY);
-		for (Category entry : categories) {
+		for (Category entry : Category.values()) {
 			rowY += ENTRY;
-			entry(Icon.of(entry), title(entry), browsing && category == entry, mouseX, mouseY, rowY);
+			entry(Icon.of(entry), entry.title(), browsing && category == entry, mouseX, mouseY, rowY);
 		}
 	}
 
@@ -219,7 +205,7 @@ public class PanelGui extends ClickScreen {
 			Draw.text("Search", left, textY, Draw.TEXT);
 			Draw.textRight(count + (count == 1 ? " result" : " results"), right, textY, Draw.FAINT, Draw.Weight.REGULAR);
 		} else if (module != null) {
-			String parent = title(module.category);
+			String parent = module.category.title();
 			int parentWidth = Draw.width(parent);
 			Draw.text(parent, left, textY, crumbHovered(mouseX, mouseY) ? Draw.TEXT : Draw.MUTED);
 			Icon.CHEVRON.draw(left + parentWidth + 6, y + (TITLE - Icon.CHEVRON.height) / 2, Draw.FAINT);
@@ -227,7 +213,7 @@ public class PanelGui extends ClickScreen {
 		} else if (category != null) {
 			List<Module> list = modules.get(category);
 			long on = list.stream().filter(Module::isEnabled).count();
-			Draw.text(title(category), left, textY, Draw.TEXT);
+			Draw.text(category.title(), left, textY, Draw.TEXT);
 			Draw.textRight(on + " of " + list.size() + " on", right, textY, Draw.FAINT, Draw.Weight.REGULAR);
 		} else {
 			Draw.text("Home", left, textY, Draw.TEXT);
@@ -287,8 +273,7 @@ public class PanelGui extends ClickScreen {
 
 	private void card(Module entry, int left, int top, int width, boolean hovered, int mouseX, int mouseY) {
 		boolean enabled = entry.isEnabled();
-		int fill = enabled ? hovered ? Draw.PRIMARY_CONTAINER_HOVER : Draw.PRIMARY_CONTAINER : hovered ? Draw.CONTAINER_HIGHEST : Draw.CONTAINER_HIGH;
-		Draw.rounded(left, top, width, CARD, Component.RADIUS, fill);
+		Draw.rounded(left, top, width, CARD, Component.RADIUS, ModuleComponent.fill(entry, hovered));
 
 		int chevronX = chevronLeft(left, width);
 		boolean chevronHovered = hovered && mouseX >= chevronX - PADDING;
@@ -296,7 +281,7 @@ public class PanelGui extends ClickScreen {
 
 		int textRight = keyRight(left, width) - PADDING + 6;
 		boolean listening = KeybindComponent.listening(entry);
-		String key = keyLabel(entry, hovered, listening);
+		String key = ModuleComponent.keyLabel(entry, hovered, listening);
 		if (key != null) {
 			int keyX = keyLeft(key, left, width);
 			int keyWidth = keyRight(left, width) - keyX;
@@ -320,10 +305,10 @@ public class PanelGui extends ClickScreen {
 		}
 
 		String text = entry.description.value();
-		String trimmed = ellipsize(text, textRight - textX);
+		String trimmed = Draw.ellipsize(text, textRight - textX, Draw.Weight.REGULAR);
 		float nameY = twoLineY(top, CARD);
 		Draw.text(entry.name, textX, nameY, nameColor);
-		Draw.text(trimmed, textX, nameY + Draw.textHeight() + LINE_GAP, Draw.color(entry.description.type()), Draw.Weight.REGULAR);
+		Draw.text(trimmed, textX, nameY + Draw.textHeight() + LINE_GAP, Draw.MUTED, Draw.Weight.REGULAR);
 		if (hovered && !trimmed.equals(text)) Tooltip.show(entry.description);
 	}
 
@@ -332,8 +317,7 @@ public class PanelGui extends ClickScreen {
 		int width = contentWidth();
 		boolean hovered = within(mouseX, mouseY, left, top, width, HEADER);
 		boolean enabled = module.isEnabled();
-		int fill = enabled ? hovered ? Draw.PRIMARY_CONTAINER_HOVER : Draw.PRIMARY_CONTAINER : hovered ? Draw.CONTAINER_HIGHEST : Draw.CONTAINER_HIGH;
-		Draw.rounded(left, top, width, HEADER, Component.RADIUS, 0.0F, fill);
+		Draw.rounded(left, top, width, HEADER, Component.RADIUS, 0.0F, ModuleComponent.fill(module, hovered));
 		float nameY = module.description == null ? Draw.textY(top, HEADER) : twoLineY(top, HEADER);
 		Draw.text(module.name, left + PADDING, nameY, enabled ? Draw.ON_PRIMARY_CONTAINER : Draw.TEXT);
 
@@ -341,9 +325,8 @@ public class PanelGui extends ClickScreen {
 
 		if (module.description != null) {
 			String text = module.description.value();
-			String trimmed = ellipsize(text, textRight - left - PADDING);
-			int color = enabled && module.description.type() == Description.Type.INFO ? Draw.ON_PRIMARY_CONTAINER : Draw.color(module.description.type());
-			Draw.text(trimmed, left + PADDING, nameY + Draw.textHeight() + LINE_GAP, color, Draw.Weight.REGULAR);
+			String trimmed = Draw.ellipsize(text, textRight - left - PADDING, Draw.Weight.REGULAR);
+			Draw.text(trimmed, left + PADDING, nameY + Draw.textHeight() + LINE_GAP, enabled ? Draw.ON_PRIMARY_CONTAINER : Draw.MUTED, Draw.Weight.REGULAR);
 			if (hovered && !trimmed.equals(text)) Tooltip.show(module.description);
 		}
 
@@ -450,9 +433,9 @@ public class PanelGui extends ClickScreen {
 			return;
 		}
 
-		if (within(mouseX, mouseY, x, listTop(), SIDEBAR, ENTRY * (categories.size() + 1))) {
+		if (within(mouseX, mouseY, x, listTop(), SIDEBAR, ENTRY * (Category.values().length + 1))) {
 			int index = (mouseY - listTop()) / ENTRY;
-			show(index == 0 ? null : categories.get(index - 1));
+			show(index == 0 ? null : Category.values()[index - 1]);
 			return;
 		}
 
@@ -462,7 +445,7 @@ public class PanelGui extends ClickScreen {
 			for (Card card : cards) {
 				if (!within(mouseX, mouseY, contentLeft(), card.y, contentWidth(), CARD)) continue;
 
-				String key = keyLabel(card.module, true, false);
+				String key = ModuleComponent.keyLabel(card.module, true, false);
 				int keyX = keyLeft(key, contentLeft(), contentWidth());
 				boolean onKey = within(mouseX, mouseY, keyX, card.y + KEY_Y, keyRight(contentLeft(), contentWidth()) - keyX, ModuleComponent.KEY_HEIGHT);
 				int holdX = holdLeft(keyX);
@@ -470,7 +453,7 @@ public class PanelGui extends ClickScreen {
 				boolean onChevron = mouseX >= chevronLeft(contentLeft(), contentWidth()) - PADDING;
 				if (button == 2 || button == 0 && onKey) KeybindComponent.listen(card.module);
 				else if (button == 0 && onHold) card.module.setHold(!card.module.isHold());
-				else if (button == 1 || button == 0 && (onChevron || !toggleable(card.module))) open(card.module);
+				else if (button == 1 || button == 0 && (onChevron || card.module instanceof ClickGuiModule)) open(card.module);
 				else if (button == 0) card.module.toggle();
 				return;
 			}
@@ -482,7 +465,7 @@ public class PanelGui extends ClickScreen {
 				}
 			}
 		} else if (within(mouseX, mouseY, contentLeft(), contentTop() - contentScroll, contentWidth(), HEADER)) {
-			if (button == 0 && toggleable(module)) module.toggle();
+			if (button == 0 && !(module instanceof ClickGuiModule)) module.toggle();
 		} else {
 			for (Component component : visibleOptions(module)) component.mouseClicked(mouseX, mouseY, button);
 		}
@@ -668,13 +651,8 @@ public class PanelGui extends ClickScreen {
 		return visibleOptions;
 	}
 
-	private String ellipsize(String text, int room) {
-		if (Draw.width(text, Draw.Weight.REGULAR) <= room) return text;
-		return Draw.trim(text, room - Draw.width("...", Draw.Weight.REGULAR), Draw.Weight.REGULAR).stripTrailing() + "...";
-	}
-
 	private boolean crumbHovered(int mouseX, int mouseY) {
-		return within(mouseX, mouseY, contentLeft(), y + 6, Draw.width(title(module.category)), TITLE - 12);
+		return within(mouseX, mouseY, contentLeft(), y + 6, Draw.width(module.category.title()), TITLE - 12);
 	}
 
 	private void clampPosition() {
@@ -692,12 +670,6 @@ public class PanelGui extends ClickScreen {
 	private void endScissor() {
 		Draw.flush();
 		GL11.glDisable(GL11.GL_SCISSOR_TEST);
-	}
-
-	private String keyLabel(Module entry, boolean hovered, boolean listening) {
-		if (listening) return "Press a key...";
-		if (entry.getBind() != Keyboard.KEY_NONE) return entry.bindName();
-		return hovered ? "None" : null;
 	}
 
 	private static float twoLineY(int top, int height) {

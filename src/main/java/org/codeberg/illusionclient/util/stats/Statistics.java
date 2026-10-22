@@ -18,16 +18,12 @@ public final class Statistics {
 	public long autoClicks;
 	public long bestCombo;
 
-	private static boolean tracked(Module module) {
-		return !(module instanceof ClickGuiModule);
-	}
-
 	public long playtime() {
 		return previousPlaytime + (System.nanoTime() - start) / 1_000_000L;
 	}
 
 	public void toggled(Module module) {
-		if (tracked(module)) toggles.mergeLong(module.key, 1, Long::sum);
+		if (!(module instanceof ClickGuiModule)) toggles.mergeLong(module.key, 1, Long::sum);
 	}
 
 	public Module mostToggled() {

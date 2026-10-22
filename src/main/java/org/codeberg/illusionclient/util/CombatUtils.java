@@ -12,6 +12,8 @@ import org.codeberg.illusionclient.feature.module.client.AntiBot;
 import org.codeberg.illusionclient.feature.module.client.Teams;
 
 public final class CombatUtils {
+	public static final byte HURT = 2;
+
 	public static boolean isTarget(Entity entity) {
 		if (!(entity instanceof PlayerEntity player)) return false;
 

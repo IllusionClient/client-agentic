@@ -45,7 +45,7 @@ public final class DocsGenerator {
 		for (Map.Entry<Category, List<Module>> entry : byCategory.entrySet()) {
 			Category category = entry.getKey();
 			List<Module> modules = entry.getValue();
-			String title = title(category);
+			String title = category.title();
 			String id = category.name().toLowerCase(Locale.ROOT);
 			icons.append(icon(id));
 			nav.append("<div class=\"group\">\n<a class=\"entry category\" href=\"#").append(id).append("\"><span class=\"icon\" style=\"--icon: var(--icon-").append(id).append(")\"></span>")
@@ -105,8 +105,7 @@ public final class DocsGenerator {
 
 	private static String description(Description description) {
 		if (description == null) return "";
-		String type = description.type().name().toLowerCase(Locale.ROOT);
-		return "<p class=\"" + type + "\">" + escape(description.value()) + "</p>";
+		return "<p>" + escape(description.value()) + "</p>";
 	}
 
 	private static String text(Description description) {
@@ -126,11 +125,6 @@ public final class DocsGenerator {
 		String name = "<strong>" + escape(required.name) + "</strong>";
 		if (requires.is().length == 0) return "Shown when " + name + " is on.";
 		return "Shown when " + name + " is " + list(requires.is()) + ".";
-	}
-
-	private static String title(Category category) {
-		String name = category.name().toLowerCase(Locale.ROOT);
-		return Character.toUpperCase(name.charAt(0)) + name.substring(1);
 	}
 
 	private static String escape(String text) {

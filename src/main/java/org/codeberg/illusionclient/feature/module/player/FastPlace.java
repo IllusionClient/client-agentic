@@ -45,18 +45,10 @@ public class FastPlace extends Module {
 	private BlockPos lockedPos;
 	private int heldTicks;
 	private float remainder;
-	private String details;
-	private float detailsCps;
-	private String detailsMode;
 
 	@Override
 	public String details() {
-		if (details == null || maximumCps != detailsCps || !mode.equals(detailsMode)) {
-			detailsCps = maximumCps;
-			detailsMode = mode;
-			details = mode + " " + number(maximumCps) + "cps";
-		}
-		return details;
+		return mode + " " + number(maximumCps) + "cps";
 	}
 
 	@Override

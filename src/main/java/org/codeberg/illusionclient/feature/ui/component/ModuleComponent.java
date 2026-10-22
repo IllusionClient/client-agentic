@@ -27,6 +27,17 @@ public class ModuleComponent extends Group {
 		return module.getBind() != Keyboard.KEY_NONE && !(module instanceof ClickGuiModule) && !KeybindComponent.listening(module) && (module.isHold() || hovered);
 	}
 
+	public static String keyLabel(Module module, boolean hovered, boolean listening) {
+		if (listening) return "Press a key...";
+		if (module.getBind() != Keyboard.KEY_NONE) return module.bindName();
+		return hovered ? "None" : null;
+	}
+
+	public static int fill(Module module, boolean hovered) {
+		if (module.isEnabled()) return hovered ? Draw.PRIMARY_CONTAINER_HOVER : Draw.PRIMARY_CONTAINER;
+		return hovered ? Draw.CONTAINER_HIGHEST : Draw.CONTAINER_HIGH;
+	}
+
 	public static int keyWidth(String label) {
 		return Draw.width(label) + 10;
 	}
@@ -68,34 +79,29 @@ public class ModuleComponent extends Group {
 		boolean hovered = hovered(mouseX, mouseY);
 		if (hovered) Tooltip.show(description);
 
-		boolean enabled = module.isEnabled();
-		int fill = enabled ? hovered ? Draw.PRIMARY_CONTAINER_HOVER : Draw.PRIMARY_CONTAINER : hovered ? Draw.CONTAINER_HIGHEST : Draw.CONTAINER_HIGH;
-		Draw.rounded(x, y, width, HEIGHT, RADIUS, headerRadius(), fill);
+		Draw.rounded(x, y, width, HEIGHT, RADIUS, headerRadius(), fill(module, hovered));
 
 		int textRight = right();
-		boolean bound = module.getBind() != Keyboard.KEY_NONE;
 		boolean listening = KeybindComponent.listening(module);
-		String key = listening ? "Press a key..." : bound ? module.bindName() : hovered ? "None" : null;
+		String key = keyLabel(module, hovered, listening);
 		keyLeft = keyRight = textRight;
 		if (key != null) {
-			keyLeft = keyRight - Draw.width(key) - 10;
+			keyLeft = keyRight - keyWidth(key);
 			boolean keyHovered = hovered && mouseX >= keyLeft && mouseX < keyRight;
-			drawKey(keyLeft, y + (HEIGHT - KEY_HEIGHT) / 2, key, listening, bound, keyHovered);
+			drawKey(keyLeft, y + (HEIGHT - KEY_HEIGHT) / 2, key, listening, module.getBind() != Keyboard.KEY_NONE, keyHovered);
 			textRight = keyLeft - 6;
 		}
 
 		holdLeft = holdRight = textRight;
 		if (showHold(module, hovered)) {
-			holdLeft = holdRight - Draw.width(HOLD) - 10;
+			holdLeft = holdRight - keyWidth(HOLD);
 			boolean holdHovered = hovered && mouseX >= holdLeft && mouseX < holdRight;
 			drawKey(holdLeft, y + (HEIGHT - KEY_HEIGHT) / 2, HOLD, false, module.isHold(), holdHovered);
 			textRight = holdLeft - 6;
 		}
 
-		String name = module.name;
-		int room = textRight - x - PADDING;
-		if (Draw.width(name) > room) name = Draw.trim(name, room - Draw.width("...")).stripTrailing() + "...";
-		Draw.text(name, x + PADDING, Draw.textY(y, HEIGHT), enabled ? Draw.ON_PRIMARY_CONTAINER : Draw.TEXT);
+		String name = Draw.ellipsize(module.name, textRight - x - PADDING, Draw.Weight.MEDIUM);
+		Draw.text(name, x + PADDING, Draw.textY(y, HEIGHT), module.isEnabled() ? Draw.ON_PRIMARY_CONTAINER : Draw.TEXT);
 	}
 
 	@Override

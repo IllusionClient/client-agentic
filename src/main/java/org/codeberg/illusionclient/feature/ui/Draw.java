@@ -9,7 +9,6 @@ import net.minecraft.client.render.vertex.BufferUploader;
 import net.minecraft.client.render.vertex.DefaultVertexFormat;
 import net.minecraft.resource.Identifier;
 import org.codeberg.illusionclient.IllusionClient;
-import org.codeberg.illusionclient.feature.module.api.Description;
 import org.codeberg.illusionclient.feature.module.client.ClickGuiModule;
 import org.lwjgl.opengl.GL11;
 
@@ -101,10 +100,6 @@ public final class Draw {
 		TEXT = Tones.of(hue, neutral, 90, 0xFF);
 		MUTED = Tones.of(hue, variant, 80, 0xFF);
 		FAINT = Tones.of(hue, variant, 60, 0xFF);
-	}
-
-	public static int color(Description.Type type) {
-		return type == Description.Type.INFO ? MUTED : type.color;
 	}
 
 	public static void flush() {
@@ -384,6 +379,11 @@ public final class Draw {
 
 	public static String trim(String text, int width, Weight weight) {
 		return font().trim(text, width, weight);
+	}
+
+	public static String ellipsize(String text, int width, Weight weight) {
+		if (width(text, weight) <= width) return text;
+		return trim(text, width - width("...", weight), weight).stripTrailing() + "...";
 	}
 
 	public static List<String> split(String text, int width, Weight weight) {

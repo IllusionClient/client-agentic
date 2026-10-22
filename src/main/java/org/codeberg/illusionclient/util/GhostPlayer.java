@@ -20,13 +20,12 @@ import net.minecraft.scoreboard.team.AbstractTeam;
 import org.codeberg.illusionclient.mixin.RemoteClientPlayerEntityAccessor;
 
 public final class GhostPlayer extends RemoteClientPlayerEntity {
-	private static final double POSITION_SCALE = 32.0D;
+	public static final double POSITION_SCALE = 32.0D;
 	private static final float ANGLE_SCALE = 360.0F / 256.0F;
 	private static final int LERP_STEPS = 3;
 	private static final double TELEPORT_TOLERANCE = 0.03125D;
 	private static final double TELEPORT_TOLERANCE_Y = 0.015625D;
 	private static final int EQUIPMENT_SLOTS = 5;
-	private static final int HURT_EVENT = 2;
 	private final PlayerEntity player;
 
 	public GhostPlayer(PlayerEntity player) {
@@ -107,7 +106,7 @@ public final class GhostPlayer extends RemoteClientPlayerEntity {
 			if (animation.getAction() == 0) swingArm();
 			else if (animation.getAction() == 1) animateDamage();
 		} else if (packet instanceof EntityEventS2CPacket event && event.getEntity(world) == player) {
-			if (event.getEvent() == HURT_EVENT) {
+			if (event.getEvent() == CombatUtils.HURT) {
 				walkAnimationSpeed = 1.5F;
 				damagedTimer = damagedTime = 10;
 				damagedSwingDir = 0.0F;

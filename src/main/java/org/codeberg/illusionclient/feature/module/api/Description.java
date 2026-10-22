@@ -9,17 +9,4 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Description {
 	String value();
-
-	Type type() default Type.INFO;
-
-	enum Type {
-		INFO(0xFFAAAAAA),
-		WARNING(0xFFFFC107);
-
-		public final int color;
-
-		Type(int color) {
-			this.color = color;
-		}
-	}
 }

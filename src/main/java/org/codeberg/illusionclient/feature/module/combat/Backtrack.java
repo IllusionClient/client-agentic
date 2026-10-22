@@ -27,8 +27,6 @@ import org.codeberg.illusionclient.util.lag.LagManager;
 @ModuleInfo(name = "Backtrack", category = Category.COMBAT)
 @Description("Lags players leaving your range for extra hits.")
 public class Backtrack extends Module {
-	private static final int MILLIS_PER_TICK = 50;
-	private static final double POSITION_SCALE = 32.0D;
 	private static final int GHOST_LINGER_TICKS = 4;
 	private final Minecraft minecraft = Minecraft.getInstance();
 	private final LagManager.Lag lag = IllusionClient.LAG.create();
@@ -145,7 +143,7 @@ public class Backtrack extends Module {
 
 	private boolean shouldLag(PlayerEntity player) {
 		if (player == null || !player.isAlive() || !CombatUtils.isTarget(player)) return false;
-		if (player.damagedTimer * MILLIS_PER_TICK > maximumHurtTime) return false;
+		if (player.damagedTimer * MS_PER_TICK > maximumHurtTime) return false;
 
 		double distance = CombatUtils.distanceTo(player);
 		if (distance < targetDistance[0] || distance > targetDistance[1]) return false;
@@ -155,8 +153,8 @@ public class Backtrack extends Module {
 	private double serverDistanceTo(PlayerEntity player) {
 		Entity server = player == target && ghost != null ? ghost : player;
 		return CombatUtils.distanceTo(player.getShape().moved(
-			server.lastKnownX / POSITION_SCALE - player.x,
-			server.lastKnownY / POSITION_SCALE - player.y,
-			server.lastKnownZ / POSITION_SCALE - player.z));
+			server.lastKnownX / GhostPlayer.POSITION_SCALE - player.x,
+			server.lastKnownY / GhostPlayer.POSITION_SCALE - player.y,
+			server.lastKnownZ / GhostPlayer.POSITION_SCALE - player.z));
 	}
 }

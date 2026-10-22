@@ -27,6 +27,7 @@ import org.codeberg.illusionclient.feature.module.api.ModuleInfo;
 import org.codeberg.illusionclient.feature.ui.Draw;
 import org.codeberg.illusionclient.util.BlockUtils;
 import org.codeberg.illusionclient.util.bed.Bed;
+import org.codeberg.illusionclient.util.render.EspRenderer;
 
 import org.lwjgl.opengl.GL11;
 
@@ -39,7 +40,6 @@ import java.util.WeakHashMap;
 @Description("Shows the blocks defending each bed.")
 @ModuleInfo(name = "Bed Plates", category = Category.VISUAL)
 public class Bedplates extends Module {
-	private static final int OUTLINE = 0x96000000;
 	private static final ItemStack[] NONE = new ItemStack[0];
 	private static final int ICON = 16;
 	private static final int GAP = 2;
@@ -100,15 +100,7 @@ public class Bedplates extends Module {
 			float x = (float) ((bed.x + bed.footX) / 2.0D + 0.5D - dispatcher.cameraX);
 			float y = (float) (bed.y + 1.0D - dispatcher.cameraY);
 			float z = (float) ((bed.z + bed.footZ) / 2.0D + 0.5D - dispatcher.cameraZ);
-
-			float w = clip[3] * x + clip[7] * y + clip[11] * z + clip[15];
-			if (w <= 0.0F) continue;
-			float depth = (clip[2] * x + clip[6] * y + clip[10] * z + clip[14]) / w;
-			if (depth < -1.0F || depth >= 1.0F) continue;
-
-			plate.screenX = ((clip[0] * x + clip[4] * y + clip[8] * z + clip[12]) / w + 1.0F) * minecraft.width / 2.0F;
-			plate.screenY = (1.0F - (clip[1] * x + clip[5] * y + clip[9] * z + clip[13]) / w) * minecraft.height / 2.0F;
-			visible.add(plate);
+			if (EspRenderer.project(clip, x, y, z, minecraft.width / 2.0F, minecraft.height / 2.0F, plate.screen)) visible.add(plate);
 		}
 	}
 
@@ -120,9 +112,9 @@ public class Bedplates extends Module {
 		int plateHeight = ICON + PAD * 2;
 		for (Plate plate : visible) {
 			int width = plate.blocks.length * (ICON + GAP) - GAP + PAD * 2;
-			int x = plate.plateX = Math.round(plate.screenX / scale) - width / 2;
-			int y = plate.plateY = Math.round(plate.screenY / scale) - plateHeight;
-			int border = plate.exposed ? exposedColor.getRGB() : OUTLINE;
+			int x = plate.plateX = Math.round(plate.screen[0] / scale) - width / 2;
+			int y = plate.plateY = Math.round(plate.screen[1] / scale) - plateHeight;
+			int border = plate.exposed ? exposedColor.getRGB() : EspRenderer.OUTLINE;
 
 			Draw.rounded(x, y, width, plateHeight, cornerRadius, Draw.HUD_BACKGROUND);
 			Draw.roundedOutline(x, y, width, plateHeight, cornerRadius, 1.0F, border);
@@ -177,7 +169,7 @@ public class Bedplates extends Module {
 		ItemStack[] blocks = NONE;
 		boolean exposed;
 		int revision;
-		float screenX, screenY;
+		final float[] screen = new float[2];
 		int plateX, plateY;
 	}
 

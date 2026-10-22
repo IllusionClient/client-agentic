@@ -32,7 +32,6 @@ import java.util.Random;
 public class BridgeAssist extends Module {
 	private static final float LOOKING_DOWN_PITCH = 45.0F;
 	private static final double DIAGONAL_RATIO = Math.sin(Math.toRadians(22.5D));
-	private static final float MS_PER_TICK = 50.0F;
 	private static final float BRIDGE_ANGLE = 45.0F;
 	private static final float BRIDGE_ANGLE_TOLERANCE = 7.5F;
 	private static final float DIAGONAL_TOLERANCE = 10.0F;
@@ -125,8 +124,6 @@ public class BridgeAssist extends Module {
 	private int unsneakTicks;
 	private float jitter;
 	private int blockSlot = -1;
-	private String details;
-	private float detailsDelay;
 	private boolean tracking;
 	private float lastYaw;
 	private float lastPitch;
@@ -139,11 +136,7 @@ public class BridgeAssist extends Module {
 
 	@Override
 	public String details() {
-		if (details == null || unsneakDelay != detailsDelay) {
-			detailsDelay = unsneakDelay;
-			details = number(unsneakDelay) + "ms";
-		}
-		return details;
+		return number(unsneakDelay) + "ms";
 	}
 
 	@Override
@@ -330,14 +323,9 @@ public class BridgeAssist extends Module {
 	}
 
 	private boolean overEdge(LocalClientPlayerEntity player) {
-		double[] move = move(player);
-		return unsupported(player, move[0], move[1]);
-	}
-
-	private static double[] move(LocalClientPlayerEntity player) {
 		InputState input = IllusionClient.INPUT.client;
 		double[] acceleration = acceleration(player, input.forwardAxis(), input.sidewaysAxis(), false);
-		return new double[]{player.velocityX + acceleration[0], player.velocityZ + acceleration[1]};
+		return unsupported(player, player.velocityX + acceleration[0], 0.0D, player.velocityZ + acceleration[1]);
 	}
 
 	private static double[] acceleration(LocalClientPlayerEntity player, float forward, float sideways, boolean sneak) {
@@ -361,10 +349,6 @@ public class BridgeAssist extends Module {
 			velocityY = (velocityY - GRAVITY) * VERTICAL_DRAG;
 		}
 		return unsupported(player, x, groundY - player.y, z);
-	}
-
-	private boolean unsupported(LocalClientPlayerEntity player, double x, double z) {
-		return unsupported(player, x, 0.0D, z);
 	}
 
 	private boolean unsupported(LocalClientPlayerEntity player, double x, double y, double z) {

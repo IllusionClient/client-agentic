@@ -10,9 +10,9 @@ import org.codeberg.illusionclient.IllusionClient;
 import org.codeberg.illusionclient.event.PacketReceiveEvent;
 import org.codeberg.illusionclient.event.PacketSendEvent;
 import org.codeberg.illusionclient.event.PlayerTickEvent;
+import org.codeberg.illusionclient.util.CombatUtils;
 
 public final class CombatManager {
-	private static final byte HURT = 2;
 	private static final byte DEATH = 3;
 	private static final int HIT_WINDOW = 10;
 
@@ -23,10 +23,6 @@ public final class CombatManager {
 
 	public CombatManager() {
 		IllusionClient.BUS.subscribe(this);
-	}
-
-	public Entity target() {
-		return target;
 	}
 
 	public int combo() {
@@ -54,9 +50,9 @@ public final class CombatManager {
 		if (entity == null) return;
 
 		if (entity == minecraft.player) {
-			if (packet.getEvent() == HURT || packet.getEvent() == DEATH) combo = 0;
+			if (packet.getEvent() == CombatUtils.HURT || packet.getEvent() == DEATH) combo = 0;
 		} else if (entity == target) {
-			if (packet.getEvent() == HURT && sinceAttack <= HIT_WINDOW) combo++;
+			if (packet.getEvent() == CombatUtils.HURT && sinceAttack <= HIT_WINDOW) combo++;
 			else if (packet.getEvent() == DEATH) reset();
 		}
 	}

@@ -14,7 +14,6 @@ import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.function.Predicate;
 
 public final class LagManager {
 	private final Minecraft minecraft = Minecraft.getInstance();
@@ -27,19 +26,11 @@ public final class LagManager {
 	}
 
 	public Lag create() {
-		return create(packet -> true);
-	}
-
-	public Lag create(Predicate<Packet<?>> filter) {
-		return add(new Lag(filter, false));
+		return add(new Lag(false));
 	}
 
 	public Lag createOutbound() {
-		return createOutbound(packet -> true);
-	}
-
-	public Lag createOutbound(Predicate<Packet<?>> filter) {
-		return add(new Lag(filter, true));
+		return add(new Lag(true));
 	}
 
 	private Lag add(Lag lag) {
@@ -56,7 +47,7 @@ public final class LagManager {
 
 	@Listen
 	public void onPacketReceive(PacketReceiveEvent event) {
-		if (inbound.isEmpty() && !wanted(event.packet(), false)) return;
+		if (inbound.isEmpty() && !wanted(false)) return;
 
 		Packet<PacketHandler> packet = event.packet();
 		PacketHandler listener = event.listener();
@@ -66,7 +57,7 @@ public final class LagManager {
 
 	@Listen
 	public void onPacketSend(PacketSendEvent event) {
-		if (outbound.isEmpty() && !wanted(event.packet(), true)) return;
+		if (outbound.isEmpty() && !wanted(true)) return;
 
 		event.cancelled = true;
 		outbound.add(new Held(event.packet(), true, () -> event.connection().send(event.packet()), System.currentTimeMillis()));
@@ -77,16 +68,16 @@ public final class LagManager {
 		flush();
 	}
 
-	private boolean wanted(Packet<?> packet, boolean outbound) {
+	private boolean wanted(boolean outbound) {
 		for (Lag lag : lags) {
-			if (lag.active && lag.outbound == outbound && lag.filter.test(packet)) return true;
+			if (lag.active && lag.outbound == outbound) return true;
 		}
 		return false;
 	}
 
 	private boolean holds(Held held, long now) {
 		for (Lag lag : lags) {
-			if (lag.active && lag.outbound == held.outbound && now - held.time < lag.delay && lag.filter.test(held.packet)) return true;
+			if (lag.active && lag.outbound == held.outbound && now - held.time < lag.delay) return true;
 		}
 		return false;
 	}
@@ -118,19 +109,13 @@ public final class LagManager {
 	}
 
 	public final class Lag {
-		private final Predicate<Packet<?>> filter;
 		private final boolean outbound;
 		private volatile boolean active;
 		private volatile boolean holdKeepAlives = true;
 		private long delay;
 
-		private Lag(Predicate<Packet<?>> filter, boolean outbound) {
-			this.filter = filter;
+		private Lag(boolean outbound) {
 			this.outbound = outbound;
-		}
-
-		public boolean isActive() {
-			return active;
 		}
 
 		public void holdKeepAlives(boolean hold) {

@@ -23,7 +23,6 @@ import org.codeberg.illusionclient.feature.module.api.ModuleInfo;
 @ModuleInfo(name = "Auto Tool", category = Category.PLAYER)
 @Description("Switches to the best tool when you mine a block.")
 public class AutoTool extends Module {
-	private static final float MS_PER_TICK = 50.0F;
 	private static final float HAND_SPEED = 1.0F;
 	private final Minecraft minecraft = Minecraft.getInstance();
 

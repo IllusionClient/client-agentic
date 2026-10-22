@@ -45,7 +45,7 @@ public final class Tooltip {
 
 		Draw.rounded(x, y, width, height, 4.0F, Draw.TOOLTIP_INK);
 		for (int i = 0; i < lines.size(); i++) {
-			Draw.text(lines.get(i), x + PADDING, y + PADDING + i * Draw.lineHeight(), Draw.color(description.type()), Draw.Weight.REGULAR);
+			Draw.text(lines.get(i), x + PADDING, y + PADDING + i * Draw.lineHeight(), Draw.MUTED, Draw.Weight.REGULAR);
 		}
 	}
 }
