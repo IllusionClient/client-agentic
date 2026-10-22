@@ -27,6 +27,7 @@ import org.codeberg.illusionclient.feature.module.movement.NoJumpDelay;
 import org.codeberg.illusionclient.feature.module.movement.Sprint;
 import org.codeberg.illusionclient.feature.module.movement.Timer;
 import org.codeberg.illusionclient.feature.module.player.AutoTool;
+import org.codeberg.illusionclient.feature.module.player.Blink;
 import org.codeberg.illusionclient.feature.module.player.BridgeAssist;
 import org.codeberg.illusionclient.feature.module.player.FastPlace;
 import org.codeberg.illusionclient.feature.module.visual.AntiDebuff;
@@ -69,6 +70,7 @@ public final class ModuleManager {
 			new Sprint(),
 			new Timer(),
 			new AutoTool(),
+			new Blink(),
 			new BridgeAssist(),
 			new FastPlace(),
 			new AntiDebuff(),
