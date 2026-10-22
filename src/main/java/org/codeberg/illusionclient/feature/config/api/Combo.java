@@ -10,5 +10,7 @@ import java.lang.annotation.Target;
 public @interface Combo {
 	String value();
 
-	String[] options();
+	String[] options() default {};
+
+	String source() default "";
 }

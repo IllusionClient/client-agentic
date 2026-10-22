@@ -5,6 +5,9 @@ import org.codeberg.illusionclient.feature.module.api.Description;
 import java.awt.*;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.List;
 
 public final class Option {
@@ -14,8 +17,8 @@ public final class Option {
 	public final Description description;
 	private final Object owner;
 	private final Field field;
-	private Option required;
-	private List<String> requiredValues;
+	private final Method source;
+	private final List<Requirement> requirements = new ArrayList<>();
 
 	private Option(Object owner, Field field, Annotation info, String name, Class<?> type) {
 		if (field.getType() != type) {
@@ -30,7 +33,18 @@ public final class Option {
 		this.description = field.getAnnotation(Description.class);
 		this.owner = owner;
 		this.field = field;
+		this.source = info instanceof Combo combo && !combo.source().isEmpty() ? source(owner, combo.source()) : null;
 		field.setAccessible(true);
+	}
+
+	private static Method source(Object owner, String name) {
+		try {
+			Method method = owner.getClass().getMethod(name);
+			if (method.getReturnType() != String[].class) throw new IllegalStateException(name + " must return String[]");
+			return method;
+		} catch (NoSuchMethodException e) {
+			throw new IllegalStateException("@Combo source " + owner.getClass().getName() + "." + name + "() not found", e);
+		}
 	}
 
 	public static Option of(Object owner, Field field) {
@@ -53,27 +67,38 @@ public final class Option {
 	}
 
 	public void link(List<Option> earlier) {
-		Requires requires = field.getAnnotation(Requires.class);
-		if (requires == null) return;
+		for (Requires requires : field.getAnnotationsByType(Requires.class)) {
+			List<String> values = List.of(requires.is());
+			Option required = null;
+			for (Option option : earlier) {
+				if (option.key.equals(requires.value())) required = option;
+			}
 
-		requiredValues = List.of(requires.is());
-		for (Option option : earlier) {
-			if (option.key.equals(requires.value())) required = option;
-		}
-
-		boolean valid = required != null && (requiredValues.isEmpty()
-			? required.info instanceof Check
-			: required.info instanceof Combo combo && List.of(combo.options()).containsAll(requiredValues));
-		if (!valid) {
-			throw new IllegalStateException("@Requires on " + field.getDeclaringClass().getName() + "." + field.getName()
-				+ " needs " + requires.value() + " to be an earlier @Check, or an earlier @Combo offering " + requiredValues);
+			boolean valid = required != null && (values.isEmpty()
+				? required.info instanceof Check
+				: required.info instanceof Combo combo && List.of(combo.options()).containsAll(values));
+			if (!valid) {
+				throw new IllegalStateException("@Requires on " + field.getDeclaringClass().getName() + "." + field.getName()
+					+ " needs " + requires.value() + " to be an earlier @Check, or an earlier @Combo offering " + values);
+			}
+			requirements.add(new Requirement(required, values));
 		}
 	}
 
 	public boolean visible() {
-		if (required == null) return true;
-		if (!required.visible()) return false;
-		return requiredValues.isEmpty() ? required.getBoolean() : requiredValues.contains(required.<String>get());
+		for (Requirement requirement : requirements) {
+			if (!requirement.met()) return false;
+		}
+		return true;
+	}
+
+	public String[] choices() {
+		if (source == null) return ((Combo) info).options();
+		try {
+			return (String[]) source.invoke(owner);
+		} catch (IllegalAccessException | InvocationTargetException e) {
+			throw new IllegalStateException(e);
+		}
 	}
 
 	@SuppressWarnings("unchecked")
@@ -106,6 +131,13 @@ public final class Option {
 			field.set(owner, value);
 		} catch (IllegalAccessException e) {
 			throw new IllegalStateException(e);
+		}
+	}
+
+	private record Requirement(Option option, List<String> values) {
+		private boolean met() {
+			if (!option.visible()) return false;
+			return values.isEmpty() ? option.getBoolean() : values.contains(option.<String>get());
 		}
 	}
 }

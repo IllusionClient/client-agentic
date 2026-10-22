@@ -175,7 +175,7 @@ public final class ConfigManager {
 		}
 
 		String choice = value.getAsString();
-		if (!Arrays.asList(((Combo) option.info).options()).contains(choice)) {
+		if (!Arrays.asList(option.choices()).contains(choice)) {
 			throw new IllegalArgumentException("unknown option " + choice);
 		}
 		return choice;

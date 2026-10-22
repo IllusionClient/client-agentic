@@ -31,6 +31,9 @@ public final class ClickPattern {
 	private float lastYaw;
 	private float lastPitch;
 	private float activity;
+	private ClickProfile profile;
+	private int streak;
+	private int position;
 
 	public void tick(float yaw, float pitch) {
 		float turned = (float) Math.hypot(MathHelper.wrapDegrees(yaw - lastYaw), pitch - lastPitch);
@@ -43,7 +46,9 @@ public final class ClickPattern {
 		clicking = false;
 	}
 
-	public int advance(float delta, float cps, boolean randomize, boolean simulateExhaust, boolean butterfly) {
+	public int advance(float delta, ClickProfile profile, float cps, boolean randomize, boolean simulateExhaust, boolean butterfly) {
+		if (this.profile != profile) clicking = false;
+		this.profile = profile;
 		this.cps = cps;
 		this.randomize = randomize;
 		this.simulateExhaust = simulateExhaust;
@@ -54,7 +59,8 @@ public final class ClickPattern {
 			burstLeft = 0;
 			exhaustClicks = 0;
 			lifted = false;
-			wait = split(interval());
+			streak = -1;
+			wait = next();
 		}
 
 		int edges = 0;
@@ -71,7 +77,26 @@ public final class ClickPattern {
 		lifted = !lifted;
 		if (lifted) return lift;
 		presses++;
-		return split(interval());
+		return next();
+	}
+
+	private float next() {
+		return profile != null ? replay() : split(interval());
+	}
+
+	private float replay() {
+		if (streak < 0) {
+			streak = random.nextInt(profile.streaks.size());
+			position = random.nextInt(profile.streaks.get(streak).length / 2) * 2;
+		} else if (position >= profile.streaks.get(streak).length) {
+			streak = (streak + 1) % profile.streaks.size();
+			position = 0;
+		}
+
+		float[] clicks = profile.streaks.get(streak);
+		lift = clicks[position + 1];
+		position += 2;
+		return clicks[position - 2];
 	}
 
 	private float split(float ms) {
