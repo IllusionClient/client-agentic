@@ -25,6 +25,7 @@ import org.codeberg.illusionclient.feature.module.combat.Weapons;
 import org.codeberg.illusionclient.feature.module.movement.NullMove;
 import org.codeberg.illusionclient.feature.module.movement.NoJumpDelay;
 import org.codeberg.illusionclient.feature.module.movement.Sprint;
+import org.codeberg.illusionclient.feature.module.movement.Timer;
 import org.codeberg.illusionclient.feature.module.player.AutoTool;
 import org.codeberg.illusionclient.feature.module.player.BridgeAssist;
 import org.codeberg.illusionclient.feature.module.player.FastPlace;
@@ -66,6 +67,7 @@ public final class ModuleManager {
 			new NoJumpDelay(),
 			new NullMove(),
 			new Sprint(),
+			new Timer(),
 			new AutoTool(),
 			new BridgeAssist(),
 			new FastPlace(),

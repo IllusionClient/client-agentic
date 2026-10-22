@@ -34,7 +34,8 @@ public class SliderComponent extends OptionComponent {
 
 		if (dragging) {
 			float progress = Math.clamp((mouseX - left()) / (float) width, 0.0F, 1.0F);
-			option.set(Math.round((min + progress * (max - min)) * 10.0F) / 10.0F);
+			float inverse = 1.0F / slider.step();
+			option.set(Math.round((min + progress * (max - min)) * inverse) / inverse);
 		}
 
 		float value = option.getFloat();

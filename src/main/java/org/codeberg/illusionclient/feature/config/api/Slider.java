@@ -13,4 +13,6 @@ public @interface Slider {
 	float min();
 
 	float max();
+
+	float step() default 0.1F;
 }

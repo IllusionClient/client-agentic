@@ -43,7 +43,7 @@ public class BridgeAssist extends Module {
 	private final Random random = new Random();
 
 	@Description("How far past the edge before sneaking.")
-	@Slider(value = "Edge Offset", min = 0.0F, max = 0.3F)
+	@Slider(value = "Edge Offset", min = 0.0F, max = 0.3F, step = 0.01F)
 	public float edgeOffset = 0.2F;
 
 	@Description("Sneak time after you're back on the block.")

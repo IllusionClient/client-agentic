@@ -17,11 +17,15 @@ public class TickTimerMixin {
 	@Shadow
 	public float partialTick;
 
+	@Shadow
+	public float tpsScale;
+
 	@Inject(method = "advance", at = @At("TAIL"))
 	private void illusion$advance(CallbackInfo ci) {
 		TimerEvent event = TimerEvent.of(ticksThisFrame, partialTick);
 		IllusionClient.BUS.publish(event);
 		ticksThisFrame = event.ticks;
 		partialTick = event.partialTick;
+		tpsScale = event.speed;
 	}
 }
