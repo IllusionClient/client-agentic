@@ -9,6 +9,7 @@ import org.codeberg.illusionclient.feature.module.ModuleManager;
 import org.codeberg.illusionclient.util.bed.BedManager;
 import org.codeberg.illusionclient.util.combat.CombatManager;
 import org.codeberg.illusionclient.util.input.InputManager;
+import org.codeberg.illusionclient.util.inventory.InventoryManager;
 import org.codeberg.illusionclient.util.lag.LagManager;
 import org.codeberg.illusionclient.util.stats.Statistics;
 
@@ -25,6 +26,7 @@ public final class IllusionClient {
 	public static LagManager LAG;
 	public static CombatManager COMBAT;
 	public static BedManager BEDS;
+	public static InventoryManager INVENTORY;
 	public static Statistics STATS;
 
 	public static void init() {
@@ -33,6 +35,7 @@ public final class IllusionClient {
 		LAG = new LagManager();
 		COMBAT = new CombatManager();
 		BEDS = new BedManager();
+		INVENTORY = new InventoryManager();
 		MODULES = new ModuleManager();
 		CONFIG = new ConfigManager();
 
