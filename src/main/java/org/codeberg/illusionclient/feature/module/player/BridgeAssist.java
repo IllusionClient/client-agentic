@@ -6,6 +6,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.living.player.LocalClientPlayerEntity;
 import net.minecraft.entity.living.player.PlayerInventory;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.HitResult;
@@ -22,8 +23,8 @@ import org.codeberg.illusionclient.feature.module.api.Description;
 import org.codeberg.illusionclient.feature.module.api.Module;
 import org.codeberg.illusionclient.feature.module.api.ModuleInfo;
 import org.codeberg.illusionclient.util.ItemUtils;
-import org.codeberg.illusionclient.util.MoveUtils;
 import org.codeberg.illusionclient.util.NoiseUtils;
+import org.codeberg.illusionclient.util.SimulatedPlayer;
 import org.codeberg.illusionclient.util.input.InputState;
 
 import java.util.Random;
@@ -31,8 +32,6 @@ import java.util.Random;
 @ModuleInfo(name = "Bridge Assist", category = Category.PLAYER)
 @Description("Sneaks for you at block edges.")
 public class BridgeAssist extends Module {
-	private static final double FEET_DEPTH = 0.01D;
-	private static final float INPUT_SCALE = 0.98F;
 	private static final float LOOKING_DOWN_PITCH = 65.0F;
 	private static final int HOLD_GRACE_TICKS = 2;
 	private static final int PLACEMENT_TICKS = 20;
@@ -194,21 +193,16 @@ public class BridgeAssist extends Module {
 
 	private boolean edgeAhead(LocalClientPlayerEntity player) {
 		InputState input = IllusionClient.INPUT.client;
-		float forward = input.forwardAxis() * INPUT_SCALE;
-		float sideways = input.sidewaysAxis() * INPUT_SCALE;
-		double speed = (player.onGround ? player.getSpeed() : player.speedInAir) / Math.max(1.0D, Math.hypot(forward, sideways));
-		double[] direction = MoveUtils.inputDirection(player.yaw, forward, sideways);
-		double x = player.x + player.velocityX + direction[0] * speed;
-		double z = player.z + player.velocityZ + direction[1] * speed;
-		int y = (int) Math.floor(player.y - FEET_DEPTH);
+		SimulatedPlayer simulated = SimulatedPlayer.of(player);
+		simulated.forward = input.forwardAxis();
+		simulated.sideways = input.sidewaysAxis();
+		simulated.jumping = input.jump;
+		simulated.sneaking = false;
+		simulated.tick();
 
-		float offset = edgeOffset();
-		for (int blockX = (int) Math.floor(x - offset); blockX <= (int) Math.floor(x + offset); blockX++) {
-			for (int blockZ = (int) Math.floor(z - offset); blockZ <= (int) Math.floor(z + offset); blockZ++) {
-				if (!minecraft.world.isAir(new BlockPos(blockX, y, blockZ))) return false;
-			}
-		}
-		return true;
+		double inset = player.width / 2.0F - edgeOffset();
+		Box feet = simulated.shape.contract(inset, 0.0D, inset).moved(0.0D, -1.0D, 0.0D);
+		return minecraft.world.getCollisions(player, feet).isEmpty();
 	}
 
 	private float edgeOffset() {
