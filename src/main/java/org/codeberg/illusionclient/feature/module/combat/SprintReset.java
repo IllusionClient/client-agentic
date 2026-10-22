@@ -37,10 +37,16 @@ public class SprintReset extends Module {
 	private static final int TRADE_TICKS = 10;
 	private static final int EQUAL_TRADE_TICKS = 2;
 	private static final int SPRINT_UP_TICKS = 2;
-	private static final int MAX_S_TAP_TICKS = 5;
+	private static final int MIN_STRAFE_TICKS = 5;
+	private static final int MAX_STRAFE_TICKS = 12;
+	private static final int STRAFE_TICKS = 20;
 	private static final int MAX_ZEST_TICKS = 15;
 	private static final int ZEST_SEQUENCE = 3;
 	private static final double SAFE_DISTANCE = 3.2D;
+	private static final double MIN_S_TAP_DISTANCE = 2.8D;
+	private static final double MAX_S_TAP_DISTANCE = 3.0D;
+	private static final double STRAFE_PROBE = 0.5D;
+	private static final double MAX_DROP = 2.0D;
 	private static final double TRAP_DISTANCE = 1.0D;
 	private static final double MOVING_SPEED = 0.03D;
 	private static final double FACING_COS = 0.5D;
@@ -50,7 +56,7 @@ public class SprintReset extends Module {
 	private final Minecraft minecraft = Minecraft.getInstance();
 	private final Random random = new Random();
 
-	@Description("W-Tap lets go of forward, S-Tap presses back, Sneak sneaks, No Stop only drops sprint, Dynamic picks for you.")
+	@Description("W-Tap lets go of forward, S-Tap holds forward and back together, Sneak sneaks, No Stop only drops sprint, Dynamic picks for you.")
 	@Combo(value = "Mode", options = {"W-Tap", "S-Tap", "Sneak", "No Stop", "Dynamic"})
 	public String mode = "W-Tap";
 
@@ -68,6 +74,11 @@ public class SprintReset extends Module {
 	@Requires(value = "mode", is = "Dynamic")
 	@Check("Zest Tap")
 	public boolean zestTap = false;
+
+	@Description("Strafes randomly left and right while zest tapping, avoiding walls and drops.")
+	@Requires("zestTap")
+	@Check("Zest Tap Strafe")
+	public boolean zestTapStrafe = false;
 
 	@Description("Varies the delay and duration.")
 	@Check("Randomize")
@@ -98,6 +109,8 @@ public class SprintReset extends Module {
 	private int zestHits;
 	private float crouching;
 	private float approaching;
+	private int strafe;
+	private int strafeTicks;
 
 	@Override
 	public String details() {
@@ -172,16 +185,20 @@ public class SprintReset extends Module {
 	public void onInput(InputEvent event) {
 		ticks++;
 		LocalClientPlayerEntity player = minecraft.player;
-		boolean resetting = player != null && minecraft.screen == null && active();
+		boolean playing = player != null && minecraft.screen == null;
+		boolean resetting = playing && active();
 		MoveUtils.setSprintBlocked(resetting);
-		if (!resetting) return;
-
 		InputState client = IllusionClient.INPUT.client;
+		if (!resetting) {
+			if (playing) strafe(player, client);
+			return;
+		}
+
 		switch (tap) {
 			case FORWARD -> client.forward = false;
 			case BACK -> {
-				client.forward = false;
 				client.back = true;
+				if (target != null && CombatUtils.distanceTo(target) < spacing) client.forward = false;
 			}
 			case SNEAK -> client.sneak = true;
 		}
@@ -207,7 +224,7 @@ public class SprintReset extends Module {
 		double distance = target == null ? Double.MAX_VALUE : CombatUtils.distanceTo(target);
 		boolean opening = distance < spacing && distance >= gap;
 		gap = distance;
-		if (ticks < minEnd || ticks < maxEnd && opening) return true;
+		if (ticks < minEnd || ticks < maxEnd && (opening || tap == Tap.BACK)) return true;
 
 		tap = null;
 		return false;
@@ -240,7 +257,8 @@ public class SprintReset extends Module {
 		if (!player.isSprinting()) {
 			tap = null;
 		} else if (trapped(player)) {
-			plan(Tap.BACK, 0, 1, MAX_S_TAP_TICKS, SAFE_DISTANCE);
+			double spacing = randomize ? MIN_S_TAP_DISTANCE + random.nextDouble() * (MAX_S_TAP_DISTANCE - MIN_S_TAP_DISTANCE) : MAX_S_TAP_DISTANCE;
+			plan(Tap.BACK, 0, 0, HITTABLE_TICKS - SPRINT_UP_TICKS, spacing);
 		} else if (hitTick - hurtTick <= EQUAL_TRADE_TICKS) {
 			planDefensive();
 		} else {
@@ -266,6 +284,26 @@ public class SprintReset extends Module {
 
 	private int jitter(int ticks) {
 		return randomize ? Math.max(0, ticks + random.nextInt(3) - 1) : ticks;
+	}
+
+	private void strafe(LocalClientPlayerEntity player, InputState client) {
+		if (!mode.equals("Dynamic") || !zestTap || !zestTapStrafe || zestHits == 0 || target == null || ticks - hitTick > STRAFE_TICKS) return;
+		if (!client.forward || client.back || client.left || client.right) return;
+
+		if (--strafeTicks <= 0 || strafe != 0 && !clear(player, strafe)) {
+			strafe = random.nextBoolean() ? 1 : -1;
+			if (!clear(player, strafe)) strafe = clear(player, -strafe) ? -strafe : 0;
+			strafeTicks = MIN_STRAFE_TICKS + random.nextInt(MAX_STRAFE_TICKS - MIN_STRAFE_TICKS + 1);
+		}
+		client.left = strafe > 0;
+		client.right = strafe < 0;
+	}
+
+	private boolean clear(LocalClientPlayerEntity player, int side) {
+		double[] direction = MoveUtils.inputDirection(player.yaw, 1.0F, side);
+		Box shape = player.getShape().moved(direction[0] * STRAFE_PROBE, 0.0D, direction[1] * STRAFE_PROBE);
+		return minecraft.world.getCollisions(player, shape.moved(0.0D, player.stepHeight, 0.0D)).isEmpty()
+			&& !minecraft.world.getCollisions(player, shape.expanded(0.0D, -MAX_DROP, 0.0D)).isEmpty();
 	}
 
 	private boolean trapped(LocalClientPlayerEntity player) {
@@ -307,7 +345,7 @@ public class SprintReset extends Module {
 		hurtTick = Integer.MIN_VALUE / 2;
 		waiting = offensive = false;
 		MoveUtils.setSprintBlocked(false);
-		zestHits = 0;
+		zestHits = strafe = strafeTicks = 0;
 		crouching = approaching = 0.0F;
 	}
 }
