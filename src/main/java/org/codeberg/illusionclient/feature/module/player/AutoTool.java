@@ -1,6 +1,6 @@
 package org.codeberg.illusionclient.feature.module.player;
 
-import io.github.nevalackin.radbus.Listen;
+import org.codeberg.illusionclient.event.api.Listen;
 import net.minecraft.block.Block;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.living.player.LocalClientPlayerEntity;
@@ -12,7 +12,7 @@ import net.minecraft.item.SwordItem;
 import net.minecraft.item.ToolItem;
 import net.minecraft.world.HitResult;
 import org.codeberg.illusionclient.IllusionClient;
-import org.codeberg.illusionclient.event.PlayerTickEvent;
+import org.codeberg.illusionclient.event.player.PlayerTickEvent;
 import org.codeberg.illusionclient.feature.config.api.Check;
 import org.codeberg.illusionclient.feature.config.api.Slider;
 import org.codeberg.illusionclient.feature.module.api.Category;

@@ -1,6 +1,6 @@
 package org.codeberg.illusionclient.feature.module.visual;
 
-import io.github.nevalackin.radbus.Listen;
+import org.codeberg.illusionclient.event.api.Listen;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import net.minecraft.block.Block;
 import net.minecraft.block.Blocks;
@@ -15,8 +15,8 @@ import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import org.codeberg.illusionclient.IllusionClient;
-import org.codeberg.illusionclient.event.Render2DEvent;
-import org.codeberg.illusionclient.event.Render3DEvent;
+import org.codeberg.illusionclient.event.render.Render2DEvent;
+import org.codeberg.illusionclient.event.render.Render3DEvent;
 import org.codeberg.illusionclient.feature.config.api.Check;
 import org.codeberg.illusionclient.feature.config.api.ColorPicker;
 import org.codeberg.illusionclient.feature.config.api.Slider;

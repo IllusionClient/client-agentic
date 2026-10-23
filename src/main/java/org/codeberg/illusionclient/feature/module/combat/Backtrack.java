@@ -1,6 +1,6 @@
 package org.codeberg.illusionclient.feature.module.combat;
 
-import io.github.nevalackin.radbus.Listen;
+import org.codeberg.illusionclient.event.api.Listen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.living.player.LocalClientPlayerEntity;
 import net.minecraft.entity.Entity;
@@ -8,10 +8,10 @@ import net.minecraft.entity.living.player.PlayerEntity;
 import net.minecraft.network.packet.Packet;
 import net.minecraft.network.packet.s2c.play.EntityVelocityS2CPacket;
 import org.codeberg.illusionclient.IllusionClient;
-import org.codeberg.illusionclient.event.PacketReceiveEvent;
-import org.codeberg.illusionclient.event.PlayerTickEvent;
-import org.codeberg.illusionclient.event.Render3DEvent;
-import org.codeberg.illusionclient.event.WorldLoadEvent;
+import org.codeberg.illusionclient.event.network.PacketReceiveEvent;
+import org.codeberg.illusionclient.event.player.PlayerTickEvent;
+import org.codeberg.illusionclient.event.render.Render3DEvent;
+import org.codeberg.illusionclient.event.world.WorldLoadEvent;
 import org.codeberg.illusionclient.feature.config.api.Check;
 import org.codeberg.illusionclient.feature.config.api.RangeSlider;
 import org.codeberg.illusionclient.feature.config.api.Requires;

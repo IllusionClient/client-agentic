@@ -1,6 +1,6 @@
 package org.codeberg.illusionclient.feature.module.movement;
 
-import io.github.nevalackin.radbus.Listen;
+import org.codeberg.illusionclient.event.api.Listen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.living.player.LocalClientPlayerEntity;
 import org.codeberg.illusionclient.IllusionClient;

@@ -1,4 +1,6 @@
-package org.codeberg.illusionclient.event;
+package org.codeberg.illusionclient.event.player;
+
+import org.codeberg.illusionclient.event.CancellableEvent;
 
 public final class JumpEvent extends CancellableEvent {
 	private static final JumpEvent INSTANCE = new JumpEvent();

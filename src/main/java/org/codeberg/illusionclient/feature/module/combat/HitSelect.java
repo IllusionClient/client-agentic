@@ -1,6 +1,6 @@
 package org.codeberg.illusionclient.feature.module.combat;
 
-import io.github.nevalackin.radbus.Listen;
+import org.codeberg.illusionclient.event.api.Listen;
 import net.minecraft.block.Blocks;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.living.player.LocalClientPlayerEntity;
@@ -8,10 +8,10 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.living.LivingEntity;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.HitResult;
-import org.codeberg.illusionclient.event.PickEvent;
-import org.codeberg.illusionclient.event.PlayerTickEvent;
-import org.codeberg.illusionclient.event.SwingEvent;
-import org.codeberg.illusionclient.event.WorldLoadEvent;
+import org.codeberg.illusionclient.event.player.PickEvent;
+import org.codeberg.illusionclient.event.player.PlayerTickEvent;
+import org.codeberg.illusionclient.event.player.SwingEvent;
+import org.codeberg.illusionclient.event.world.WorldLoadEvent;
 import org.codeberg.illusionclient.feature.config.api.Check;
 import org.codeberg.illusionclient.feature.config.api.Combo;
 import org.codeberg.illusionclient.feature.config.api.Requires;

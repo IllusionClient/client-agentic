@@ -1,6 +1,6 @@
 package org.codeberg.illusionclient.feature.module.player;
 
-import io.github.nevalackin.radbus.Listen;
+import org.codeberg.illusionclient.event.api.Listen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.options.KeyBinding;
 import net.minecraft.util.math.BlockPos;
@@ -8,9 +8,9 @@ import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.HitResult;
 import org.codeberg.illusionclient.IllusionClient;
-import org.codeberg.illusionclient.event.PlayerTickEvent;
-import org.codeberg.illusionclient.event.UseDelayEvent;
-import org.codeberg.illusionclient.event.UseItemEvent;
+import org.codeberg.illusionclient.event.player.PlayerTickEvent;
+import org.codeberg.illusionclient.event.player.UseDelayEvent;
+import org.codeberg.illusionclient.event.player.UseItemEvent;
 import org.codeberg.illusionclient.feature.config.api.Check;
 import org.codeberg.illusionclient.feature.config.api.Combo;
 import org.codeberg.illusionclient.feature.config.api.Slider;

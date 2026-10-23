@@ -1,8 +1,8 @@
 package org.codeberg.illusionclient.feature.module.combat;
 
-import io.github.nevalackin.radbus.Listen;
-import org.codeberg.illusionclient.event.AttackEvent;
-import org.codeberg.illusionclient.event.MiningCooldownEvent;
+import org.codeberg.illusionclient.event.api.Listen;
+import org.codeberg.illusionclient.event.player.AttackEvent;
+import org.codeberg.illusionclient.event.player.MiningCooldownEvent;
 import org.codeberg.illusionclient.feature.config.api.Check;
 import org.codeberg.illusionclient.feature.config.api.Combo;
 import org.codeberg.illusionclient.feature.module.api.Category;

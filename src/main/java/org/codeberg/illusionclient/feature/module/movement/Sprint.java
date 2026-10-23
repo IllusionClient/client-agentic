@@ -1,11 +1,11 @@
 package org.codeberg.illusionclient.feature.module.movement;
 
-import io.github.nevalackin.radbus.Listen;
+import org.codeberg.illusionclient.event.api.Listen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.living.player.LocalClientPlayerEntity;
 import net.minecraft.entity.living.effect.StatusEffect;
-import org.codeberg.illusionclient.event.JumpYawEvent;
-import org.codeberg.illusionclient.event.UpdateSprintEvent;
+import org.codeberg.illusionclient.event.player.JumpYawEvent;
+import org.codeberg.illusionclient.event.player.UpdateSprintEvent;
 import org.codeberg.illusionclient.feature.config.api.Check;
 import org.codeberg.illusionclient.feature.module.api.Category;
 import org.codeberg.illusionclient.feature.module.api.Description;

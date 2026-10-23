@@ -1,8 +1,8 @@
 package org.codeberg.illusionclient.feature.module.visual;
 
-import io.github.nevalackin.radbus.Listen;
+import org.codeberg.illusionclient.event.api.Listen;
 import net.minecraft.entity.living.effect.StatusEffect;
-import org.codeberg.illusionclient.event.EffectVisualEvent;
+import org.codeberg.illusionclient.event.render.EffectVisualEvent;
 import org.codeberg.illusionclient.feature.config.api.Check;
 import org.codeberg.illusionclient.feature.module.api.Category;
 import org.codeberg.illusionclient.feature.module.api.Description;

@@ -1,4 +1,6 @@
-package org.codeberg.illusionclient.event;
+package org.codeberg.illusionclient.event.player;
+
+import org.codeberg.illusionclient.event.Event;
 
 public final class UpdateSprintEvent implements Event {
 	private static final UpdateSprintEvent INSTANCE = new UpdateSprintEvent();

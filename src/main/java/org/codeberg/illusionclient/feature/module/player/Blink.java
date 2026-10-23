@@ -1,15 +1,15 @@
 package org.codeberg.illusionclient.feature.module.player;
 
-import io.github.nevalackin.radbus.Listen;
+import org.codeberg.illusionclient.event.api.Listen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.packet.Packet;
 import net.minecraft.network.packet.c2s.play.PlayerHandActionC2SPacket;
 import net.minecraft.network.packet.c2s.play.PlayerInteractEntityC2SPacket;
 import net.minecraft.network.packet.c2s.play.PlayerUseC2SPacket;
 import org.codeberg.illusionclient.IllusionClient;
-import org.codeberg.illusionclient.event.PacketSendEvent;
-import org.codeberg.illusionclient.event.PlayerTickEvent;
-import org.codeberg.illusionclient.event.WorldLoadEvent;
+import org.codeberg.illusionclient.event.network.PacketSendEvent;
+import org.codeberg.illusionclient.event.player.PlayerTickEvent;
+import org.codeberg.illusionclient.event.world.WorldLoadEvent;
 import org.codeberg.illusionclient.feature.config.api.Check;
 import org.codeberg.illusionclient.feature.config.api.Combo;
 import org.codeberg.illusionclient.feature.config.api.Slider;

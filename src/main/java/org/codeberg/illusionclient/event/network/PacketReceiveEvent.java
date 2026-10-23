@@ -1,7 +1,8 @@
-package org.codeberg.illusionclient.event;
+package org.codeberg.illusionclient.event.network;
 
 import net.minecraft.network.handler.PacketHandler;
 import net.minecraft.network.packet.Packet;
+import org.codeberg.illusionclient.event.CancellableEvent;
 
 public final class PacketReceiveEvent extends CancellableEvent {
 	private static final PacketReceiveEvent INSTANCE = new PacketReceiveEvent();

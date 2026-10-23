@@ -1,6 +1,7 @@
-package org.codeberg.illusionclient.event;
+package org.codeberg.illusionclient.event.world;
 
 import net.minecraft.world.chunk.WorldChunk;
+import org.codeberg.illusionclient.event.Event;
 
 public final class ChunkLoadEvent implements Event {
 	private static final ChunkLoadEvent INSTANCE = new ChunkLoadEvent();

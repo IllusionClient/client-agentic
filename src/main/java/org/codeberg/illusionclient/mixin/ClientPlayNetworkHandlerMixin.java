@@ -9,7 +9,7 @@ import net.minecraft.network.PacketUtils;
 import net.minecraft.network.packet.Packet;
 import net.minecraft.network.packet.s2c.play.KeepAliveS2CPacket;
 import org.codeberg.illusionclient.IllusionClient;
-import org.codeberg.illusionclient.event.PacketSendEvent;
+import org.codeberg.illusionclient.event.network.PacketSendEvent;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;

@@ -1,11 +1,11 @@
 package org.codeberg.illusionclient.feature.module.client;
 
-import io.github.nevalackin.radbus.Listen;
+import org.codeberg.illusionclient.event.api.Listen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.entity.living.player.PlayerEntity;
 import org.codeberg.illusionclient.IllusionClient;
-import org.codeberg.illusionclient.event.PlayerTickEvent;
-import org.codeberg.illusionclient.event.WorldLoadEvent;
+import org.codeberg.illusionclient.event.player.PlayerTickEvent;
+import org.codeberg.illusionclient.event.world.WorldLoadEvent;
 import org.codeberg.illusionclient.feature.config.api.Check;
 import org.codeberg.illusionclient.feature.module.api.Category;
 import org.codeberg.illusionclient.feature.module.api.Description;

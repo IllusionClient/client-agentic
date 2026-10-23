@@ -1,6 +1,6 @@
 package org.codeberg.illusionclient.util.bed;
 
-import io.github.nevalackin.radbus.Listen;
+import org.codeberg.illusionclient.event.api.Listen;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import net.minecraft.block.Block;
@@ -8,10 +8,10 @@ import net.minecraft.block.Blocks;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.chunk.WorldChunk;
 import org.codeberg.illusionclient.IllusionClient;
-import org.codeberg.illusionclient.event.BlockChangeEvent;
-import org.codeberg.illusionclient.event.ChunkLoadEvent;
-import org.codeberg.illusionclient.event.ChunkUnloadEvent;
-import org.codeberg.illusionclient.event.WorldLoadEvent;
+import org.codeberg.illusionclient.event.world.BlockChangeEvent;
+import org.codeberg.illusionclient.event.world.ChunkLoadEvent;
+import org.codeberg.illusionclient.event.world.ChunkUnloadEvent;
+import org.codeberg.illusionclient.event.world.WorldLoadEvent;
 import org.codeberg.illusionclient.util.BlockUtils;
 
 import java.util.Collection;

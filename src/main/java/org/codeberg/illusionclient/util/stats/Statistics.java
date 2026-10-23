@@ -1,13 +1,13 @@
 package org.codeberg.illusionclient.util.stats;
 
-import io.github.nevalackin.radbus.Listen;
+import org.codeberg.illusionclient.event.api.Listen;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.network.PlayerInfo;
 import net.minecraft.client.network.handler.ClientPlayNetworkHandler;
 import org.codeberg.illusionclient.IllusionClient;
-import org.codeberg.illusionclient.event.PlayerTickEvent;
+import org.codeberg.illusionclient.event.player.PlayerTickEvent;
 import org.codeberg.illusionclient.feature.module.api.Module;
 import org.codeberg.illusionclient.feature.module.client.ClickGuiModule;
 

@@ -4,7 +4,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.options.GameOptions;
 import net.minecraft.client.options.KeyBinding;
 import org.codeberg.illusionclient.IllusionClient;
-import org.codeberg.illusionclient.event.InputEvent;
+import org.codeberg.illusionclient.event.input.InputEvent;
 import org.codeberg.illusionclient.util.KeyboardUtils;
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.input.Mouse;

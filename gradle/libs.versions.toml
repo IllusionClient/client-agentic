@@ -4,8 +4,6 @@ feather = "1.8.9+build.2"
 loader = "0.19.5"
 osl = "0.22.1"
 
-radbus = "1.0.0"
-
 loom = "1.18.2"
 ploceus = "1.18.1"
 
@@ -13,8 +11,6 @@ ploceus = "1.18.1"
 minecraft = { module = "com.mojang:minecraft", version.ref = "minecraft" }
 feather = { module = "net.ornithemc:feather-gen2", version.ref = "feather" }
 loader = { module = "net.fabricmc:fabric-loader", version.ref = "loader" }
-
-radbus = { module = "io.github.nevalackin:radbus", version.ref = "radbus" }
 
 [plugins]
 ploceus = { id = "ploceus", version.ref = "ploceus" }

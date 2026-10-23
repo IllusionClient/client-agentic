@@ -1,15 +1,15 @@
 package org.codeberg.illusionclient.util.combat;
 
-import io.github.nevalackin.radbus.Listen;
+import org.codeberg.illusionclient.event.api.Listen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.entity.Entity;
 import net.minecraft.network.packet.Packet;
 import net.minecraft.network.packet.c2s.play.PlayerInteractEntityC2SPacket;
 import net.minecraft.network.packet.s2c.play.EntityEventS2CPacket;
 import org.codeberg.illusionclient.IllusionClient;
-import org.codeberg.illusionclient.event.PacketReceiveEvent;
-import org.codeberg.illusionclient.event.PacketSendEvent;
-import org.codeberg.illusionclient.event.PlayerTickEvent;
+import org.codeberg.illusionclient.event.network.PacketReceiveEvent;
+import org.codeberg.illusionclient.event.network.PacketSendEvent;
+import org.codeberg.illusionclient.event.player.PlayerTickEvent;
 import org.codeberg.illusionclient.util.CombatUtils;
 
 public final class CombatManager {

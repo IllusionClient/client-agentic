@@ -34,9 +34,6 @@ dependencies {
 	mappings libs.feather
 	modImplementation libs.loader
 
-	implementation libs.radbus
-    include libs.radbus
-
 	ploceus.dependOsl(libs.versions.osl.get())
 }
 

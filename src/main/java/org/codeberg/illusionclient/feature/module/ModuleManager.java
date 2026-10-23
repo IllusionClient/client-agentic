@@ -1,13 +1,13 @@
 package org.codeberg.illusionclient.feature.module;
 
-import io.github.nevalackin.radbus.Listen;
+import org.codeberg.illusionclient.event.api.Listen;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.Reference2ObjectMap;
 import it.unimi.dsi.fastutil.objects.Reference2ObjectOpenHashMap;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
 import org.codeberg.illusionclient.IllusionClient;
-import org.codeberg.illusionclient.event.KeyPressEvent;
+import org.codeberg.illusionclient.event.input.KeyPressEvent;
 import org.codeberg.illusionclient.feature.module.api.Module;
 import org.codeberg.illusionclient.feature.module.client.AntiBot;
 import org.codeberg.illusionclient.feature.module.client.ClickGuiModule;

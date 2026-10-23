@@ -1,13 +1,13 @@
 package org.codeberg.illusionclient.util.lag;
 
-import io.github.nevalackin.radbus.Listen;
+import org.codeberg.illusionclient.event.api.Listen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.handler.PacketHandler;
 import net.minecraft.network.packet.Packet;
 import org.codeberg.illusionclient.IllusionClient;
-import org.codeberg.illusionclient.event.PacketReceiveEvent;
-import org.codeberg.illusionclient.event.PacketSendEvent;
-import org.codeberg.illusionclient.event.PlayerTickEvent;
+import org.codeberg.illusionclient.event.network.PacketReceiveEvent;
+import org.codeberg.illusionclient.event.network.PacketSendEvent;
+import org.codeberg.illusionclient.event.player.PlayerTickEvent;
 
 import java.util.ArrayDeque;
 import java.util.List;

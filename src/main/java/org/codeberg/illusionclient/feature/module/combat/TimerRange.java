@@ -1,6 +1,6 @@
 package org.codeberg.illusionclient.feature.module.combat;
 
-import io.github.nevalackin.radbus.Listen;
+import org.codeberg.illusionclient.event.api.Listen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.living.player.LocalClientPlayerEntity;
 import net.minecraft.client.entity.living.player.RemoteClientPlayerEntity;
@@ -12,10 +12,10 @@ import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.HitResult;
 import org.codeberg.illusionclient.IllusionClient;
-import org.codeberg.illusionclient.event.AttackEvent;
-import org.codeberg.illusionclient.event.PickEvent;
+import org.codeberg.illusionclient.event.player.AttackEvent;
+import org.codeberg.illusionclient.event.player.PickEvent;
 import org.codeberg.illusionclient.event.TimerEvent;
-import org.codeberg.illusionclient.event.WorldLoadEvent;
+import org.codeberg.illusionclient.event.world.WorldLoadEvent;
 import org.codeberg.illusionclient.feature.config.api.Check;
 import org.codeberg.illusionclient.feature.config.api.Combo;
 import org.codeberg.illusionclient.feature.config.api.Requires;

@@ -1,4 +1,6 @@
-package org.codeberg.illusionclient.event;
+package org.codeberg.illusionclient.event.player;
+
+import org.codeberg.illusionclient.event.CancellableEvent;
 
 public final class UseItemEvent extends CancellableEvent {
 	private static final UseItemEvent INSTANCE = new UseItemEvent();

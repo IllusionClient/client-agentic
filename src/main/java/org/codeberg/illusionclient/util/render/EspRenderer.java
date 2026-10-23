@@ -11,7 +11,7 @@ import net.minecraft.client.render.vertex.BufferBuilder;
 import net.minecraft.client.render.vertex.BufferUploader;
 import net.minecraft.client.render.vertex.DefaultVertexFormat;
 import net.minecraft.util.math.Box;
-import org.codeberg.illusionclient.event.Render2DEvent;
+import org.codeberg.illusionclient.event.render.Render2DEvent;
 import org.codeberg.illusionclient.feature.ui.Draw;
 import org.lwjgl.opengl.GL11;
 

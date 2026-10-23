@@ -1,9 +1,9 @@
 package org.codeberg.illusionclient;
 
-import io.github.nevalackin.radbus.PubSub;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.codeberg.illusionclient.event.Event;
+import org.codeberg.illusionclient.event.api.PubSub;
 import org.codeberg.illusionclient.feature.config.ConfigManager;
 import org.codeberg.illusionclient.feature.module.ModuleManager;
 import org.codeberg.illusionclient.util.bed.BedManager;

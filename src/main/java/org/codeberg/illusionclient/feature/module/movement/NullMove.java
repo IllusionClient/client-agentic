@@ -1,8 +1,8 @@
 package org.codeberg.illusionclient.feature.module.movement;
 
-import io.github.nevalackin.radbus.Listen;
+import org.codeberg.illusionclient.event.api.Listen;
 import org.codeberg.illusionclient.IllusionClient;
-import org.codeberg.illusionclient.event.InputEvent;
+import org.codeberg.illusionclient.event.input.InputEvent;
 import org.codeberg.illusionclient.feature.module.api.Category;
 import org.codeberg.illusionclient.feature.module.api.Description;
 import org.codeberg.illusionclient.feature.module.api.Module;

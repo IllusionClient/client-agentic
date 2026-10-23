@@ -2,7 +2,7 @@ package org.codeberg.illusionclient.mixin;
 
 import net.minecraft.client.world.chunk.ClientChunkCache;
 import org.codeberg.illusionclient.IllusionClient;
-import org.codeberg.illusionclient.event.ChunkUnloadEvent;
+import org.codeberg.illusionclient.event.world.ChunkUnloadEvent;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;

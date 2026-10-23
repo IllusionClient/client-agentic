@@ -1,16 +1,16 @@
 package org.codeberg.illusionclient.feature.module.combat;
 
-import io.github.nevalackin.radbus.Listen;
+import org.codeberg.illusionclient.event.api.Listen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.living.player.LocalClientPlayerEntity;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.game.inventory.InventoryMenuScreen;
 import net.minecraft.client.options.KeyBinding;
 import org.codeberg.illusionclient.IllusionClient;
-import org.codeberg.illusionclient.event.KeyPressEvent;
-import org.codeberg.illusionclient.event.PlayerTickEvent;
-import org.codeberg.illusionclient.event.Render3DEvent;
-import org.codeberg.illusionclient.event.ScreenInputEvent;
+import org.codeberg.illusionclient.event.input.KeyPressEvent;
+import org.codeberg.illusionclient.event.player.PlayerTickEvent;
+import org.codeberg.illusionclient.event.render.Render3DEvent;
+import org.codeberg.illusionclient.event.input.ScreenInputEvent;
 import org.codeberg.illusionclient.feature.config.api.Check;
 import org.codeberg.illusionclient.feature.config.api.Combo;
 import org.codeberg.illusionclient.feature.config.api.Requires;

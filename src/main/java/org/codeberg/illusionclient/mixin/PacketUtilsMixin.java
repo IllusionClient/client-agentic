@@ -5,7 +5,7 @@ import net.minecraft.client.network.handler.ClientPlayNetworkHandler;
 import net.minecraft.network.handler.PacketHandler;
 import net.minecraft.network.packet.Packet;
 import org.codeberg.illusionclient.IllusionClient;
-import org.codeberg.illusionclient.event.PacketReceiveEvent;
+import org.codeberg.illusionclient.event.network.PacketReceiveEvent;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 
