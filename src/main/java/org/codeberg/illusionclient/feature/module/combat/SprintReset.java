@@ -70,6 +70,11 @@ public class SprintReset extends Module {
 	@Slider(value = "Stop Duration (ms)", min = 50.0F, max = 500.0F)
 	public float stopDuration = 100.0F;
 
+	@Description("How long Dynamic usually stops sprinting for when you're the one pressing the attack.")
+	@Requires(value = "mode", is = "Dynamic")
+	@Slider(value = "Stop Duration (ms)", min = 50.0F, max = 300.0F)
+	public float dynamicStopDuration = 50.0F;
+
 	@Description("Holds forward for two hits and lets go for the third against opponents walking into you.")
 	@Requires(value = "mode", is = "Dynamic")
 	@Check("Zest Tap")
@@ -263,7 +268,7 @@ public class SprintReset extends Module {
 			planDefensive();
 		} else {
 			offensive = true;
-			int duration = 1;
+			int duration = Math.max(1, Math.round(dynamicStopDuration / MS_PER_TICK));
 			plan(Tap.FORWARD, jitter(HITTABLE_TICKS - SPRINT_UP_TICKS - duration - 1), duration, 0, 0.0D);
 		}
 	}
