@@ -115,16 +115,16 @@ public class BridgeAssist extends Module {
 		InputState input = IllusionClient.INPUT.player;
 		nonBlockTicks = ItemUtils.isBlock(player.inventory.getSelectedItem()) ? 0 : nonBlockTicks + 1;
 		armed = false;
-		if (minecraft.focused && minecraft.screen == null && player.onGround && edgeAhead(player, player.width / 2.0F)) {
+		if (!conditionsMet(player, input)) {
+			sneaking = false;
+			unsneakTicks = 0;
+			return;
+		}
+		if (player.onGround && edgeAhead(player, player.width / 2.0F)) {
 			sneaking = armed = true;
 			delay = nextDelay();
 			unsneakTicks = delay;
 			IllusionClient.INPUT.client.sneak = true;
-			return;
-		}
-		if (!conditionsMet(player, input)) {
-			sneaking = false;
-			unsneakTicks = 0;
 			return;
 		}
 
