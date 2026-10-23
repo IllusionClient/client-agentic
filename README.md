@@ -4,6 +4,15 @@ An independent, fully open source ghost client for Minecraft 1.8.9, written from
 
 ---
 
+## Features
+
+- All the typical modules in ghost & hybrid clients, implemented in superior, more sophisticated ways
+- Disables server checks in many Freelook mods ([Chromatic's Freelook](https://modrinth.com/mod/freelook-oneconfig), [Omnilook](https://modrinth.com/mod/omnilook), [Axolotl Client's Freelook](https://modrinth.com/mod/axolotlclient))
+
+## Screenshot
+
+![Screenshot](.forgejo/assets/preview.png)
+
 ## Building
 
 Requires Git and Java 25.
@@ -16,12 +25,11 @@ cd Illusion
 
 The jar is written to `build/libs/`.
 
-## Screenshot
-
-![Screenshot](.forgejo/assets/preview.png)
-
 ## Credits
 
 - [Inter](https://rsms.me/inter/). Used under [OFL](licenses/Inter-OFL.txt).
 
+## License
+
+Illusion is licensed under the GNU General Public License, version 3.0 or later. For more information, check the [license file](LICENSE) and the [official page for the license](https://www.gnu.org/licenses/gpl-3.0.en.html).
 ---
