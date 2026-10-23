@@ -7,8 +7,6 @@ import net.minecraft.client.entity.living.player.LocalClientPlayerEntity;
 import net.minecraft.entity.living.player.PlayerInventory;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.HitResult;
 import org.codeberg.illusionclient.IllusionClient;
 import org.codeberg.illusionclient.event.input.InputEvent;
@@ -35,10 +33,6 @@ public class BridgeAssist extends Module {
 	private static final float LOOKING_DOWN_PITCH = 65.0F;
 	private static final int HOLD_GRACE_TICKS = 2;
 	private static final int PLACEMENT_TICKS = 20;
-	private static final float DIAGONAL_MIN = 30.0F;
-	private static final float DIAGONAL_MAX = 60.0F;
-	private static final double CORNER_MARGIN = 0.15D;
-	private static final double OVER_CORNER_MARGIN = 0.25D;
 	private final Minecraft minecraft = Minecraft.getInstance();
 	private final Random random = new Random();
 
@@ -67,7 +61,7 @@ public class BridgeAssist extends Module {
 	@Check("Only While Moving")
 	public boolean onlyWhileMoving = true;
 
-	@Description("Blocks mid-face placements that cause a double sneak on diagonals.")
+	@Description("Blocks placements that would leave you at the edge and need a second sneak.")
 	@Check("Avoid Double-Sneaking")
 	public boolean avoidDoubleSneaking = false;
 
@@ -95,6 +89,7 @@ public class BridgeAssist extends Module {
 	private boolean armed;
 	private boolean sneakedSincePlace;
 	private boolean pendingSneak;
+	private boolean holdSneak;
 	private int delay;
 	private int unsneakTicks;
 	private int placementTicks;
@@ -109,7 +104,7 @@ public class BridgeAssist extends Module {
 
 	@Override
 	public void onDisable() {
-		sneaking = armed = sneakedSincePlace = pendingSneak = false;
+		sneaking = armed = sneakedSincePlace = pendingSneak = holdSneak = false;
 		unsneakTicks = placementTicks = nonBlockTicks = 0;
 		lastBlock = null;
 		lastSlot = -1;
@@ -122,10 +117,11 @@ public class BridgeAssist extends Module {
 		nonBlockTicks = ItemUtils.isBlock(player.inventory.getSelectedItem()) ? 0 : nonBlockTicks + 1;
 		armed = false;
 		if (!conditionsMet(player, input)) {
-			sneaking = pendingSneak = false;
+			sneaking = pendingSneak = holdSneak = false;
 			unsneakTicks = 0;
 			return;
 		}
+		if (placementTicks == 0) holdSneak = false;
 		if (pendingSneak) {
 			pendingSneak = false;
 			if (!sneaking) {
@@ -150,7 +146,7 @@ public class BridgeAssist extends Module {
 				delay = nextDelay();
 				unsneakTicks = delay;
 			}
-		} else if (edge) {
+		} else if (edge || holdSneak) {
 			unsneakTicks = delay;
 		} else if (unsneakTicks-- <= 0) {
 			sneaking = false;
@@ -170,12 +166,16 @@ public class BridgeAssist extends Module {
 		LocalClientPlayerEntity player = minecraft.player;
 		HitResult target = minecraft.crosshairTarget;
 		if (target == null || target.type != HitResult.Type.BLOCK || !ItemUtils.isBlock(player.inventory.getSelectedItem())) return;
-		if (avoidDoubleSneaking && armed && placementTicks != PLACEMENT_TICKS && midFace(player, target)) {
-			event.cancelled = true;
-			return;
+		if (avoidDoubleSneaking && armed) {
+			int reach = edgeReach(player, target);
+			if (reach < 0) {
+				event.cancelled = true;
+				return;
+			}
+			holdSneak = reach > 0;
 		}
 		placementTicks = PLACEMENT_TICKS;
-		if (!skipSneak && !sneakedSincePlace && player.onGround) pendingSneak = true;
+		if (event.click && !skipSneak && !sneakedSincePlace && player.onGround && edgeReach(player, target) >= 0) pendingSneak = true;
 		sneakedSincePlace = false;
 	}
 
@@ -216,6 +216,10 @@ public class BridgeAssist extends Module {
 	}
 
 	private boolean edgeAhead(LocalClientPlayerEntity player, float offset) {
+		return minecraft.world.getCollisions(player, feet(player, offset)).isEmpty();
+	}
+
+	private Box feet(LocalClientPlayerEntity player, float offset) {
 		InputState input = IllusionClient.INPUT.client;
 		SimulatedPlayer simulated = SimulatedPlayer.of(player);
 		simulated.forward = input.forwardAxis();
@@ -225,8 +229,7 @@ public class BridgeAssist extends Module {
 		simulated.tick();
 
 		double inset = player.width / 2.0F - offset;
-		Box feet = simulated.shape.contract(inset, 0.0D, inset).moved(0.0D, -1.0D, 0.0D);
-		return minecraft.world.getCollisions(player, feet).isEmpty();
+		return simulated.shape.contract(inset, 0.0D, inset).moved(0.0D, -1.0D, 0.0D);
 	}
 
 	private float edgeOffset() {
@@ -243,22 +246,14 @@ public class BridgeAssist extends Module {
 		return Math.max(0, Math.round(ticks)) + spike;
 	}
 
-	private boolean midFace(LocalClientPlayerEntity player, HitResult target) {
-		if (!target.face.getAxis().isHorizontal()) return false;
-		InputState input = IllusionClient.INPUT.player;
-		if (!player.onGround || !input.back || input.forward || input.left || input.right) return false;
-		float angle = (player.yaw % 90.0F + 90.0F) % 90.0F;
-		if (angle < DIAGONAL_MIN || angle > DIAGONAL_MAX) return false;
-
-		Vec3d hit = target.facePos;
-		if (Math.abs(hit.x - player.x) > 1.0D || Math.abs(hit.z - player.z) > 1.0D || hit.y > player.y || hit.y < player.y - 1.0D) return false;
-
+	private int edgeReach(LocalClientPlayerEntity player, HitResult target) {
 		BlockPos cell = target.getPos().offset(target.face);
-		boolean over = (int) Math.floor(player.x) == cell.getX() && (int) Math.floor(player.z) == cell.getZ();
-		double margin = over ? OVER_CORNER_MARGIN : CORNER_MARGIN;
-		double along = target.face.getAxis() == Direction.Axis.X ? hit.z : hit.x;
-		double fraction = along - Math.floor(along);
-		return fraction >= margin && fraction <= 1.0D - margin;
+		Box feet = feet(player, edgeOffset);
+		if (cell.getY() != (int) Math.floor(feet.minY)) return -1;
+		double dx = Math.max(cell.getX() - feet.maxX, feet.minX - (cell.getX() + 1));
+		double dz = Math.max(cell.getZ() - feet.maxZ, feet.minZ - (cell.getZ() + 1));
+		if (dx < 0.0D && dz < 0.0D) return 0;
+		return dx < 1.0D && dz < 1.0D && (dx < 0.0D || dz < 0.0D) ? 1 : -1;
 	}
 
 	private static int bestSlot(PlayerInventory inventory, Block preferred) {
