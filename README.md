@@ -13,18 +13,6 @@ An independent, fully open source ghost client for Minecraft 1.8.9, written from
 
 ![Screenshot](.forgejo/assets/preview.png)
 
-## Building
-
-Requires Git and Java 25.
-
-```sh
-git clone https://codeberg.org/awruff/Illusion.git
-cd Illusion
-./gradlew build
-```
-
-The jar is written to `build/libs/`.
-
 ## Credits
 
 - [Inter](https://rsms.me/inter/). Used under [OFL](licenses/Inter-OFL.txt).
