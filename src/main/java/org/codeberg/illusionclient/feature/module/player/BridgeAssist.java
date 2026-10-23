@@ -47,7 +47,7 @@ public class BridgeAssist extends Module {
 	public float edgeOffset = 0.2F;
 
 	@Description("Sneak time after you're back on the block.")
-	@Slider(value = "Unsneak Delay", min = 50.0F, max = 300.0F)
+	@Slider(value = "Unsneak Delay", min = 0.0F, max = 300.0F)
 	public float unsneakDelay = 150.0F;
 
 	@Description("Swaps to hotbar blocks.")
@@ -115,13 +115,20 @@ public class BridgeAssist extends Module {
 		InputState input = IllusionClient.INPUT.player;
 		nonBlockTicks = ItemUtils.isBlock(player.inventory.getSelectedItem()) ? 0 : nonBlockTicks + 1;
 		armed = false;
+		if (minecraft.focused && minecraft.screen == null && player.onGround && edgeAhead(player, player.width / 2.0F)) {
+			sneaking = armed = true;
+			delay = nextDelay();
+			unsneakTicks = delay;
+			IllusionClient.INPUT.client.sneak = true;
+			return;
+		}
 		if (!conditionsMet(player, input)) {
 			sneaking = false;
 			unsneakTicks = 0;
 			return;
 		}
 
-		boolean edge = edgeAhead(player);
+		boolean edge = edgeAhead(player, edgeOffset());
 		if (!sneaking) {
 			sneaking = edge && (sneakKeyPressed || player.onGround || rising(player, input));
 			if (sneaking) {
@@ -191,7 +198,7 @@ public class BridgeAssist extends Module {
 		return !onlyWhileMoving || input.forward || input.back || input.left || input.right;
 	}
 
-	private boolean edgeAhead(LocalClientPlayerEntity player) {
+	private boolean edgeAhead(LocalClientPlayerEntity player, float offset) {
 		InputState input = IllusionClient.INPUT.client;
 		SimulatedPlayer simulated = SimulatedPlayer.of(player);
 		simulated.forward = input.forwardAxis();
@@ -200,7 +207,7 @@ public class BridgeAssist extends Module {
 		simulated.sneaking = false;
 		simulated.tick();
 
-		double inset = player.width / 2.0F - edgeOffset();
+		double inset = player.width / 2.0F - offset;
 		Box feet = simulated.shape.contract(inset, 0.0D, inset).moved(0.0D, -1.0D, 0.0D);
 		return minecraft.world.getCollisions(player, feet).isEmpty();
 	}
@@ -216,7 +223,7 @@ public class BridgeAssist extends Module {
 
 		ticks += NoiseUtils.wander(-0.5F, 0.5F, 30.0F, 1);
 		int spike = random.nextFloat() < NoiseUtils.wander(0.04F, 0.08F, 60.0F, 2) ? random.nextInt(4) : 0;
-		return Math.max(1, Math.round(ticks)) + spike;
+		return Math.max(0, Math.round(ticks)) + spike;
 	}
 
 	private boolean midFace(LocalClientPlayerEntity player, HitResult target) {
