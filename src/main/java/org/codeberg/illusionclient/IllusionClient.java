@@ -18,7 +18,7 @@ public final class IllusionClient {
 
 	public static final Logger LOGGER = LoggerFactory.getLogger(NAME);
 
-	public static final PubSub<Event> BUS = PubSub.newInstance(LOGGER::error);
+	public static final PubSub<Event> BUS = new PubSub<>(LOGGER::error);
 	public static ModuleManager MODULES;
 	public static ConfigManager CONFIG;
 	public static InputManager INPUT;
