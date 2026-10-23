@@ -75,6 +75,10 @@ public class BridgeAssist extends Module {
 	@Check("Sneak Key Pressed")
 	public boolean sneakKeyPressed = false;
 
+	@Description("Lets you place the next block without sneaking first.")
+	@Check("Skip Sneak")
+	public boolean skipSneak = false;
+
 	@Description("Only works while you hold blocks.")
 	@Check("Holding Blocks")
 	public boolean holdingBlocks = false;
@@ -89,6 +93,8 @@ public class BridgeAssist extends Module {
 
 	private boolean sneaking;
 	private boolean armed;
+	private boolean sneakedSincePlace;
+	private boolean pendingSneak;
 	private int delay;
 	private int unsneakTicks;
 	private int placementTicks;
@@ -103,7 +109,7 @@ public class BridgeAssist extends Module {
 
 	@Override
 	public void onDisable() {
-		sneaking = armed = false;
+		sneaking = armed = sneakedSincePlace = pendingSneak = false;
 		unsneakTicks = placementTicks = nonBlockTicks = 0;
 		lastBlock = null;
 		lastSlot = -1;
@@ -116,12 +122,20 @@ public class BridgeAssist extends Module {
 		nonBlockTicks = ItemUtils.isBlock(player.inventory.getSelectedItem()) ? 0 : nonBlockTicks + 1;
 		armed = false;
 		if (!conditionsMet(player, input)) {
-			sneaking = false;
+			sneaking = pendingSneak = false;
 			unsneakTicks = 0;
 			return;
 		}
+		if (pendingSneak) {
+			pendingSneak = false;
+			if (!sneaking) {
+				sneaking = true;
+				delay = nextDelay();
+				unsneakTicks = delay;
+			}
+		}
 		if (player.onGround && edgeAhead(player, player.width / 2.0F)) {
-			sneaking = armed = true;
+			sneaking = armed = sneakedSincePlace = true;
 			delay = nextDelay();
 			unsneakTicks = delay;
 			IllusionClient.INPUT.client.sneak = true;
@@ -132,6 +146,7 @@ public class BridgeAssist extends Module {
 		if (!sneaking) {
 			sneaking = edge && (sneakKeyPressed || player.onGround || rising(player, input));
 			if (sneaking) {
+				sneakedSincePlace = true;
 				delay = nextDelay();
 				unsneakTicks = delay;
 			}
@@ -160,6 +175,8 @@ public class BridgeAssist extends Module {
 			return;
 		}
 		placementTicks = PLACEMENT_TICKS;
+		if (!skipSneak && !sneakedSincePlace && player.onGround) pendingSneak = true;
+		sneakedSincePlace = false;
 	}
 
 	@Listen
