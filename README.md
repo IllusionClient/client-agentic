@@ -20,4 +20,5 @@ An independent, fully open source ghost client for Minecraft 1.8.9, written from
 ## License
 
 Illusion is licensed under the [GNU General Public License v3.0 or later](https://www.gnu.org/licenses/gpl-3.0.en.html). See [LICENSE](LICENSE) for the full text.
+
 ---
