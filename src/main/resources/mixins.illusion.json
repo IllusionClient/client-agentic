@@ -26,6 +26,8 @@
     "ScreenInvoker",
     "TickTimerMixin",
     "WorldChunkMixin",
+    "compat.FeatureDisablerCommonMixin",
+    "compat.FeatureDisablerMixin",
     "compat.FreelookHandlerMixin"
   ],
   "injectors": {
