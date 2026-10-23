@@ -3,13 +3,16 @@ package org.codeberg.illusionclient.feature.module.movement;
 import io.github.nevalackin.radbus.Listen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.living.player.LocalClientPlayerEntity;
+import org.codeberg.illusionclient.IllusionClient;
 import org.codeberg.illusionclient.event.JumpDelayEvent;
 import org.codeberg.illusionclient.event.JumpEvent;
+import org.codeberg.illusionclient.event.PlayerTickEvent;
 import org.codeberg.illusionclient.feature.config.api.Combo;
 import org.codeberg.illusionclient.feature.module.api.Category;
 import org.codeberg.illusionclient.feature.module.api.Description;
 import org.codeberg.illusionclient.feature.module.api.Module;
 import org.codeberg.illusionclient.feature.module.api.ModuleInfo;
+import org.codeberg.illusionclient.util.KeyboardUtils;
 import org.codeberg.illusionclient.util.MoveUtils;
 
 @ModuleInfo(name = "No Jump Delay", category = Category.MOVEMENT)
@@ -26,13 +29,29 @@ public class NoJumpDelay extends Module {
 	@Combo(value = "Mode", options = {"Regular", "Smart"})
 	public String mode = "Regular";
 
+	private int cooldown;
+
 	@Override
 	public String details() {
 		return mode;
 	}
 
+	@Override
+	public void onDisable() {
+		cooldown = 0;
+	}
+
+	@Listen
+	public void onPlayerTick(PlayerTickEvent event) {
+		cooldown = IllusionClient.INPUT.client.jump ? Math.max(0, cooldown - 1) : 0;
+	}
+
 	@Listen
 	public void onJumpDelay(JumpDelayEvent event) {
+		if (cooldown > 0 && IllusionClient.INPUT.held(minecraft.options.jumpKey)) {
+			KeyboardUtils.set(minecraft.options.jumpKey, false);
+		}
+		cooldown = event.ticks;
 		event.ticks = 0;
 	}
 

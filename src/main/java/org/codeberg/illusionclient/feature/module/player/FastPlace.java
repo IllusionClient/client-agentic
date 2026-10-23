@@ -2,10 +2,12 @@ package org.codeberg.illusionclient.feature.module.player;
 
 import io.github.nevalackin.radbus.Listen;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.options.KeyBinding;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.HitResult;
+import org.codeberg.illusionclient.IllusionClient;
 import org.codeberg.illusionclient.event.PlayerTickEvent;
 import org.codeberg.illusionclient.event.UseDelayEvent;
 import org.codeberg.illusionclient.event.UseItemEvent;
@@ -16,7 +18,10 @@ import org.codeberg.illusionclient.feature.module.api.Category;
 import org.codeberg.illusionclient.feature.module.api.Description;
 import org.codeberg.illusionclient.feature.module.api.Module;
 import org.codeberg.illusionclient.feature.module.api.ModuleInfo;
+import org.codeberg.illusionclient.mixin.MinecraftAccessor;
 import org.codeberg.illusionclient.util.ItemUtils;
+import org.codeberg.illusionclient.util.KeyboardUtils;
+import org.codeberg.illusionclient.util.MouseUtils;
 
 @ModuleInfo(name = "Fast Place", category = Category.PLAYER)
 @Description("Removes the delay between block placements.")
@@ -45,6 +50,9 @@ public class FastPlace extends Module {
 	private BlockPos lockedPos;
 	private int heldTicks;
 	private float remainder;
+	private boolean shortened;
+	private boolean released;
+	private boolean syntheticClick;
 
 	@Override
 	public String details() {
@@ -56,23 +64,44 @@ public class FastPlace extends Module {
 		lockedFace = null;
 		heldTicks = 0;
 		remainder = 0.0F;
+		shortened = false;
 	}
 
 	@Listen
 	public void onPlayerTick(PlayerTickEvent event) {
-		if (minecraft.options.useKey.isPressed()) {
-			heldTicks++;
-		} else {
+		KeyBinding useKey = minecraft.options.useKey;
+		syntheticClick = false;
+		if (!IllusionClient.INPUT.held(useKey)) {
 			lockedFace = null;
 			heldTicks = 0;
 			remainder = 0.0F;
+			shortened = false;
+			return;
 		}
+		heldTicks++;
+		if (!shortened || minecraft.player == null || minecraft.player.isUsingItem()) return;
+
+		int cooldown = ((MinecraftAccessor) minecraft).illusion$useKeyCooldown();
+		if (cooldown == 2) {
+			tap(useKey, false);
+			released = true;
+		} else if (cooldown == 1) {
+			if (!released) tap(useKey, false);
+			tap(useKey, true);
+			syntheticClick = true;
+		}
+	}
+
+	private static void tap(KeyBinding key, boolean pressed) {
+		int code = key.getKeyCode();
+		if (code < 0) MouseUtils.toggle(code + 100);
+		else KeyboardUtils.set(key, pressed);
 	}
 
 	@Listen
 	public void onUseItem(UseItemEvent event) {
 		boolean smart = mode.equals("Smart");
-		if (!smart || event.click) lockedFace = null;
+		if (!smart || event.click && !syntheticClick) lockedFace = null;
 		if (!smart) return;
 
 		HitResult target = minecraft.crosshairTarget;
@@ -119,6 +148,8 @@ public class FastPlace extends Module {
 
 	@Listen
 	public void onUseDelay(UseDelayEvent event) {
+		shortened = false;
+		released = false;
 		if (blocksOnly && !ItemUtils.isBlock(minecraft.player.inventory.getSelectedItem())) return;
 
 		float ticks = TICKS_PER_SECOND / maximumCps + remainder;
@@ -130,6 +161,7 @@ public class FastPlace extends Module {
 			remainder = 0.0F;
 			delay = Math.max(delay, untilActive);
 		}
+		shortened = delay < event.delay;
 		event.delay = Math.min(event.delay, delay);
 	}
 }

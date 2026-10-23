@@ -4,15 +4,14 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.options.KeyBinding;
 import org.lwjgl.input.Keyboard;
 
-import java.util.HashSet;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Set;
 
 public final class KeyboardUtils {
 	private static final Map<Integer, Boolean> pending = new LinkedHashMap<>();
-	private static final Set<Integer> overridden = new HashSet<>();
+	private static final Map<Integer, Boolean> overridden = new HashMap<>();
 	private static int key;
 	private static boolean state;
 	private static boolean synthetic;
@@ -25,7 +24,12 @@ public final class KeyboardUtils {
 	}
 
 	public static boolean overridden(KeyBinding binding) {
-		return overridden.contains(binding.getKeyCode());
+		return overridden.containsKey(binding.getKeyCode());
+	}
+
+	public static boolean pressed(KeyBinding binding, boolean pressed) {
+		Boolean state = overridden.get(binding.getKeyCode());
+		return state == null ? pressed : state;
 	}
 
 	public static boolean next(boolean hasEvent) {
@@ -36,14 +40,17 @@ public final class KeyboardUtils {
 			overridden.remove(code);
 			return true;
 		}
-		if (Minecraft.getInstance().screen != null) pending.clear();
+		if (Minecraft.getInstance().screen != null) {
+			pending.clear();
+			overridden.clear();
+		}
 		if (pending.isEmpty()) return false;
 		Iterator<Map.Entry<Integer, Boolean>> iterator = pending.entrySet().iterator();
 		Map.Entry<Integer, Boolean> event = iterator.next();
 		iterator.remove();
 		key = event.getKey();
 		state = event.getValue();
-		overridden.add(key);
+		overridden.put(key, state);
 		return synthetic = true;
 	}
 

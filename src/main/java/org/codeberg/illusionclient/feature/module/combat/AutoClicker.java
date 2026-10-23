@@ -19,6 +19,7 @@ import org.codeberg.illusionclient.feature.module.api.Category;
 import org.codeberg.illusionclient.feature.module.api.Description;
 import org.codeberg.illusionclient.feature.module.api.Module;
 import org.codeberg.illusionclient.feature.module.api.ModuleInfo;
+import org.codeberg.illusionclient.feature.ui.ClickGui;
 import org.codeberg.illusionclient.mixin.ScreenInvoker;
 import org.codeberg.illusionclient.util.ClickPattern;
 import org.codeberg.illusionclient.util.ClickProfile;
@@ -180,7 +181,7 @@ public class AutoClicker extends Module {
 
 	private void stop() {
 		pattern.stop();
-		MouseUtils.resync();
+		MouseUtils.resync(minecraft.options.attackKey.getKeyCode() + 100);
 	}
 
 	private ClickProfile profile() {
@@ -226,7 +227,7 @@ public class AutoClicker extends Module {
 	}
 
 	private boolean activeInInventory() {
-		return inventory && minecraft.screen instanceof InventoryMenuScreen
+		return inventory && minecraft.screen instanceof InventoryMenuScreen && !ClickGui.isOpen()
 			&& Mouse.isButtonDown(0) && Screen.isShiftDown();
 	}
 }
