@@ -26,6 +26,10 @@ public class GameRendererMixin {
 	private void illusion$renderClickGui(Screen screen, int mouseX, int mouseY, float tickDelta, Operation<Void> original) {
 		boolean open = ClickGui.isOpen();
 		original.call(screen, open ? -1 : mouseX, open ? -1 : mouseY, tickDelta);
+	}
+
+	@Inject(method = "render(FJ)V", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/screen/Screen;render(IIF)V", shift = At.Shift.AFTER))
+	private void illusion$renderClickGuiOverlay(float tickDelta, long renderTimeLimit, CallbackInfo ci) {
 		ClickGui.render(tickDelta);
 	}
 
