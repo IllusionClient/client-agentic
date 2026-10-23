@@ -6,6 +6,7 @@ import net.minecraft.client.Minecraft;
 import org.codeberg.illusionclient.IllusionClient;
 import org.codeberg.illusionclient.event.*;
 import org.codeberg.illusionclient.feature.module.api.Module;
+import org.codeberg.illusionclient.feature.ui.ClickGui;
 import org.codeberg.illusionclient.util.KeyboardUtils;
 import org.codeberg.illusionclient.util.MouseUtils;
 import org.lwjgl.input.Keyboard;
@@ -27,6 +28,11 @@ public class MinecraftMixin {
 	@Inject(method = "init", at = @At("TAIL"))
 	private void illusion$init(CallbackInfo ci) {
 		IllusionClient.init();
+	}
+
+	@Inject(method = "openScreen", at = @At("TAIL"))
+	private void illusion$openScreen(CallbackInfo ci) {
+		ClickGui.screenChanged(((Minecraft) (Object) this).screen);
 	}
 
 	@Inject(method = "doAttack", at = @At("HEAD"))

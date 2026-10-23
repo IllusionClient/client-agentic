@@ -1,13 +1,12 @@
 package org.codeberg.illusionclient.feature.module.client;
 
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.screen.Screen;
 import org.codeberg.illusionclient.feature.config.api.ColorPicker;
 import org.codeberg.illusionclient.feature.config.api.Combo;
 import org.codeberg.illusionclient.feature.module.api.Category;
 import org.codeberg.illusionclient.feature.module.api.Description;
 import org.codeberg.illusionclient.feature.module.api.Module;
 import org.codeberg.illusionclient.feature.module.api.ModuleInfo;
+import org.codeberg.illusionclient.feature.ui.ClickGui;
 import org.codeberg.illusionclient.feature.ui.FramesGui;
 import org.codeberg.illusionclient.feature.ui.PanelGui;
 import org.lwjgl.input.Keyboard;
@@ -62,10 +61,8 @@ public class ClickGuiModule extends Module {
 
 	@Override
 	public void onEnable() {
-		Screen gui = style.equals("Frames") ? frames() : panel();
-
-		Minecraft minecraft = Minecraft.getInstance();
-		minecraft.openScreen(minecraft.screen instanceof FramesGui || minecraft.screen instanceof PanelGui ? null : gui);
+		if (ClickGui.isOpen()) ClickGui.close();
+		else (style.equals("Frames") ? frames() : panel()).open();
 		setEnabled(false);
 	}
 }

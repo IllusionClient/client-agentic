@@ -6,7 +6,6 @@ import it.unimi.dsi.fastutil.objects.Reference2ObjectMap;
 import it.unimi.dsi.fastutil.objects.Reference2ObjectOpenHashMap;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.screen.Screen;
 import org.codeberg.illusionclient.IllusionClient;
 import org.codeberg.illusionclient.event.KeyPressEvent;
 import org.codeberg.illusionclient.feature.module.api.Module;
@@ -35,8 +34,6 @@ import org.codeberg.illusionclient.feature.module.visual.Bedplates;
 import org.codeberg.illusionclient.feature.module.visual.ChestEsp;
 import org.codeberg.illusionclient.feature.module.visual.Esp;
 import org.codeberg.illusionclient.feature.module.visual.ModOverlay;
-import org.codeberg.illusionclient.feature.ui.FramesGui;
-import org.codeberg.illusionclient.feature.ui.PanelGui;
 
 import java.util.Arrays;
 import java.util.List;
@@ -101,12 +98,7 @@ public final class ModuleManager {
 	public void onKeyPress(KeyPressEvent event) {
 		if (event.key() == 0) return;
 
-		Screen screen = Minecraft.getInstance().screen;
-		if (screen != null && event.down()) {
-			ClickGuiModule clickGui = get(ClickGuiModule.class);
-			if ((screen instanceof FramesGui || screen instanceof PanelGui) && clickGui.getBind() == event.key()) clickGui.toggle();
-			return;
-		}
+		if (Minecraft.getInstance().screen != null && event.down()) return;
 
 		for (Module module : modules) {
 			if (module.getBind() != event.key()) continue;

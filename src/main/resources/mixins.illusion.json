@@ -19,6 +19,7 @@
     "MinecraftMixin",
     "MouseMixin",
     "PacketUtilsMixin",
+    "ScreenMixin",
     "RemoteClientPlayerEntityAccessor",
     "ScreenInvoker",
     "TickTimerMixin",

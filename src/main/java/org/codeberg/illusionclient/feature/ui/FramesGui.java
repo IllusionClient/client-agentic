@@ -10,13 +10,12 @@ import org.codeberg.illusionclient.feature.module.api.Category;
 import org.codeberg.illusionclient.feature.ui.component.Component;
 import org.codeberg.illusionclient.feature.ui.component.Frame;
 import org.codeberg.illusionclient.feature.ui.component.KeybindComponent;
-import org.lwjgl.input.Mouse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
-public class FramesGui extends ClickScreen {
+public class FramesGui extends ClickGui {
 	private static final Logger LOGGER = LoggerFactory.getLogger(FramesGui.class);
 	private static final String STATE = "frames";
 
@@ -39,7 +38,7 @@ public class FramesGui extends ClickScreen {
 	}
 
 	@Override
-	public void init() {
+	protected void init() {
 		int x = Component.PADDING, y = Component.PADDING, row = 0;
 		for (Frame frame : frames) {
 			if (!frame.placed()) {
@@ -59,7 +58,7 @@ public class FramesGui extends ClickScreen {
 
 	public void resetPositions() {
 		for (Frame frame : frames) frame.unplace();
-		if (minecraft != null && minecraft.screen == this) init();
+		if (isCurrent()) init();
 		save();
 	}
 
@@ -157,15 +156,9 @@ public class FramesGui extends ClickScreen {
 	}
 
 	@Override
-	public void handleMouse() {
-		super.handleMouse();
-
-		int wheel = Mouse.getEventDWheel();
-		if (wheel == 0) return;
-
-		int mouseX = Mouse.getEventX() * width / minecraft.width;
+	protected void scrolled(int mouseX, int direction) {
 		for (Frame frame : frames) {
-			frame.scroll(mouseX, Integer.signum(wheel) * Component.HEIGHT);
+			frame.scroll(mouseX, direction * Component.HEIGHT);
 		}
 	}
 
@@ -179,7 +172,7 @@ public class FramesGui extends ClickScreen {
 	}
 
 	@Override
-	public void removed() {
+	protected void removed() {
 		KeybindComponent.stopListening();
 		for (Frame frame : frames) frame.mouseReleased();
 		save();
@@ -190,10 +183,5 @@ public class FramesGui extends ClickScreen {
 		for (Frame frame : frames) state.add(frame.category.name(), frame.save());
 		IllusionClient.CONFIG.gui.add(STATE, state);
 		IllusionClient.CONFIG.save();
-	}
-
-	@Override
-	public boolean shouldPauseGame() {
-		return false;
 	}
 }

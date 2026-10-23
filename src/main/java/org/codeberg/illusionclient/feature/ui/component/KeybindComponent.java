@@ -16,6 +16,10 @@ public class KeybindComponent extends Component {
 		return listening == module;
 	}
 
+	public static boolean isListening() {
+		return listening != null;
+	}
+
 	public static void listen(Module module) {
 		listening = module;
 	}

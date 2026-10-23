@@ -6,6 +6,7 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.Reference2ObjectMap;
 import it.unimi.dsi.fastutil.objects.Reference2ObjectOpenHashMap;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screen.Screen;
 import org.codeberg.illusionclient.IllusionClient;
 import org.codeberg.illusionclient.feature.module.api.Category;
 import org.codeberg.illusionclient.feature.module.api.Module;
@@ -15,7 +16,6 @@ import org.codeberg.illusionclient.feature.ui.component.KeybindComponent;
 import org.codeberg.illusionclient.feature.ui.component.ModuleComponent;
 import org.codeberg.illusionclient.util.stats.Statistics;
 import org.lwjgl.input.Keyboard;
-import org.lwjgl.input.Mouse;
 import org.lwjgl.opengl.GL11;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,7 +26,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-public class PanelGui extends ClickScreen {
+public class PanelGui extends ClickGui {
 	private static final Logger LOGGER = LoggerFactory.getLogger(PanelGui.class);
 	private static final String STATE = "panel";
 	private static final int MAX_WIDTH = 460;
@@ -89,8 +89,7 @@ public class PanelGui extends ClickScreen {
 	}
 
 	@Override
-	public void init() {
-		Keyboard.enableRepeatEvents(true);
+	protected void init() {
 		panelWidth = Math.min(MAX_WIDTH, width - PADDING * 2);
 		panelHeight = Math.min(MAX_HEIGHT, height - PADDING * 2);
 		if (x == Integer.MIN_VALUE) {
@@ -477,14 +476,8 @@ public class PanelGui extends ClickScreen {
 	}
 
 	@Override
-	public void handleMouse() {
-		super.handleMouse();
-
-		int wheel = Mouse.getEventDWheel();
-		if (wheel == 0) return;
-
-		int mouseX = Mouse.getEventX() * width / minecraft.width;
-		if (mouseX >= x + SIDEBAR) contentScroll -= Integer.signum(wheel) * SCROLL_STEP;
+	protected void scrolled(int mouseX, int direction) {
+		if (mouseX >= x + SIDEBAR) contentScroll -= direction * SCROLL_STEP;
 	}
 
 	@Override
@@ -517,14 +510,14 @@ public class PanelGui extends ClickScreen {
 			}
 		}
 
-		if (isControlDown() && (key == Keyboard.KEY_F || key == Keyboard.KEY_E)) {
+		if (Screen.isControlDown() && (key == Keyboard.KEY_F || key == Keyboard.KEY_E)) {
 			search.focus();
 			search.keyPressed('\0', Keyboard.KEY_A);
-		} else if (isAltDown() && key == Keyboard.KEY_LEFT || key == Keyboard.KEY_BACK) {
+		} else if (Screen.isAltDown() && key == Keyboard.KEY_LEFT || key == Keyboard.KEY_BACK) {
 			back();
-		} else if (isAltDown() && key == Keyboard.KEY_RIGHT) {
+		} else if (Screen.isAltDown() && key == Keyboard.KEY_RIGHT) {
 			forward();
-		} else if (chr > ' ' && chr <= '~' && !isControlDown()) {
+		} else if (chr > ' ' && chr <= '~' && !Screen.isControlDown()) {
 			search.focus();
 			search.keyPressed(chr, key);
 			contentScroll = 0;
@@ -534,15 +527,19 @@ public class PanelGui extends ClickScreen {
 	}
 
 	@Override
-	public void removed() {
-		Keyboard.enableRepeatEvents(false);
+	protected boolean capturesBind() {
+		return search.focused();
+	}
+
+	@Override
+	protected void removed() {
 		release();
 		save();
 	}
 
 	public void resetPosition() {
 		x = Integer.MIN_VALUE;
-		if (minecraft != null && minecraft.screen == this) init();
+		if (isCurrent()) init();
 		save();
 	}
 
@@ -556,11 +553,6 @@ public class PanelGui extends ClickScreen {
 		if (module != null) state.addProperty("module", module.key);
 		IllusionClient.CONFIG.gui.add(STATE, state);
 		IllusionClient.CONFIG.save();
-	}
-
-	@Override
-	public boolean shouldPauseGame() {
-		return false;
 	}
 
 	private void show(Category category) {
