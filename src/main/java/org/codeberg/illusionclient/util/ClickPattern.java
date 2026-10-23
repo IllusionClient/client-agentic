@@ -34,6 +34,8 @@ public final class ClickPattern {
 	private ClickProfile profile;
 	private int streak;
 	private int position;
+	private long rampStart;
+	private float rampLength;
 
 	public void tick(float yaw, float pitch) {
 		float turned = (float) Math.hypot(MathHelper.wrapDegrees(yaw - lastYaw), pitch - lastPitch);
@@ -60,6 +62,8 @@ public final class ClickPattern {
 			exhaustClicks = 0;
 			lifted = false;
 			streak = -1;
+			rampStart = System.currentTimeMillis();
+			rampLength = butterfly ? 500.0F + random.nextFloat() * 500.0F : 0.0F;
 			wait = next();
 		}
 
@@ -105,11 +109,19 @@ public final class ClickPattern {
 		return ms - lift;
 	}
 
+	private float ramp(long now) {
+		if (rampLength <= 0.0F) return 1.0F;
+		float t = Math.clamp((now - rampStart) / rampLength, 0.0F, 1.0F);
+		return 0.45F + 0.55F * t * t * (3.0F - 2.0F * t);
+	}
+
 	private float period(long now) {
-		if (!randomize) return 1000.0F / cps;
+		float base = 1000.0F / (cps * ramp(now));
+		if (!randomize) return base;
 
 		float drift = 1.0F + phaseCps.signed(now) * 0.1F + streakCps.signed(now) * 0.07F + jitterCps.signed(now) * 0.04F;
-		return 1000.0F / (cps * drift * (1.0F + gaussian() * deviation.range(now, 0.22F, 0.34F)));
+		float sigma = deviation.range(now, 0.2F, 0.32F);
+		return base / drift * (float) Math.exp(sigma * random.nextGaussian() - sigma * sigma / 2.0F);
 	}
 
 	private float interval() {
@@ -129,7 +141,9 @@ public final class ClickPattern {
 
 	private void startBurst(long now, boolean exhausted) {
 		gap = randomize ? gapSpread.range(now, 22.0F, 40.0F) : 30.0F;
-		boolean single = exhausted || randomize && random.nextFloat() < singleChance.range(now, 0.03F, 0.07F);
+		float chance = randomize ? singleChance.range(now, 0.03F, 0.07F) : 0.0F;
+		chance += (1.0F - ramp(now)) * 0.6F;
+		boolean single = exhausted || random.nextFloat() < chance;
 		burstLeft = single ? 0 : 1;
 	}
 
