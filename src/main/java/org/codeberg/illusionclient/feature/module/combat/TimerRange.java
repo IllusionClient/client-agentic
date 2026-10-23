@@ -160,7 +160,7 @@ public class TimerRange extends Module {
 		if (frozenTicks > 0 || event.ticks == 0) event.partialTick = heldPartialTick;
 		if (frozenTicks > 0) return;
 
-		readyAt = System.currentTimeMillis() + (long) (cooldown * 1000.0F);
+		readyAt = secondsFromNow(cooldown);
 		if (pending == 0) return;
 
 		lag.release();
@@ -253,7 +253,7 @@ public class TimerRange extends Module {
 		if (minecraft.screen != null || !player.isAlive() || !player.onGround || player.velocityY > 0.0D) return false;
 		if (target.damagedTimer > 1 || minecraft.options.jumpKey.isPressed() || !player.canSee(target)) return false;
 		if (leftMousePressed && !IllusionClient.INPUT.held(minecraft.options.attackKey)) return false;
-		if (weaponsOnly && !Weapons.isWeapons(player.getItemInHand())) return false;
+		if (weaponsOnly && !Weapons.isHolding(player)) return false;
 		return !notUsingItem || player.getItemInUse() == null;
 	}
 
@@ -262,7 +262,7 @@ public class TimerRange extends Module {
 	}
 
 	private int durationTicks() {
-		return Math.max(1, Math.round((legit() ? legitDuration : duration) / MS_PER_TICK));
+		return Math.max(1, ticks(legit() ? legitDuration : duration));
 	}
 
 	private void reset() {

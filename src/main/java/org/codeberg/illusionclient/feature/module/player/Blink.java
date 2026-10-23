@@ -56,7 +56,7 @@ public class Blink extends Module {
 
 	@Override
 	public void onEnable() {
-		endsAt = System.currentTimeMillis() + (long) (maximumDuration * 1000.0F);
+		endsAt = secondsFromNow(maximumDuration);
 		if (!direction.equals("Inbound")) outboundLag.hold(Long.MAX_VALUE);
 		if (!direction.equals("Outbound")) inboundLag.hold(Long.MAX_VALUE);
 	}

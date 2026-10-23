@@ -60,7 +60,7 @@ public class AutoTool extends Module {
 
 	@Override
 	public void onEnable() {
-		countdown = Math.round(activationTime / MS_PER_TICK);
+		countdown = ticks(activationTime);
 	}
 
 	@Override
@@ -83,7 +83,7 @@ public class AutoTool extends Module {
 
 		Block block = target(player);
 		if (block == null) {
-			countdown = Math.round(activationTime / MS_PER_TICK);
+			countdown = ticks(activationTime);
 			release();
 			return;
 		}

@@ -2,6 +2,7 @@ package org.codeberg.illusionclient.feature.module.combat;
 
 import net.minecraft.enchantment.Enchantment;
 import net.minecraft.enchantment.EnchantmentHelper;
+import net.minecraft.entity.living.player.PlayerEntity;
 import net.minecraft.item.*;
 import org.codeberg.illusionclient.IllusionClient;
 import org.codeberg.illusionclient.feature.config.api.Check;
@@ -40,6 +41,10 @@ public class Weapons extends Module {
 	@Description("Counts any item with Fire Aspect as a weapon.")
 	@Check("Fire Aspect")
 	public boolean fireAspect = true;
+
+	public static boolean isHolding(PlayerEntity player) {
+		return isWeapons(player.getItemInHand());
+	}
 
 	public static boolean isWeapons(ItemStack stack) {
 		Weapons weapons = IllusionClient.MODULES.get(Weapons.class);

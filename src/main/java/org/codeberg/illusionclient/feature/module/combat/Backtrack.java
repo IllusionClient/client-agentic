@@ -130,7 +130,7 @@ public class Backtrack extends Module {
 	}
 
 	private void stop() {
-		if (lagging) readyAt = System.currentTimeMillis() + (long) (cooldown * 1000.0F);
+		if (lagging) readyAt = secondsFromNow(cooldown);
 		lagging = false;
 		lingerTicks = GHOST_LINGER_TICKS;
 		lag.release();

@@ -139,7 +139,7 @@ public class SprintReset extends Module {
 		if (!(event.packet() instanceof PlayerInteractEntityC2SPacket packet)) return;
 		if (packet.getAction() != PlayerInteractEntityC2SPacket.Action.ATTACK) return;
 		if (!(packet.getInteractTarget(minecraft.world) instanceof PlayerEntity attacked) || !CombatUtils.isTarget(attacked)) return;
-		if (weaponsOnly && !Weapons.isWeapons(player.getItemInHand())) return;
+		if (weaponsOnly && !Weapons.isHolding(player)) return;
 		if (attacked.invulnerableTimer > attacked.invulnerableTicks / 2) return;
 
 		if (attacked != target) {
@@ -242,8 +242,8 @@ public class SprintReset extends Module {
 			case "No Stop" -> Tap.SPRINT;
 			default -> Tap.FORWARD;
 		};
-		int delay = Math.round(delayAfterAttack / MS_PER_TICK);
-		int duration = Math.max(1, Math.round(stopDuration / MS_PER_TICK));
+		int delay = ticks(delayAfterAttack);
+		int duration = Math.max(1, ticks(stopDuration));
 		plan(tap, jitter(delay), jitter(duration), 0, 0.0D);
 	}
 
@@ -268,7 +268,7 @@ public class SprintReset extends Module {
 			planDefensive();
 		} else {
 			offensive = true;
-			int duration = Math.max(1, Math.round(dynamicStopDuration / MS_PER_TICK));
+			int duration = Math.max(1, ticks(dynamicStopDuration));
 			plan(Tap.FORWARD, jitter(HITTABLE_TICKS - SPRINT_UP_TICKS - duration - 1), duration, 0, 0.0D);
 		}
 	}

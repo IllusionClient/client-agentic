@@ -39,6 +39,14 @@ public abstract class Module {
 		}
 	}
 
+	protected static int ticks(float ms) {
+		return Math.round(ms / MS_PER_TICK);
+	}
+
+	protected static long secondsFromNow(float seconds) {
+		return System.currentTimeMillis() + (long) (seconds * 1000.0F);
+	}
+
 	protected static String number(float value) {
 		return value == (int) value ? String.valueOf((int) value) : String.valueOf(value);
 	}

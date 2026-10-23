@@ -246,7 +246,7 @@ public class AimAssist extends Module {
 		if (sprinting && !player.isSprinting()) return false;
 		if (mousePressed && System.currentTimeMillis() - lastClick > CLICK_WINDOW) return false;
 		if (breakingBlocks && minecraft.interactionManager.isMiningBlock()) return false;
-		return Weapons.isWeapons(player.getItemInHand());
+		return Weapons.isHolding(player);
 	}
 
 	private boolean valid(PlayerEntity player, float yaw, float pitch, boolean anyFov) {

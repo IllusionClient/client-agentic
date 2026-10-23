@@ -153,7 +153,7 @@ public class HitSelect extends Module {
 
 	private boolean cancel(LocalClientPlayerEntity player) {
 		if (sprinting && !player.isSprinting()) return false;
-		if (holdingWeapon && !Weapons.isWeapons(player.getItemInHand())) return false;
+		if (holdingWeapon && !Weapons.isHolding(player)) return false;
 
 		HitResult crosshair = minecraft.crosshairTarget;
 		if (crosshair == null) return false;
@@ -172,9 +172,9 @@ public class HitSelect extends Module {
 		} else {
 			if (closer) return false;
 			if (clock < 15) waitingHits = 0;
-			else if (++waitingHits <= Math.round(waitForFirstHit / MS_PER_TICK)) return true;
+			else if (++waitingHits <= ticks(waitForFirstHit)) return true;
 
-			if (undamagedTicks < 10) pause += Math.round(hitLaterInTrades / MS_PER_TICK);
+			if (undamagedTicks < 10) pause += ticks(hitLaterInTrades);
 			if (serverReset) {
 				serverReset = false;
 				return false;

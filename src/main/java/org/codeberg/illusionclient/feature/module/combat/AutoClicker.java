@@ -212,12 +212,12 @@ public class AutoClicker extends Module {
 	private boolean fighting() {
 		LocalClientPlayerEntity player = minecraft.player;
 		return player != null && player.isAlive() && minecraft.screen == null
-			&& Weapons.isWeapons(player.getItemInHand()) && !PlayerUtils.aimingAtBlock();
+			&& Weapons.isHolding(player) && !PlayerUtils.aimingAtBlock();
 	}
 
 	private boolean activeInGame(LocalClientPlayerEntity player) {
 		if (!IllusionClient.INPUT.held(minecraft.options.attackKey) || !player.isAlive()) return false;
-		if (!Weapons.isWeapons(player.getItemInHand())) return false;
+		if (!Weapons.isHolding(player)) return false;
 		if (notUsingItem && player.getItemInUse() != null) return false;
 		return !allowBreakingBlocks || !PlayerUtils.aimingAtBlock();
 	}
