@@ -7,6 +7,7 @@ import net.minecraft.client.entity.living.player.LocalClientPlayerEntity;
 import net.minecraft.entity.living.player.PlayerInventory;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
+import net.minecraft.util.math.MathHelper;
 import net.minecraft.world.HitResult;
 import org.codeberg.illusionclient.IllusionClient;
 import org.codeberg.illusionclient.event.input.InputEvent;
@@ -33,6 +34,8 @@ public class BridgeAssist extends Module {
 	private static final float LOOKING_DOWN_PITCH = 65.0F;
 	private static final int HOLD_GRACE_TICKS = 2;
 	private static final int PLACEMENT_TICKS = 20;
+	private static final double EDGE_TOLERANCE = 0.2D;
+	private static final float MIN_AXIS_SHARE = 0.3F;
 	private final Minecraft minecraft = Minecraft.getInstance();
 	private final Random random = new Random();
 
@@ -65,6 +68,10 @@ public class BridgeAssist extends Module {
 	@Check("Avoid Double-Sneaking")
 	public boolean avoidDoubleSneaking = false;
 
+	@Description("Blocks placements until you've backed up to the edge on every axis you're moving along.")
+	@Check("Wait For Edge")
+	public boolean waitForEdge = false;
+
 	@Description("Only works while you hold sneak, and lets go of it for you away from edges.")
 	@Check("Sneak Key Pressed")
 	public boolean sneakKeyPressed = false;
@@ -87,6 +94,7 @@ public class BridgeAssist extends Module {
 
 	private boolean sneaking;
 	private boolean armed;
+	private boolean edgeLatched;
 	private boolean sneakedSincePlace;
 	private boolean pendingSneak;
 	private boolean holdSneak;
@@ -104,7 +112,7 @@ public class BridgeAssist extends Module {
 
 	@Override
 	public void onDisable() {
-		sneaking = armed = sneakedSincePlace = pendingSneak = holdSneak = false;
+		sneaking = armed = edgeLatched = sneakedSincePlace = pendingSneak = holdSneak = false;
 		unsneakTicks = placementTicks = nonBlockTicks = 0;
 		lastBlock = null;
 		lastSlot = -1;
@@ -115,6 +123,7 @@ public class BridgeAssist extends Module {
 		LocalClientPlayerEntity player = minecraft.player;
 		InputState input = IllusionClient.INPUT.player;
 		nonBlockTicks = ItemUtils.isBlock(player.inventory.getSelectedItem()) ? 0 : nonBlockTicks + 1;
+		edgeLatched &= armed;
 		armed = false;
 		if (!conditionsMet(player, input)) {
 			sneaking = pendingSneak = holdSneak = false;
@@ -166,6 +175,13 @@ public class BridgeAssist extends Module {
 		LocalClientPlayerEntity player = minecraft.player;
 		HitResult target = minecraft.crosshairTarget;
 		if (target == null || target.type != HitResult.Type.BLOCK || !ItemUtils.isBlock(player.inventory.getSelectedItem())) return;
+		if (waitForEdge && armed && player.onGround) {
+			if (!edgeLatched && !backedToEdge(player)) {
+				event.cancelled = true;
+				return;
+			}
+			edgeLatched = true;
+		}
 		if (avoidDoubleSneaking && armed) {
 			int reach = edgeReach(player, target);
 			if (reach < 0) {
@@ -230,6 +246,26 @@ public class BridgeAssist extends Module {
 
 		double inset = player.width / 2.0F - offset;
 		return simulated.shape.contract(inset, 0.0D, inset).moved(0.0D, -1.0D, 0.0D);
+	}
+
+	private boolean backedToEdge(LocalClientPlayerEntity player) {
+		InputState input = IllusionClient.INPUT.client;
+		float forward = input.forwardAxis();
+		float sideways = input.sidewaysAxis();
+		float length = MathHelper.sqrt(forward * forward + sideways * sideways);
+		if (length < 1.0E-4F) return true;
+
+		float sin = MathHelper.sin(player.yaw * (float) Math.PI / 180.0F);
+		float cos = MathHelper.cos(player.yaw * (float) Math.PI / 180.0F);
+		float dirX = (sideways * cos - forward * sin) / length;
+		float dirZ = (forward * cos + sideways * sin) / length;
+		Box shape = player.getShape();
+		if (Math.abs(dirX) > MIN_AXIS_SHARE && supported(shape.moved(Math.signum(dirX) * EDGE_TOLERANCE, -1.0D, 0.0D))) return false;
+		return Math.abs(dirZ) <= MIN_AXIS_SHARE || !supported(shape.moved(0.0D, -1.0D, Math.signum(dirZ) * EDGE_TOLERANCE));
+	}
+
+	private boolean supported(Box box) {
+		return !minecraft.world.getCollisions(minecraft.player, box).isEmpty();
 	}
 
 	private float edgeOffset() {
