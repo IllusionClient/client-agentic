@@ -1,6 +1,7 @@
 package org.codeberg.illusionclient.feature.config.api;
 
 import org.codeberg.illusionclient.feature.module.api.Description;
+import org.codeberg.illusionclient.feature.module.api.Module;
 
 import java.awt.*;
 import java.lang.annotation.Annotation;
@@ -132,6 +133,11 @@ public final class Option {
 		} catch (IllegalAccessException e) {
 			throw new IllegalStateException(e);
 		}
+		changed();
+	}
+
+	public void changed() {
+		if (owner instanceof Module module) module.detailsChanged();
 	}
 
 	private record Requirement(Option option, List<String> values) {

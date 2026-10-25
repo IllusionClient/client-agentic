@@ -37,6 +37,7 @@ public class RangeSliderComponent extends OptionComponent {
 			float progress = Math.clamp((mouseX - left()) / (float) width, 0.0F, 1.0F);
 			float value = Math.round((min + progress * (max - min)) * 10.0F) / 10.0F;
 			range[dragging] = dragging == 0 ? Math.min(value, range[1]) : Math.max(value, range[0]);
+			option.changed();
 		}
 
 		int low = offset(range[0]);

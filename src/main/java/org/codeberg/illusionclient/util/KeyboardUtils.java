@@ -4,14 +4,13 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.options.KeyBinding;
 import org.lwjgl.input.Keyboard;
 
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import it.unimi.dsi.fastutil.ints.Int2BooleanLinkedOpenHashMap;
+import it.unimi.dsi.fastutil.ints.Int2BooleanMap;
+import it.unimi.dsi.fastutil.ints.Int2BooleanOpenHashMap;
 
 public final class KeyboardUtils {
-	private static final Map<Integer, Boolean> pending = new LinkedHashMap<>();
-	private static final Map<Integer, Boolean> overridden = new HashMap<>();
+	private static final Int2BooleanLinkedOpenHashMap pending = new Int2BooleanLinkedOpenHashMap();
+	private static final Int2BooleanMap overridden = new Int2BooleanOpenHashMap();
 	private static int key;
 	private static boolean state;
 	private static boolean synthetic;
@@ -28,8 +27,8 @@ public final class KeyboardUtils {
 	}
 
 	public static boolean pressed(KeyBinding binding, boolean pressed) {
-		Boolean state = overridden.get(binding.getKeyCode());
-		return state == null ? pressed : state;
+		int code = binding.getKeyCode();
+		return overridden.containsKey(code) ? overridden.get(code) : pressed;
 	}
 
 	public static boolean next(boolean hasEvent) {
@@ -45,11 +44,8 @@ public final class KeyboardUtils {
 			overridden.clear();
 		}
 		if (pending.isEmpty()) return false;
-		Iterator<Map.Entry<Integer, Boolean>> iterator = pending.entrySet().iterator();
-		Map.Entry<Integer, Boolean> event = iterator.next();
-		iterator.remove();
-		key = event.getKey();
-		state = event.getValue();
+		key = pending.firstIntKey();
+		state = pending.removeFirstBoolean();
 		overridden.put(key, state);
 		return synthetic = true;
 	}

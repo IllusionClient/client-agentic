@@ -20,6 +20,7 @@ public abstract class Module {
 	private int bind;
 	private boolean hold;
 	private boolean enabled;
+	private int detailsVersion;
 
 	public Module() {
 		ModuleInfo info = getClass().getAnnotation(ModuleInfo.class);
@@ -99,6 +100,14 @@ public abstract class Module {
 
 	public String details() {
 		return null;
+	}
+
+	public final int detailsVersion() {
+		return detailsVersion;
+	}
+
+	public final void detailsChanged() {
+		detailsVersion++;
 	}
 
 	public void onEnable() {

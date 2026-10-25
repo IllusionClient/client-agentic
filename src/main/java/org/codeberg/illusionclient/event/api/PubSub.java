@@ -12,7 +12,7 @@ public final class PubSub<Event> {
 
 	private static final MethodHandles.Lookup LOOKUP = MethodHandles.lookup();
 	private static final MethodType LISTENER_INVOKE_TYPE = MethodType.methodType(void.class, Object.class);
-	private final Map<Class<?>, List<Consumer<Object>>> eventTypeListenerCache = new HashMap<>();
+	private final Map<Class<?>, Consumer<Object>[]> eventTypeListenerCache = new HashMap<>();
 	private final Map<Object, List<TypedListener>> subscriberMap = new HashMap<>();
 	private final Consumer<String> logger;
 
@@ -57,12 +57,20 @@ public final class PubSub<Event> {
 			var listeners = this.eventTypeListenerCache.get(typedListener.type());
 			if (listeners == null) continue;
 
-			var updated = new ArrayList<>(listeners);
-			if (!updated.remove(typedListener.listener())) continue;
+			int index = -1;
+			for (int i = 0; i < listeners.length; i++) {
+				if (listeners[i] == typedListener.listener()) {
+					index = i;
+					break;
+				}
+			}
+			if (index < 0) continue;
 
-			if (updated.isEmpty()) {
+			if (listeners.length == 1) {
 				this.eventTypeListenerCache.remove(typedListener.type());
 			} else {
+				var updated = Arrays.copyOf(listeners, listeners.length - 1);
+				System.arraycopy(listeners, index + 1, updated, index, listeners.length - index - 1);
 				this.eventTypeListenerCache.put(typedListener.type(), updated);
 			}
 		}
@@ -73,14 +81,16 @@ public final class PubSub<Event> {
 
 		if (listeners == null) return;
 
-		for (var listener : listeners.reversed()) {
-			listener.accept(event);
+		for (int i = listeners.length - 1; i >= 0; i--) {
+			listeners[i].accept(event);
 		}
 	}
 
+	@SuppressWarnings("unchecked")
 	private void register(Object subscriber, Class<?> event, Consumer<Object> listener) {
-		var updated = new ArrayList<>(this.eventTypeListenerCache.getOrDefault(event, List.of()));
-		updated.add(listener);
+		var listeners = this.eventTypeListenerCache.get(event);
+		var updated = listeners == null ? (Consumer<Object>[]) new Consumer[1] : Arrays.copyOf(listeners, listeners.length + 1);
+		updated[updated.length - 1] = listener;
 		this.eventTypeListenerCache.put(event, updated);
 
 		this.subscriberMap.computeIfAbsent(subscriber, _ -> new ArrayList<>()).add(new TypedListener(event, listener));

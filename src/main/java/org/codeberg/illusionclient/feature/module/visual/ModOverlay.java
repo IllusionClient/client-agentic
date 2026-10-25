@@ -14,6 +14,7 @@ import org.codeberg.illusionclient.feature.module.api.Description;
 import org.codeberg.illusionclient.feature.module.api.Module;
 import org.codeberg.illusionclient.feature.module.api.ModuleInfo;
 import org.codeberg.illusionclient.feature.ui.Draw;
+import org.codeberg.illusionclient.feature.ui.Font;
 
 import java.awt.*;
 import java.util.List;
@@ -81,11 +82,21 @@ public class ModOverlay extends Module {
 			if (!module.isEnabled()) continue;
 			if (onlyBoundModules && module.getBind() == 0) continue;
 
-			String details = showDetails ? module.details() : null;
-			row.name = style(module.name);
-			row.details = details == null ? null : style(details);
-			row.nameWidth = Draw.width(row.name);
-			float textWidth = row.nameWidth + (row.details == null ? 0 : gap + Draw.width(row.details));
+			boolean restyled = row.lowercase != lowercase || row.font != Draw.font();
+			if (restyled) {
+				row.lowercase = lowercase;
+				row.font = Draw.font();
+				row.name = style(module.name);
+				row.nameWidth = Draw.width(row.name);
+			}
+			if (restyled || row.showDetails != showDetails || row.detailsVersion != module.detailsVersion()) {
+				row.showDetails = showDetails;
+				row.detailsVersion = module.detailsVersion();
+				String details = showDetails ? module.details() : null;
+				row.details = details == null ? null : style(details);
+				row.detailsWidth = details == null ? 0 : Draw.width(row.details);
+			}
+			float textWidth = row.nameWidth + (row.details == null ? 0 : gap + row.detailsWidth);
 			row.width = Math.round(textWidth * textSize + paddingX * 2.0F);
 			rows.add(row);
 		}
@@ -125,9 +136,14 @@ public class ModOverlay extends Module {
 
 	private static final class Row {
 		final Module module;
+		Font font;
+		boolean lowercase;
 		String name;
+		boolean showDetails;
+		int detailsVersion = -1;
 		String details;
 		int nameWidth;
+		int detailsWidth;
 		int width;
 
 		Row(Module module) {

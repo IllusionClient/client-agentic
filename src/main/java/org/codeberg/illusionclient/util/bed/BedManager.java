@@ -23,6 +23,7 @@ public final class BedManager {
 	private static final int HEAD_BIT = 8;
 	private static final int HEAD_MASK = ~(FACING_BITS | OCCUPIED_BIT);
 
+	private final BlockPos.Mutable key = new BlockPos.Mutable();
 	private final Long2ObjectMap<Bed> beds = new Long2ObjectOpenHashMap<>();
 	private final Collection<Bed> view = Collections.unmodifiableCollection(beds.values());
 
@@ -74,7 +75,7 @@ public final class BedManager {
 	}
 
 	private void add(int x, int y, int z, int state) {
-		beds.put(new BlockPos(x, y, z).toLong(), new Bed(x, y, z, BlockUtils.meta(state) & FACING_BITS));
+		beds.put(key.set(x, y, z).toLong(), new Bed(x, y, z, BlockUtils.meta(state) & FACING_BITS));
 	}
 
 	private static final class Lookup {

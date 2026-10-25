@@ -67,7 +67,10 @@ public class Frame extends Group {
 		icon.draw(x + PADDING + 2, y + (TITLE - icon.height) / 2, Draw.accent().getRGB());
 		Draw.heading(category.title(), x + PADDING + 2 + icon.width + 7, headingY, Draw.TEXT);
 
-		long on = children.stream().filter(child -> ((ModuleComponent) child).module.isEnabled()).count();
+		int on = 0;
+		for (Component child : children) {
+			if (((ModuleComponent) child).module.isEnabled()) on++;
+		}
 		Draw.textRight(on + " of " + children.size() + " on", x + width - PADDING - 2, Draw.headingBaseline(headingY), Draw.FAINT, Draw.Weight.REGULAR);
 	}
 

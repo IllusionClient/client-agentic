@@ -211,7 +211,7 @@ public class PanelGui extends ClickGui {
 			Draw.text(module.name, left + parentWidth + 6 + Icon.CHEVRON.width + 6, textY, Draw.TEXT);
 		} else if (category != null) {
 			List<Module> list = modules.get(category);
-			long on = list.stream().filter(Module::isEnabled).count();
+			int on = enabledCount(list);
 			Draw.text(category.title(), left, textY, Draw.TEXT);
 			Draw.textRight(on + " of " + list.size() + " on", right, textY, Draw.FAINT, Draw.Weight.REGULAR);
 		} else {
@@ -346,7 +346,7 @@ public class PanelGui extends ClickGui {
 		Draw.text("Left-click toggles a module, right-click opens its settings.", left, top + 14, Draw.MUTED, Draw.Weight.REGULAR);
 
 		List<Module> all = IllusionClient.MODULES.modules;
-		long enabled = all.stream().filter(Module::isEnabled).count();
+		int enabled = enabledCount(all);
 		Statistics statistics = IllusionClient.STATS;
 		int ping = statistics.ping();
 		Module mostToggled = statistics.mostToggled();
@@ -609,6 +609,14 @@ public class PanelGui extends ClickGui {
 		if (module == null) return;
 
 		for (Component component : options(module)) component.mouseReleased();
+	}
+
+	private static int enabledCount(List<Module> modules) {
+		int count = 0;
+		for (Module module : modules) {
+			if (module.isEnabled()) count++;
+		}
+		return count;
 	}
 
 	private List<Module> matches() {

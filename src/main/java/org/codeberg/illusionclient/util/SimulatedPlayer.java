@@ -28,6 +28,7 @@ public final class SimulatedPlayer {
 
 	private final LocalClientPlayerEntity player;
 	private final ClientWorld world;
+	private final BlockPos.Mutable cursor = new BlockPos.Mutable();
 	private final float walkSpeed;
 	private final float stepHeight;
 	private final float flyingSpeed;
@@ -205,7 +206,7 @@ public final class SimulatedPlayer {
 		move(velocityX, velocityY, velocityZ);
 		if (collidingHorizontally && isClimbing()) velocityY = 0.2D;
 
-		BlockPos column = new BlockPos((int) x(), 0, (int) z());
+		BlockPos column = cursor.set((int) x(), 0, (int) z());
 		if (!world.isChunkLoaded(column) || !world.getChunk(column).isLoaded()) {
 			velocityY = y() > 0.0D ? -0.1D : 0.0D;
 		} else {
@@ -380,7 +381,7 @@ public final class SimulatedPlayer {
 	}
 
 	private Block block(int x, int y, int z) {
-		return world.getBlockState(new BlockPos(x, y, z)).getBlock();
+		return world.getBlockState(cursor.set(x, y, z)).getBlock();
 	}
 
 	private static double approachZero(double value, double step) {

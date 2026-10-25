@@ -7,6 +7,7 @@ import net.minecraft.client.entity.living.player.LocalClientPlayerEntity;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.living.LivingEntity;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.MathHelper;
 import net.minecraft.world.HitResult;
 import org.codeberg.illusionclient.event.player.PickEvent;
 import org.codeberg.illusionclient.event.player.PlayerTickEvent;
@@ -31,6 +32,7 @@ public class HitSelect extends Module {
 	private static final int HURT_TICKS = 10;
 	private final Minecraft minecraft = Minecraft.getInstance();
 	private final Random random = new Random();
+	private final BlockPos.Mutable cursor = new BlockPos.Mutable();
 
 	@Description("The longest clicks are held back after a hit.")
 	@Slider(value = "Pause Duration (ms)", min = 0.0F, max = 1000.0F)
@@ -167,7 +169,7 @@ public class HitSelect extends Module {
 			boolean cycle = clock < 2 || clock > 8 || useServerAttackTime;
 			if (!player.onGround && player.fallDistance > 0.0F && cycle) return false;
 			if (closer && (!cycle || disableDuringKnockback)) return false;
-			if (minecraft.world.getBlockState(new BlockPos(player)).getBlock() != Blocks.AIR) return false;
+			if (minecraft.world.getBlockState(cursor.set(MathHelper.floor(player.x), MathHelper.floor(player.y), MathHelper.floor(player.z))).getBlock() != Blocks.AIR) return false;
 			if (!player.onGround && player.velocityY > 0.0D && !(onlyWhileDamaged && player.damagedTimer == 0)) return true;
 		} else {
 			if (closer) return false;
