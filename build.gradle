@@ -1,12 +1,28 @@
+import groovy.json.JsonBuilder
+
 plugins {
     alias(libs.plugins.loom)
     alias(libs.plugins.ploceus)
 }
 
+def baseVersion = project.version.toString()
+def gitOutput = { List<String> args ->
+    providers.exec {
+        commandLine(['git'] + args)
+        ignoreExitValue = true
+    }.standardOutput.asText.map { it.trim() }.orElse('')
+}
+def gitHash = gitOutput(['rev-parse', 'HEAD']).orElse('')
+def gitBranch = gitOutput(['rev-parse', '--abbrev-ref', 'HEAD']).orElse('')
+def production = providers.gradleProperty('production')
+        .orElse(providers.environmentVariable('GITHUB_REF_TYPE').map { it == 'tag' ? 'true' : 'false' })
+        .orElse('false')
+
 base {
     archivesName = project.archives_base_name
 }
-version = "${project.version}+mc${libs.versions.minecraft.get()}"
+def mcSuffix = "+mc${libs.versions.minecraft.get()}"
+version = baseVersion + mcSuffix
 group = project.maven_group
 
 sourceSets {
@@ -58,7 +74,39 @@ java {
     withSourcesJar()
 }
 
+def jarVersion = production.get().toBoolean()
+        ? baseVersion + mcSuffix
+        : "${baseVersion}-${(gitHash.get() ?: 'unknown').take(10)}${mcSuffix}"
+afterEvaluate {
+    tasks.withType(AbstractArchiveTask).configureEach {
+        archiveVersion = jarVersion
+    }
+}
+
+def generateBuildData = tasks.register('generateBuildData') {
+    def output = layout.buildDirectory.file('generated/build-data/ILLUSION_BUILD_DATA')
+    def versionValue = baseVersion
+    inputs.property 'gitHash', gitHash
+    inputs.property 'gitBranch', gitBranch
+    inputs.property 'production', production
+    inputs.property 'version', versionValue
+    outputs.file output
+
+    doLast {
+        def fullHash = gitHash.get() ?: 'unknown'
+        def json = new JsonBuilder([
+            gitBranch   : gitBranch.get() ?: 'unknown',
+            gitHash     : fullHash.take(10),
+            fullGitHash : fullHash,
+            production  : production.get().toBoolean(),
+            version     : versionValue
+        ])
+        output.get().asFile.text = json.toPrettyString() + '\n'
+    }
+}
+
 jar {
+    from generateBuildData
     from sourceSets.standalone.output
     manifest {
         attributes 'Main-Class': 'org.codeberg.illusionclient.Main'
