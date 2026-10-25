@@ -34,8 +34,10 @@ public class BridgeAssist extends Module {
 	private static final float LOOKING_DOWN_PITCH = 65.0F;
 	private static final int HOLD_GRACE_TICKS = 2;
 	private static final int PLACEMENT_TICKS = 20;
-	private static final double EDGE_TOLERANCE = 0.2D;
-	private static final float MIN_AXIS_SHARE = 0.3F;
+	private static final int LANDING_GRACE_TICKS = 2;
+	private static final double EDGE_TOLERANCE = 0.1D;
+	private static final double LATCH_RADIUS = 0.15D;
+	private static final float MIN_AXIS_SHARE = 0.38F;
 	private final Minecraft minecraft = Minecraft.getInstance();
 	private final Random random = new Random();
 
@@ -94,7 +96,6 @@ public class BridgeAssist extends Module {
 
 	private boolean sneaking;
 	private boolean armed;
-	private boolean edgeLatched;
 	private boolean sneakedSincePlace;
 	private boolean pendingSneak;
 	private boolean holdSneak;
@@ -102,6 +103,10 @@ public class BridgeAssist extends Module {
 	private int unsneakTicks;
 	private int placementTicks;
 	private int nonBlockTicks;
+	private int groundTicks;
+	private int latchedPlacements;
+	private double latchX;
+	private double latchZ;
 	private Block lastBlock;
 	private int lastSlot = -1;
 
@@ -112,8 +117,8 @@ public class BridgeAssist extends Module {
 
 	@Override
 	public void onDisable() {
-		sneaking = armed = edgeLatched = sneakedSincePlace = pendingSneak = holdSneak = false;
-		unsneakTicks = placementTicks = nonBlockTicks = 0;
+		sneaking = armed = sneakedSincePlace = pendingSneak = holdSneak = false;
+		unsneakTicks = placementTicks = nonBlockTicks = groundTicks = latchedPlacements = 0;
 		lastBlock = null;
 		lastSlot = -1;
 	}
@@ -123,7 +128,7 @@ public class BridgeAssist extends Module {
 		LocalClientPlayerEntity player = minecraft.player;
 		InputState input = IllusionClient.INPUT.player;
 		nonBlockTicks = ItemUtils.isBlock(player.inventory.getSelectedItem()) ? 0 : nonBlockTicks + 1;
-		edgeLatched &= armed;
+		if (!armed) latchedPlacements = 0;
 		armed = false;
 		if (!conditionsMet(player, input)) {
 			sneaking = pendingSneak = holdSneak = false;
@@ -175,14 +180,21 @@ public class BridgeAssist extends Module {
 		LocalClientPlayerEntity player = minecraft.player;
 		HitResult target = minecraft.crosshairTarget;
 		if (target == null || target.type != HitResult.Type.BLOCK || !ItemUtils.isBlock(player.inventory.getSelectedItem())) return;
-		if (waitForEdge && armed && player.onGround) {
-			if (!edgeLatched && !backedToEdge(player)) {
-				event.cancelled = true;
-				return;
+		if (waitForEdge && armed && player.onGround && groundTicks >= LANDING_GRACE_TICKS && !IllusionClient.INPUT.player.jump) {
+			if (latchedPlacements > 0 && Math.abs(player.x - latchX) < LATCH_RADIUS && Math.abs(player.z - latchZ) < LATCH_RADIUS) {
+				latchedPlacements--;
+			} else {
+				int axes = edgeAxes(player);
+				if (axes == 0) {
+					event.cancelled = true;
+					return;
+				}
+				latchedPlacements = axes - 1;
+				latchX = player.x;
+				latchZ = player.z;
 			}
-			edgeLatched = true;
 		}
-		if (avoidDoubleSneaking && armed) {
+		if (avoidDoubleSneaking && armed && player.onGround) {
 			int reach = edgeReach(player, target);
 			if (reach < 0) {
 				event.cancelled = true;
@@ -199,7 +211,9 @@ public class BridgeAssist extends Module {
 	public void onPlayerTick(PlayerTickEvent event) {
 		if (placementTicks > 0) placementTicks--;
 		LocalClientPlayerEntity player = minecraft.player;
-		if (player == null || minecraft.screen != null) return;
+		if (player == null) return;
+		groundTicks = player.onGround ? groundTicks + 1 : 0;
+		if (minecraft.screen != null) return;
 
 		PlayerInventory inventory = player.inventory;
 		int slot = -1;
@@ -248,20 +262,28 @@ public class BridgeAssist extends Module {
 		return simulated.shape.contract(inset, 0.0D, inset).moved(0.0D, -1.0D, 0.0D);
 	}
 
-	private boolean backedToEdge(LocalClientPlayerEntity player) {
+	private int edgeAxes(LocalClientPlayerEntity player) {
 		InputState input = IllusionClient.INPUT.client;
 		float forward = input.forwardAxis();
 		float sideways = input.sidewaysAxis();
 		float length = MathHelper.sqrt(forward * forward + sideways * sideways);
-		if (length < 1.0E-4F) return true;
+		if (length < 1.0E-4F) return 1;
 
 		float sin = MathHelper.sin(player.yaw * (float) Math.PI / 180.0F);
 		float cos = MathHelper.cos(player.yaw * (float) Math.PI / 180.0F);
 		float dirX = (sideways * cos - forward * sin) / length;
 		float dirZ = (forward * cos + sideways * sin) / length;
 		Box shape = player.getShape();
-		if (Math.abs(dirX) > MIN_AXIS_SHARE && supported(shape.moved(Math.signum(dirX) * EDGE_TOLERANCE, -1.0D, 0.0D))) return false;
-		return Math.abs(dirZ) <= MIN_AXIS_SHARE || !supported(shape.moved(0.0D, -1.0D, Math.signum(dirZ) * EDGE_TOLERANCE));
+		int axes = 0;
+		if (Math.abs(dirX) > MIN_AXIS_SHARE) {
+			if (supported(shape.moved(Math.signum(dirX) * EDGE_TOLERANCE, -1.0D, 0.0D))) return 0;
+			axes++;
+		}
+		if (Math.abs(dirZ) > MIN_AXIS_SHARE) {
+			if (supported(shape.moved(0.0D, -1.0D, Math.signum(dirZ) * EDGE_TOLERANCE))) return 0;
+			axes++;
+		}
+		return axes;
 	}
 
 	private boolean supported(Box box) {
