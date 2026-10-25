@@ -2,31 +2,44 @@ package org.codeberg.illusionclient.util;
 
 import net.minecraft.util.math.MathHelper;
 
+import java.util.ArrayDeque;
 import java.util.Random;
 
 public final class ClickPattern {
+	private static final float MIN_UP = 6.0F;
+	private static final float PAUSE_SHARE = 0.14F;
 	private final Random random = new Random();
 	private final Drift phaseCps = new Drift(75_000L);
 	private final Drift streakCps = new Drift(18_000L);
 	private final Drift jitterCps = new Drift(3_500L);
 	private final Drift deviation = new Drift(25_000L);
+	private final Drift correlation = new Drift(40_000L);
 	private final Drift gapSpread = new Drift(12_000L);
+	private final Drift gapWander = new Drift(4_000L);
 	private final Drift singleChance = new Drift(30_000L);
 	private final Drift exhaustChance = new Drift(240_000L);
 	private final Drift exhaustLength = new Drift(60_000L);
-	private final Drift liftShare = new Drift(40_000L);
+	private final Drift hitchChance = new Drift(90_000L);
+	private final Drift pauseGap = new Drift(150_000L);
+	private final Drift tiring = new Drift(120_000L);
+	private final Drift[] holdShare = {new Drift(40_000L), new Drift(55_000L)};
+	private final ArrayDeque<float[]> queue = new ArrayDeque<>();
 	private float cps;
 	private boolean randomize;
 	private boolean simulateExhaust;
 	private boolean butterfly;
 	private boolean clicking;
 	private float wait;
-	private boolean lifted;
-	private float lift;
+	private boolean down;
+	private float hold;
 	private int presses;
-	private int burstLeft;
-	private float gap;
+	private float head;
+	private float cursor;
+	private float noise;
+	private float effort;
+	private long stopped;
 	private int exhaustClicks;
+	private int untilPause;
 	private float exhaust;
 	private float lastYaw;
 	private float lastPitch;
@@ -45,11 +58,12 @@ public final class ClickPattern {
 	}
 
 	public void stop() {
+		if (clicking) stopped = System.currentTimeMillis();
 		clicking = false;
 	}
 
 	public int advance(float delta, ClickProfile profile, float cps, boolean randomize, boolean simulateExhaust, boolean butterfly) {
-		if (this.profile != profile) clicking = false;
+		if (this.profile != profile || this.butterfly != butterfly) clicking = false;
 		this.profile = profile;
 		this.cps = cps;
 		this.randomize = randomize;
@@ -57,15 +71,22 @@ public final class ClickPattern {
 		this.butterfly = butterfly;
 
 		if (!clicking) {
+			long now = System.currentTimeMillis();
 			clicking = true;
-			burstLeft = 0;
+			queue.clear();
+			head = 0.0F;
+			cursor = 0.0F;
+			noise = 0.0F;
 			exhaustClicks = 0;
-			lifted = false;
+			untilPause = 4 + random.nextInt(24);
+			down = false;
 			streak = -1;
-			rampStart = System.currentTimeMillis();
-			rampLength = butterfly ? 500.0F + random.nextFloat() * 500.0F : 0.0F;
+			effort *= (float) Math.exp((stopped - now) / 6000.0);
+			rampStart = now;
+			rampLength = butterfly ? 500.0F + random.nextFloat() * 500.0F : randomize ? 250.0F + random.nextFloat() * 400.0F : 0.0F;
 			wait = next();
 		}
+		effort += delta;
 
 		int edges = 0;
 		presses = 0;
@@ -78,14 +99,25 @@ public final class ClickPattern {
 	}
 
 	private float edge() {
-		lifted = !lifted;
-		if (lifted) return lift;
+		down = !down;
+		if (down) return hold;
 		presses++;
 		return next();
 	}
 
 	private float next() {
-		return profile != null ? replay() : split(interval());
+		if (profile != null) return replay();
+		if (queue.isEmpty()) {
+			head -= cursor;
+			cursor = 0.0F;
+			stroke();
+		}
+
+		float[] press = queue.pollFirst();
+		hold = press[1] - press[0];
+		float gap = press[0] - cursor;
+		cursor = press[1];
+		return gap;
 	}
 
 	private float replay() {
@@ -98,53 +130,92 @@ public final class ClickPattern {
 		}
 
 		float[] clicks = profile.streaks.get(streak);
-		lift = clicks[position + 1];
+		hold = clicks[position + 1];
 		position += 2;
 		return clicks[position - 2];
 	}
 
-	private float split(float ms) {
-		float share = randomize ? liftShare.range(System.currentTimeMillis(), 0.3F, 0.5F) + 0.06F * gaussian() : 0.5F;
-		lift = ms * share;
-		return ms - lift;
+	private void stroke() {
+		long now = System.currentTimeMillis();
+		float ms = period(now);
+		float extra = slowdown(now) + hitch(now);
+		if (!butterfly) {
+			head += ms + extra;
+			push(head, hold(now, 0));
+			return;
+		}
+
+		boolean single = extra > 0.0F || random.nextFloat() < singleChance(now);
+		head += (single ? ms : 2.0F * ms) + extra;
+		push(head, hold(now, 0));
+		if (!single) push(head + gap(now), hold(now, 1));
+	}
+
+	private void push(float start, float hold) {
+		float[] last = queue.peekLast();
+		if (last != null && start < last[1]) {
+			last[1] = Math.max(last[1], start + hold);
+			return;
+		}
+		start = Math.max(start, (last != null ? last[1] : cursor) + MIN_UP);
+		queue.addLast(new float[]{start, start + hold});
 	}
 
 	private float ramp(long now) {
 		if (rampLength <= 0.0F) return 1.0F;
 		float t = Math.clamp((now - rampStart) / rampLength, 0.0F, 1.0F);
-		return 0.45F + 0.55F * t * t * (3.0F - 2.0F * t);
+		float from = butterfly ? 0.45F : 0.72F;
+		return from + (1.0F - from) * t * t * (3.0F - 2.0F * t);
+	}
+
+	private float fatigue(long now) {
+		if (!randomize) return 0.0F;
+		return tiring.range(now, 0.03F, 0.09F) * (1.0F - (float) Math.exp(-effort / 12_000.0F));
 	}
 
 	private float period(long now) {
 		float base = 1000.0F / (cps * ramp(now));
 		if (!randomize) return base;
+		base /= 1.0F + PAUSE_SHARE;
 
+		float fatigue = fatigue(now);
 		float drift = 1.0F + phaseCps.signed(now) * 0.1F + streakCps.signed(now) * 0.07F + jitterCps.signed(now) * 0.04F;
-		float sigma = deviation.range(now, 0.2F, 0.32F);
-		return base / drift * (float) Math.exp(sigma * random.nextGaussian() - sigma * sigma / 2.0F);
+		float sigma = deviation.range(now, 0.13F, 0.24F) * (1.0F + fatigue * 2.0F + activity * 0.3F);
+		float rho = correlation.range(now, 0.25F, 0.5F);
+		noise = noise * rho + (float) random.nextGaussian() * (float) Math.sqrt(1.0F - rho * rho);
+		return base / (1.0F - fatigue) / drift * (float) Math.exp(sigma * noise - sigma * sigma / 2.0F);
 	}
 
-	private float interval() {
-		long now = System.currentTimeMillis();
-		float ms = period(now);
-		if (!butterfly) return ms + slowdown(now);
-
-		if (burstLeft > 0) {
-			burstLeft--;
-			return gap;
-		}
-
-		float slowdown = slowdown(now);
-		startBurst(now, slowdown > 0.0F);
-		return (burstLeft > 0 ? 2.0F * ms - gap : ms) + slowdown;
+	private float hold(long now, int finger) {
+		if (!randomize) return 500.0F / cps;
+		float ms = butterfly
+			? holdShare[finger].range(now, 0.2F, 0.34F) * Math.min(1000.0F / cps, 70.0F)
+			: holdShare[finger].range(now, 0.28F, 0.45F) * 1000.0F / cps;
+		ms = Math.clamp(ms, 12.0F, 90.0F);
+		return ms * (float) Math.exp(0.16F * random.nextGaussian());
 	}
 
-	private void startBurst(long now, boolean exhausted) {
-		gap = randomize ? gapSpread.range(now, 22.0F, 40.0F) : 30.0F;
+	private float gap(long now) {
+		if (!randomize) return 30.0F;
+		float ms = gapSpread.range(now, 20.0F, 42.0F) + gapWander.signed(now) * 8.0F;
+		return Math.max(8.0F, ms * (float) Math.exp(0.2F * random.nextGaussian()));
+	}
+
+	private float singleChance(long now) {
 		float chance = randomize ? singleChance.range(now, 0.03F, 0.07F) : 0.0F;
-		chance += (1.0F - ramp(now)) * 0.6F;
-		boolean single = exhausted || random.nextFloat() < chance;
-		burstLeft = single ? 0 : 1;
+		return chance + (1.0F - ramp(now)) * 0.6F;
+	}
+
+	private float hitch(long now) {
+		if (!randomize) return 0.0F;
+		if (--untilPause <= 0) {
+			untilPause = 12 + random.nextInt((int) pauseGap.range(now, 18.0F, 32.0F));
+			float r = random.nextFloat();
+			return Math.max(150.0F, 1000.0F / cps * (2.5F + 3.5F * r * r));
+		}
+		float stumble = hitchChance.range(now, 0.02F, 0.045F) + activity * 0.015F;
+		if (random.nextFloat() < stumble) return 1000.0F / cps * (0.6F + 1.2F * random.nextFloat());
+		return 0.0F;
 	}
 
 	private float slowdown(long now) {

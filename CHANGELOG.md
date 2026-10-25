@@ -5,7 +5,7 @@
 - Added Blink, which holds back packets so you look like you teleport to other players.
 - Added Timer, which speeds up or slows down the whole game.
 - Auto Clicker can now play back recorded click profiles.
-- Auto Clicker's butterfly mode ramps up its click speed, and clicks are spread on a log-normal curve.
+- Auto Clicker's click timing is more human. With warming up, exhaustion, hitches, varied hold times. Butterfly mode now has "overlapping" clicks.
 - The click GUI now opens as an overlay on top of any screen, and draws correctly alongside other mods' screen rendering.
 - Rewrote Bridge Assist with better edge detection and block selection. It now sneaks once per block, has a Skip Sneak option, and no longer lets you fall off edges.
 - Fixed Bridge Assist double-sneaking or sneaking when it didn't need to.
