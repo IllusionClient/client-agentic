@@ -27,7 +27,6 @@ import org.codeberg.illusionclient.util.RotationUtils;
 @Description("Moves your crosshair onto players.")
 public class AimAssist extends Module {
 	private static final float PREDICT_TICKS = 3.0F;
-	private static final long CLICK_WINDOW = 300L;
 	private static final float RESIST_LIMIT = 15.0F;
 	private static final float RESIST_DECAY = 30.0F;
 	private static final long RESIST_COOLDOWN = 1000L;
@@ -74,6 +73,10 @@ public class AimAssist extends Module {
 	@Check("Increased FOV While Locked")
 	public boolean increasedFov = false;
 
+	@Description("How long to wait for a lost target to come back before picking another.")
+	@Slider(value = "Retarget Delay (ms)", min = 0.0F, max = 1000.0F)
+	public float retargetDelay = 400.0F;
+
 	@Description("Which target to prefer.")
 	@Requires(value = "targetMode", is = "Switch")
 	@Combo(value = "Sort By", options = {"Distance", "Health", "Hurt time", "Aim angle"})
@@ -94,6 +97,11 @@ public class AimAssist extends Module {
 	@Description("Only aims while you are clicking.")
 	@Check("Mouse Pressed")
 	public boolean mousePressed = true;
+
+	@Description("Keeps aiming this long after you let go. 0 stops right away.")
+	@Requires("mousePressed")
+	@Slider(value = "Click Window (ms)", min = 0.0F, max = 500.0F)
+	public float clickWindow = 300.0F;
 
 	@Description("Only aims while you move your mouse, and never further than you do.")
 	@Check("Mouse Moved")
@@ -118,7 +126,7 @@ public class AimAssist extends Module {
 	private PlayerEntity target;
 	private long lastFrame;
 	private long lastClick;
-	private PlayerEntity resisted;
+	private long lastSeen;
 	private long resistedUntil;
 	private float resist;
 	private float yawRemainder;
@@ -152,12 +160,12 @@ public class AimAssist extends Module {
 
 	@Override
 	public void onDisable() {
-		target = resisted = null;
+		target = null;
 	}
 
 	@Listen
 	public void onWorldLoad(WorldLoadEvent event) {
-		target = resisted = null;
+		target = null;
 	}
 
 	@Listen
@@ -185,7 +193,11 @@ public class AimAssist extends Module {
 		int mouseX = minecraft.mouse.x;
 		int mouseY = -minecraft.mouse.y;
 
-		if (resisting && resisted(mouseX * gcd, mouseY * gcd, yawDiff, pitchDiff, delta)) return;
+		float yield = 1.0F;
+		if (resisting) {
+			if (resisted(mouseX * gcd, mouseY * gcd, yawDiff, pitchDiff, delta)) return;
+			yield = 1.0F - resist / RESIST_LIMIT;
+		}
 
 		yawDiff = shrink(yawDiff, fov[0] / 2.0F);
 		pitchDiff = shrink(pitchDiff, fov[0] / 2.0F);
@@ -195,8 +207,8 @@ public class AimAssist extends Module {
 		if (!lockOn) pitchDiff *= Math.max(0.0F, 1.0F - Math.abs(yawDiff) / NoiseUtils.wander(40.0F, 120.0F, 5.0F, 0));
 
 		float drift = NoiseUtils.wander(0.95F, 1.05F, 60.0F, 1);
-		float yawStep = step(yawDiff, horizontalSpeed * drift * NoiseUtils.wander(0.9F, 1.1F, 1.0F, 2), delta, mode);
-		float pitchStep = step(pitchDiff, verticalSpeed * drift * NoiseUtils.wander(0.9F, 1.1F, 1.0F, 3), delta, mode);
+		float yawStep = step(yawDiff, horizontalSpeed * drift * NoiseUtils.wander(0.9F, 1.1F, 1.0F, 2), delta, mode) * yield;
+		float pitchStep = step(pitchDiff, verticalSpeed * drift * NoiseUtils.wander(0.9F, 1.1F, 1.0F, 3), delta, mode) * yield;
 
 		float yawTotal = yawStep + yawRemainder;
 		yawRemainder = yawTotal % gcd;
@@ -218,33 +230,41 @@ public class AimAssist extends Module {
 		float length = (float) Math.hypot(yawDiff, pitchDiff);
 		float away = length == 0.0F ? 0.0F : -(mouseYaw * yawDiff + mousePitch * pitchDiff) / length;
 		resist = Math.max(0.0F, resist + Math.max(0.0F, away) - RESIST_DECAY * delta);
-		if (resist < RESIST_LIMIT) return false;
-
-		resisted = target;
-		resistedUntil = System.currentTimeMillis() + RESIST_COOLDOWN;
-		target = null;
-		yawRemainder = pitchRemainder = resist = 0.0F;
-		return true;
+		long millis = System.currentTimeMillis();
+		if (resist >= RESIST_LIMIT) {
+			resistedUntil = millis + RESIST_COOLDOWN;
+			yawRemainder = pitchRemainder = resist = 0.0F;
+		}
+		return millis < resistedUntil;
 	}
 
 	private PlayerEntity findTarget(float yaw, float pitch) {
-		if (!active()) return target = null;
+		if (!active()) return null;
 
+		long millis = System.currentTimeMillis();
 		boolean single = targetMode.equals("Single");
-		if (single && target != null && valid(target, yaw, pitch, increasedFov)) return target;
+		boolean holding = target != null && valid(target, yaw, pitch, single && increasedFov);
+		if (holding) lastSeen = millis;
+		if (single && holding) return target;
 
-		PlayerEntity hovered = CombatUtils.best(player -> valid(player, yaw, pitch, true) && CombatUtils.isHovered(player, range[1], TARGETING_MARGIN), CombatUtils::distanceTo);
-		if (hovered != null) return target = hovered;
-
-		String sort = single ? "Aim angle" : sortBy;
-		return target = CombatUtils.best(player -> valid(player, yaw, pitch, false), player -> score(player, sort, yaw, pitch));
+		PlayerEntity next = CombatUtils.best(player -> valid(player, yaw, pitch, true) && CombatUtils.isHovered(player, range[1], TARGETING_MARGIN), CombatUtils::distanceTo);
+		if (next == null) {
+			if (!holding && target != null && target.isAlive() && millis - lastSeen < retargetDelay) return null;
+			String sort = single ? "Aim angle" : sortBy;
+			next = CombatUtils.best(player -> valid(player, yaw, pitch, false), player -> score(player, sort, yaw, pitch));
+		}
+		if (next != null) {
+			target = next;
+			lastSeen = millis;
+		}
+		return next;
 	}
 
 	private boolean active() {
 		LocalClientPlayerEntity player = minecraft.player;
 		if (player == null || minecraft.world == null || minecraft.screen != null || !player.isAlive()) return false;
 		if (sprinting && !player.isSprinting()) return false;
-		if (mousePressed && System.currentTimeMillis() - lastClick > CLICK_WINDOW) return false;
+		if (mousePressed && System.currentTimeMillis() - lastClick > clickWindow) return false;
 		if (breakingBlocks && minecraft.interactionManager.isMiningBlock()) return false;
 		return Weapons.isHolding(player);
 	}
@@ -252,7 +272,6 @@ public class AimAssist extends Module {
 	private boolean valid(PlayerEntity player, float yaw, float pitch, boolean anyFov) {
 		if (!player.isAlive() || !CombatUtils.isTarget(player)) return false;
 		if (ignoreInvisibles && player.isInvisible()) return false;
-		if (player == resisted && System.currentTimeMillis() < resistedUntil) return false;
 
 		double distance = CombatUtils.distanceTo(player);
 		if (distance < range[0] || distance > range[1]) return false;
