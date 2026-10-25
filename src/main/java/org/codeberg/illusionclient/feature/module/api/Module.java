@@ -18,6 +18,8 @@ public abstract class Module {
 	public final List<Option> options = new ObjectArrayList<>();
 
 	private int bind;
+	private int namedBind;
+	private String bindName;
 	private boolean hold;
 	private boolean enabled;
 	private int detailsVersion;
@@ -65,7 +67,11 @@ public abstract class Module {
 	}
 
 	public final String bindName() {
-		return bind < 0 ? "Mouse " + (bind + 101) : Keyboard.getKeyName(bind);
+		if (bind != namedBind || bindName == null) {
+			namedBind = bind;
+			bindName = bind < 0 ? "Mouse " + (bind + 101) : Keyboard.getKeyName(bind);
+		}
+		return bindName;
 	}
 
 	public final boolean isHold() {

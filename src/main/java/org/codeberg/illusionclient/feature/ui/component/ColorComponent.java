@@ -11,6 +11,11 @@ public class ColorComponent extends OptionComponent {
 	private static final int HUE_SEGMENTS = 6;
 	private static final int BOX_RADIUS = 6;
 	private static final int HUE_RADIUS = HUE_HEIGHT / 2;
+	private static final int[] HUES = new int[HUE_SEGMENTS + 1];
+
+	static {
+		for (int i = 0; i <= HUE_SEGMENTS; i++) HUES[i] = Color.HSBtoRGB(i / (float) HUE_SEGMENTS, 1.0F, 1.0F);
+	}
 
 	private final float[] hsb;
 	private boolean open, draggingBox, draggingHue;
@@ -67,8 +72,8 @@ public class ColorComponent extends OptionComponent {
 		for (int i = 0; i < HUE_SEGMENTS; i++) {
 			int left = hueX + hueWidth * i / HUE_SEGMENTS;
 			int right = hueX + hueWidth * (i + 1) / HUE_SEGMENTS;
-			int from = Color.HSBtoRGB(i / (float) HUE_SEGMENTS, 1.0F, 1.0F);
-			int to = Color.HSBtoRGB((i + 1) / (float) HUE_SEGMENTS, 1.0F, 1.0F);
+			int from = HUES[i];
+			int to = HUES[i + 1];
 			Draw.gradient(left, hueY, right - left, HUE_HEIGHT, from, to, from, to);
 		}
 		cursor(hueX + (int) (hsb[0] * hueWidth), hueY + HUE_RADIUS, hue);

@@ -21,6 +21,8 @@ public class Frame extends Group {
 	public final Category category;
 	private boolean dragging, placed;
 	private int dragX, dragY, lastHeight;
+	private int lastOn = -1;
+	private String onLabel;
 
 	public Frame(Category category) {
 		this.category = category;
@@ -71,7 +73,11 @@ public class Frame extends Group {
 		for (Component child : children) {
 			if (((ModuleComponent) child).module.isEnabled()) on++;
 		}
-		Draw.textRight(on + " of " + children.size() + " on", x + width - PADDING - 2, Draw.headingBaseline(headingY), Draw.FAINT, Draw.Weight.REGULAR);
+		if (on != lastOn) {
+			lastOn = on;
+			onLabel = on + " of " + children.size() + " on";
+		}
+		Draw.textRight(onLabel, x + width - PADDING - 2, Draw.headingBaseline(headingY), Draw.FAINT, Draw.Weight.REGULAR);
 	}
 
 	@Override

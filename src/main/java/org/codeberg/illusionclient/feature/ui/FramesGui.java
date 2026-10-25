@@ -20,6 +20,8 @@ public class FramesGui extends ClickGui {
 	private static final String STATE = "frames";
 
 	private final List<Frame> frames = new ObjectArrayList<>();
+	private Font watermarkFont;
+	private int watermarkWidth;
 
 	public FramesGui() {
 		for (Category category : Category.values()) frames.add(new Frame(category));
@@ -129,7 +131,11 @@ public class FramesGui extends ClickGui {
 	}
 
 	private void renderWatermark() {
-		int textX = width - Component.PADDING - Draw.width(IllusionClient.NAME);
+		if (watermarkFont != Draw.font()) {
+			watermarkFont = Draw.font();
+			watermarkWidth = Draw.width(IllusionClient.NAME);
+		}
+		int textX = width - Component.PADDING - watermarkWidth;
 		int y = height - Component.PADDING - Icon.LOGO.height;
 		Icon.LOGO.draw(textX - 5 - Icon.LOGO.width, y, Draw.accent().getRGB());
 		Draw.text(IllusionClient.NAME, textX, y, Draw.TEXT);

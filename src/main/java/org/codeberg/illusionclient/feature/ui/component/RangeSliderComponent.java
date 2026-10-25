@@ -10,6 +10,8 @@ public class RangeSliderComponent extends OptionComponent {
 	private static final int KNOB = 8;
 
 	private int dragging = -1;
+	private float shownLow, shownHigh;
+	private String rangeLabel;
 
 	public RangeSliderComponent(Option option) {
 		super(option);
@@ -46,7 +48,12 @@ public class RangeSliderComponent extends OptionComponent {
 		int knobY = trackY - (KNOB - TRACK_HEIGHT) / 2;
 
 		row(option.name, mouseX, mouseY);
-		value(range[0] + " - " + range[1]);
+		if (range[0] != shownLow || range[1] != shownHigh || rangeLabel == null) {
+			shownLow = range[0];
+			shownHigh = range[1];
+			rangeLabel = range[0] + " - " + range[1];
+		}
+		value(rangeLabel);
 		Draw.rounded(left(), trackY, width, TRACK_HEIGHT, 2.0F, Draw.TRACK);
 		Draw.rounded(left() + low, trackY, high - low, TRACK_HEIGHT, 2.0F, Draw.accent().getRGB());
 		Draw.rounded(left() + low - KNOB / 2, knobY, KNOB, KNOB, KNOB / 2.0F, -1);

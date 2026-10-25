@@ -14,6 +14,12 @@ public enum Icon {
 	CHEVRON("chevron", 4, 7),
 	LOGO("logo", 9, 8);
 
+	private static final Icon[] CATEGORIES = new Icon[Category.values().length];
+
+	static {
+		for (Category category : Category.values()) CATEGORIES[category.ordinal()] = valueOf(category.name());
+	}
+
 	public final int width, height;
 	private final Identifier texture, smooth;
 
@@ -25,7 +31,7 @@ public enum Icon {
 	}
 
 	public static Icon of(Category category) {
-		return valueOf(category.name());
+		return CATEGORIES[category.ordinal()];
 	}
 
 	public void draw(int x, int y, int color) {

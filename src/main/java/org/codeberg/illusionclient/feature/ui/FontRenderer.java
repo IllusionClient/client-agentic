@@ -32,6 +32,8 @@ public final class FontRenderer {
 	private static final BufferUploader UPLOADER = new BufferUploader();
 
 	private final Atlas[] atlases;
+	private float lastPixels = Float.NaN;
+	private Atlas lastAtlas;
 
 	private FontRenderer(String name, int... sizes) {
 		atlases = new Atlas[sizes.length];
@@ -94,12 +96,14 @@ public final class FontRenderer {
 	}
 
 	private Atlas atlas(float pixels) {
+		if (pixels == lastPixels) return lastAtlas;
 		Atlas best = atlases[0];
 		for (Atlas atlas : atlases) {
 			if (Math.abs(atlas.size - pixels) < Math.abs(best.size - pixels)) best = atlas;
 		}
 		best.load();
-		return best;
+		lastPixels = pixels;
+		return lastAtlas = best;
 	}
 
 	private static void vertex(BufferBuilder buffer, float x, float y, float u, float v, int color) {

@@ -7,7 +7,6 @@ import net.minecraft.client.gui.screen.game.ChatScreen;
 import net.minecraft.client.gui.screen.game.SignEditScreen;
 import net.minecraft.client.gui.screen.game.inventory.AnvilScreen;
 import net.minecraft.client.gui.screen.game.inventory.CreativeInventoryScreen;
-import net.minecraft.client.render.Window;
 import net.minecraft.client.render.platform.GlStateManager;
 import org.codeberg.illusionclient.IllusionClient;
 import org.codeberg.illusionclient.feature.module.api.Module;
@@ -83,7 +82,7 @@ public abstract class ClickGui {
 
 	private static int scale(Minecraft minecraft) {
 		int wanted = IllusionClient.MODULES.get(ClickGuiModule.class).scale();
-		if (wanted == 0) return new Window(minecraft).getScale();
+		if (wanted == 0) return Draw.vanillaScale(minecraft);
 
 		int scale = 1;
 		while (scale < wanted && minecraft.width / (scale + 1) >= MIN_WIDTH && minecraft.height / (scale + 1) >= MIN_HEIGHT) scale++;
@@ -117,7 +116,7 @@ public abstract class ClickGui {
 	private void renderOverlay(float tickDelta) {
 		if (scale(minecraft) != scale || minecraft.width != displayWidth || minecraft.height != displayHeight) resize();
 
-		float factor = scale / (float) new Window(minecraft).getScale();
+		float factor = scale / (float) Draw.vanillaScale(minecraft);
 		GlStateManager.pushMatrix();
 		GlStateManager.scalef(factor, factor, 1.0F);
 		Draw.setPixelScale(scale);

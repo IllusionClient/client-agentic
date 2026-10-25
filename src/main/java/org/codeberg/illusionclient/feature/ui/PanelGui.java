@@ -49,6 +49,8 @@ public class PanelGui extends ClickGui {
 	private static final int BACK_BUTTON = 3;
 	private static final int FORWARD_BUTTON = 4;
 	private static final float RADIUS = 8.0F;
+	private static final Category[] CATEGORIES = Category.values();
+	private static final String[] STAT_NAMES = {"Playtime", "Auto clicks", "Best combo", "Most toggled", "Modules on", "FPS", "Ping"};
 
 	private final Map<Category, List<Module>> modules = new EnumMap<>(Category.class);
 	private final Reference2ObjectMap<Module, List<Component>> components = new Reference2ObjectOpenHashMap<>();
@@ -66,9 +68,15 @@ public class PanelGui extends ClickGui {
 	private Category category;
 	private Module module;
 	private int contentScroll, contentHeight;
+	private final long[] statKeys = new long[STAT_NAMES.length];
+	private final String[] statValues = new String[STAT_NAMES.length];
+	private Module statModule;
+	private String username, welcome;
+	private int headerCount = -1, headerOn = -1, headerSize = -1;
+	private String headerLabel;
 
 	public PanelGui() {
-		for (Category category : Category.values()) {
+		for (Category category : CATEGORIES) {
 			modules.put(category, IllusionClient.MODULES.modules.stream().filter(module -> module.category == category).toList());
 		}
 		history.add(new Page(null, null));
@@ -77,6 +85,12 @@ public class PanelGui extends ClickGui {
 
 	private static boolean within(int mouseX, int mouseY, int x, int y, int width, int height) {
 		return mouseX >= x && mouseX < x + width && mouseY >= y && mouseY < y + height;
+	}
+
+	private boolean changed(int index, long key) {
+		if (statValues[index] != null && statKeys[index] == key) return false;
+		statKeys[index] = key;
+		return true;
 	}
 
 	private static String duration(long millis) {
@@ -159,7 +173,7 @@ public class PanelGui extends ClickGui {
 		boolean browsing = search.isEmpty();
 		int rowY = listTop();
 		entry(Icon.HOME, "Home", browsing && category == null, mouseX, mouseY, rowY);
-		for (Category entry : Category.values()) {
+		for (Category entry : CATEGORIES) {
 			rowY += ENTRY;
 			entry(Icon.of(entry), entry.title(), browsing && category == entry, mouseX, mouseY, rowY);
 		}
@@ -202,7 +216,12 @@ public class PanelGui extends ClickGui {
 		if (!search.isEmpty()) {
 			int count = matches().size();
 			Draw.text("Search", left, textY, Draw.TEXT);
-			Draw.textRight(count + (count == 1 ? " result" : " results"), right, textY, Draw.FAINT, Draw.Weight.REGULAR);
+			if (count != headerCount || headerOn != -1) {
+				headerCount = count;
+				headerOn = -1;
+				headerLabel = count + (count == 1 ? " result" : " results");
+			}
+			Draw.textRight(headerLabel, right, textY, Draw.FAINT, Draw.Weight.REGULAR);
 		} else if (module != null) {
 			String parent = module.category.title();
 			int parentWidth = Draw.width(parent);
@@ -213,7 +232,13 @@ public class PanelGui extends ClickGui {
 			List<Module> list = modules.get(category);
 			int on = enabledCount(list);
 			Draw.text(category.title(), left, textY, Draw.TEXT);
-			Draw.textRight(on + " of " + list.size() + " on", right, textY, Draw.FAINT, Draw.Weight.REGULAR);
+			if (on != headerOn || list.size() != headerSize) {
+				headerOn = on;
+				headerSize = list.size();
+				headerCount = -1;
+				headerLabel = on + " of " + list.size() + " on";
+			}
+			Draw.textRight(headerLabel, right, textY, Draw.FAINT, Draw.Weight.REGULAR);
 		} else {
 			Draw.text("Home", left, textY, Draw.TEXT);
 		}
@@ -342,7 +367,12 @@ public class PanelGui extends ClickGui {
 	private int renderHome(int top, boolean inside, int mouseX, int mouseY) {
 		int left = contentLeft();
 		int width = contentWidth();
-		Draw.text("Welcome back, " + minecraft.getSession().getUsername(), left, top + 2, Draw.TEXT);
+		String name = minecraft.getSession().getUsername();
+		if (!name.equals(username)) {
+			username = name;
+			welcome = "Welcome back, " + name;
+		}
+		Draw.text(welcome, left, top + 2, Draw.TEXT);
 		Draw.text("Left-click toggles a module, right-click opens its settings.", left, top + 14, Draw.MUTED, Draw.Weight.REGULAR);
 
 		List<Module> all = IllusionClient.MODULES.modules;
@@ -350,15 +380,20 @@ public class PanelGui extends ClickGui {
 		Statistics statistics = IllusionClient.STATS;
 		int ping = statistics.ping();
 		Module mostToggled = statistics.mostToggled();
-		String[][] stats = {
-			{"Playtime", duration(statistics.playtime())},
-			{"Auto clicks", String.format("%,d", statistics.autoClicks)},
-			{"Best combo", String.format("%,d", statistics.bestCombo)},
-			{"Most toggled", mostToggled == null ? "None" : mostToggled.name + " (" + String.format("%,d", statistics.toggles.getLong(mostToggled.key)) + ")"},
-			{"Modules on", enabled + " of " + all.size()},
-			{"FPS", String.valueOf(Minecraft.getCurrentFps())},
-			{"Ping", ping < 0 ? "Offline" : ping + " ms"}
-		};
+		long playtime = statistics.playtime();
+		long toggles = mostToggled == null ? -1 : statistics.toggles.getLong(mostToggled.key);
+		int fps = Minecraft.getCurrentFps();
+		String[] stats = statValues;
+		if (changed(0, playtime / 1000)) stats[0] = duration(playtime);
+		if (changed(1, statistics.autoClicks)) stats[1] = String.format("%,d", statistics.autoClicks);
+		if (changed(2, statistics.bestCombo)) stats[2] = String.format("%,d", statistics.bestCombo);
+		if (changed(3, toggles) | mostToggled != statModule) {
+			statModule = mostToggled;
+			stats[3] = mostToggled == null ? "None" : mostToggled.name + " (" + String.format("%,d", toggles) + ")";
+		}
+		if (changed(4, enabled)) stats[4] = enabled + " of " + all.size();
+		if (changed(5, fps)) stats[5] = String.valueOf(fps);
+		if (changed(6, ping)) stats[6] = ping < 0 ? "Offline" : ping + " ms";
 
 		Draw.text("Session", left, top + 36, Draw.TEXT);
 		int rowY = top + 50;
@@ -367,8 +402,8 @@ public class PanelGui extends ClickGui {
 			float bottomRadius = i == stats.length - 1 ? Component.RADIUS : 0.0F;
 			Draw.rounded(left, rowY, width, STAT, topRadius, bottomRadius, Draw.CONTAINER_HIGH);
 			float textY = Draw.textY(rowY, STAT);
-			Draw.text(stats[i][0], left + PADDING, textY, Draw.MUTED, Draw.Weight.REGULAR);
-			Draw.textRight(stats[i][1], left + width - PADDING, textY, Draw.TEXT);
+			Draw.text(STAT_NAMES[i], left + PADDING, textY, Draw.MUTED, Draw.Weight.REGULAR);
+			Draw.textRight(stats[i], left + width - PADDING, textY, Draw.TEXT);
 			rowY += STAT + STAT_GAP;
 		}
 
@@ -432,9 +467,9 @@ public class PanelGui extends ClickGui {
 			return;
 		}
 
-		if (within(mouseX, mouseY, x, listTop(), SIDEBAR, ENTRY * (Category.values().length + 1))) {
+		if (within(mouseX, mouseY, x, listTop(), SIDEBAR, ENTRY * (CATEGORIES.length + 1))) {
 			int index = (mouseY - listTop()) / ENTRY;
-			show(index == 0 ? null : Category.values()[index - 1]);
+			show(index == 0 ? null : CATEGORIES[index - 1]);
 			return;
 		}
 

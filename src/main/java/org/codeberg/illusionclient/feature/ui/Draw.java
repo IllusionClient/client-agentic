@@ -2,7 +2,6 @@ package org.codeberg.illusionclient.feature.ui;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.render.TextRenderer;
-import net.minecraft.client.render.Window;
 import net.minecraft.client.render.platform.GlStateManager;
 import net.minecraft.client.render.vertex.BufferBuilder;
 import net.minecraft.client.render.vertex.BufferUploader;
@@ -43,8 +42,11 @@ public final class Draw {
 	private static final float[] EDGE_Y = new float[OUTLINE_POINTS];
 	private static final float[] FRINGE_X = new float[OUTLINE_POINTS];
 	private static final float[] FRINGE_Y = new float[OUTLINE_POINTS];
-	private static final Object2ObjectMap<Identifier, BufferBuilder> TEXTURED = new Object2ObjectOpenHashMap<>();
-	private static final List<Identifier> TEXTURES_PENDING = new ObjectArrayList<>();
+	private static final Object2ObjectMap<Identifier, Batch> TEXTURED = new Object2ObjectOpenHashMap<>();
+	private static final List<Batch> TEXTURES_PENDING = new ObjectArrayList<>();
+	private static ClickGuiModule settings;
+	private static String fontName;
+	private static Font font = Font.MINECRAFT;
 	private static boolean shapesPending, glyphsPending;
 	private static int pixelScale;
 	private static int tintedFrom;
@@ -62,7 +64,7 @@ public final class Draw {
 	}
 
 	public static Color accent() {
-		Color accent = IllusionClient.MODULES.get(ClickGuiModule.class).color;
+		Color accent = settings().color;
 		if (accent.getRGB() != tintedFrom) tint(accent.getRGB());
 		return accent;
 	}
@@ -124,11 +126,11 @@ public final class Draw {
 		if (!TEXTURES_PENDING.isEmpty()) {
 			GlStateManager.enableBlend();
 			GlStateManager.blendFuncSeparate(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA, GL11.GL_ONE, GL11.GL_ZERO);
-			for (Identifier texture : TEXTURES_PENDING) {
-				BufferBuilder buffer = TEXTURED.get(texture);
-				Minecraft.getInstance().getTextureManager().bind(texture);
-				buffer.end();
-				UPLOADER.end(buffer);
+			for (Batch batch : TEXTURES_PENDING) {
+				batch.pending = false;
+				Minecraft.getInstance().getTextureManager().bind(batch.texture);
+				batch.buffer.end();
+				UPLOADER.end(batch.buffer);
 			}
 			TEXTURES_PENDING.clear();
 			GlStateManager.disableBlend();
@@ -227,20 +229,26 @@ public final class Draw {
 		if (outer <= inner) return;
 
 		BufferBuilder buffer = shapes();
+		float fromInnerX = right + inner, fromInnerY = top, fromOuterX = right + outer, fromOuterY = top;
 		for (int from = 0; from < OUTLINE_POINTS; from++) {
-			int to = (from + 1) % OUTLINE_POINTS;
-			float fromX = from / ARC_POINTS == 1 || from / ARC_POINTS == 2 ? left : right;
-			float fromY = from / ARC_POINTS < 2 ? top : bottom;
-			float toX = to / ARC_POINTS == 1 || to / ARC_POINTS == 2 ? left : right;
-			float toY = to / ARC_POINTS < 2 ? top : bottom;
+			int to = from + 1 == OUTLINE_POINTS ? 0 : from + 1, quadrant = to / ARC_POINTS;
+			float toX = quadrant == 1 || quadrant == 2 ? left : right;
+			float toY = quadrant < 2 ? top : bottom;
+			float toInnerX = toX + COS[to] * inner, toInnerY = toY - SIN[to] * inner;
+			float toOuterX = toX + COS[to] * outer, toOuterY = toY - SIN[to] * outer;
 
-			vertex(buffer, fromX + COS[from] * inner, fromY - SIN[from] * inner, innerColor);
-			vertex(buffer, fromX + COS[from] * outer, fromY - SIN[from] * outer, outerColor);
-			vertex(buffer, toX + COS[to] * outer, toY - SIN[to] * outer, outerColor);
+			vertex(buffer, fromInnerX, fromInnerY, innerColor);
+			vertex(buffer, fromOuterX, fromOuterY, outerColor);
+			vertex(buffer, toOuterX, toOuterY, outerColor);
 
-			vertex(buffer, fromX + COS[from] * inner, fromY - SIN[from] * inner, innerColor);
-			vertex(buffer, toX + COS[to] * outer, toY - SIN[to] * outer, outerColor);
-			vertex(buffer, toX + COS[to] * inner, toY - SIN[to] * inner, innerColor);
+			vertex(buffer, fromInnerX, fromInnerY, innerColor);
+			vertex(buffer, toOuterX, toOuterY, outerColor);
+			vertex(buffer, toInnerX, toInnerY, innerColor);
+
+			fromInnerX = toInnerX;
+			fromInnerY = toInnerY;
+			fromOuterX = toOuterX;
+			fromOuterY = toOuterY;
 		}
 	}
 
@@ -312,14 +320,13 @@ public final class Draw {
 	}
 
 	public static void texture(Identifier texture, int x, int y, int width, int height, int color) {
-		BufferBuilder buffer = TEXTURED.computeIfAbsent(texture, _ -> new BufferBuilder(4096));
-		boolean pending = TEXTURES_PENDING.contains(texture);
-		if (pending && full(buffer, 4)) {
-			flush();
-			pending = false;
-		}
-		if (!pending) {
-			TEXTURES_PENDING.add(texture);
+		Batch batch = TEXTURED.get(texture);
+		if (batch == null) TEXTURED.put(texture, batch = new Batch(texture));
+		BufferBuilder buffer = batch.buffer;
+		if (batch.pending && full(buffer, 4)) flush();
+		if (!batch.pending) {
+			batch.pending = true;
+			TEXTURES_PENDING.add(batch);
 			buffer.begin(GL11.GL_QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
 		}
 
@@ -407,11 +414,22 @@ public final class Draw {
 	}
 
 	public static float headingBaseline(float headingY) {
-		return headingY + font().headingHeight() - font().height();
+		Font font = font();
+		return headingY + font.headingHeight() - font.height();
 	}
 
 	public static Font font() {
-		return IllusionClient.MODULES.get(ClickGuiModule.class).font.equals("Inter") ? Font.INTER : Font.MINECRAFT;
+		String name = settings().font;
+		if (name != fontName) {
+			fontName = name;
+			font = name.equals("Inter") ? Font.INTER : Font.MINECRAFT;
+		}
+		return font;
+	}
+
+	private static ClickGuiModule settings() {
+		if (settings == null) settings = IllusionClient.MODULES.get(ClickGuiModule.class);
+		return settings;
 	}
 
 	public static boolean smooth() {
@@ -491,7 +509,15 @@ public final class Draw {
 	}
 
 	public static int pixelScale() {
-		return pixelScale != 0 ? pixelScale : new Window(Minecraft.getInstance()).getScale();
+		return pixelScale != 0 ? pixelScale : vanillaScale(Minecraft.getInstance());
+	}
+
+	static int vanillaScale(Minecraft minecraft) {
+		int wanted = minecraft.options.guiScale == 0 ? 1000 : minecraft.options.guiScale;
+		int scale = 1;
+		while (scale < wanted && minecraft.width / (scale + 1) >= 320 && minecraft.height / (scale + 1) >= 240) scale++;
+		if (minecraft.isUnicode() && scale % 2 != 0 && scale != 1) scale--;
+		return scale;
 	}
 
 	static void setPixelScale(int scale) {
@@ -542,6 +568,16 @@ public final class Draw {
 		buffer.vertex(x, y, 0.0D)
 			.color(color >> 16 & 255, color >> 8 & 255, color & 255, color >>> 24)
 			.nextVertex();
+	}
+
+	private static final class Batch {
+		final Identifier texture;
+		final BufferBuilder buffer = new BufferBuilder(4096);
+		boolean pending;
+
+		Batch(Identifier texture) {
+			this.texture = texture;
+		}
 	}
 
 	public enum Weight {

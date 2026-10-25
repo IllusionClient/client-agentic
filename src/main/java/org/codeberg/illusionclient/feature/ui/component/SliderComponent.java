@@ -10,6 +10,8 @@ public class SliderComponent extends OptionComponent {
 	private static final int KNOB = 8;
 
 	private boolean dragging;
+	private float shownValue;
+	private String valueLabel;
 
 	public SliderComponent(Option option) {
 		super(option);
@@ -43,7 +45,11 @@ public class SliderComponent extends OptionComponent {
 		int trackY = y + TRACK_Y;
 
 		row(option.name, mouseX, mouseY);
-		value(String.valueOf(value));
+		if (value != shownValue || valueLabel == null) {
+			shownValue = value;
+			valueLabel = String.valueOf(value);
+		}
+		value(valueLabel);
 		Draw.rounded(left(), trackY, width, TRACK_HEIGHT, 2.0F, Draw.TRACK);
 		Draw.rounded(left(), trackY, filled, TRACK_HEIGHT, 2.0F, Draw.accent().getRGB());
 		Draw.rounded(left() + filled - KNOB / 2, trackY - (KNOB - TRACK_HEIGHT) / 2, KNOB, KNOB, KNOB / 2.0F, -1);

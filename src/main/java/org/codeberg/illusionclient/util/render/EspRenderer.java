@@ -75,7 +75,7 @@ public final class EspRenderer<T> {
 		cameraZ = dispatcher.cameraZ;
 
 		FrustumData data = Frustum.getInstance();
-		frustum = new FrustumCuller(data);
+		if (frustum == null) frustum = new FrustumCuller(data);
 		frustum.prepare(cameraX, cameraY, cameraZ);
 		clip = data.clipMatrix;
 		halfWidth = minecraft.width / 2.0F;
