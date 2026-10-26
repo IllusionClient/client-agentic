@@ -42,7 +42,7 @@ public class AutoWeapon extends Module {
 
 	@Override
 	public void onDisable() {
-		release();
+		IllusionClient.MODULES.releaseSlot(this);
 	}
 
 	@Listen
