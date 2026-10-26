@@ -81,9 +81,10 @@ public class AutoWeapon extends Module {
 		inventory.selectedSlot = slotToUse;
 	}
 
-  	private PlayerEntity hasTarget(LocalClientPlayerEntity player) {
-		HitResult crosshair = minecraft.crosshairTarget;		
-		return crosshair != null && crosshair.entity instanceof PlayerEntity hovered && valid(hovered) && CombatUtils.isTarget(hovered);
+  	private boolean hasTarget(LocalClientPlayerEntity player) {
+		HitResult crosshair = minecraft.crosshairTarget;
+
+		return crosshair != null && crosshair.entity instanceof PlayerEntity hovered && CombatUtils.isTarget(hovered);
 	}
 
   	private boolean conditionsMet(LocalClientPlayerEntity player) {
