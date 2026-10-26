@@ -1,12 +1,10 @@
 package org.codeberg.illusionclient.feature.module.combat;
 
 import org.codeberg.illusionclient.event.api.Listen;
-import net.minecraft.block.Block;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.living.player.LocalClientPlayerEntity;
 import net.minecraft.entity.living.player.PlayerEntity;
 import net.minecraft.entity.living.player.PlayerInventory;
-import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.world.HitResult;
 import org.codeberg.illusionclient.IllusionClient;
@@ -64,11 +62,10 @@ public class AutoWeapon extends Module {
 			return;
 		}
 
-		int current = inventory.selectedSlot;
         int slotToUse = -1;
 
         for (int i = 0; i < PlayerInventory.getHotbarSize(); i++) {
-			int slot = (current + i) % PlayerInventory.getHotbarSize();
+			int slot = (inventory.selectedSlot + i) % PlayerInventory.getHotbarSize();
 			ItemStack stack = inventory.items[slot];
 			if (Weapons.isWeapons(stack)) {
 				slotToUse = slot;
@@ -90,8 +87,8 @@ public class AutoWeapon extends Module {
   	private boolean conditionsMet(LocalClientPlayerEntity player) {
 		if (minecraft.screen != null || !player.isAlive() || player.isSleeping()) return false;
       	if (Weapons.isHolding(player)) return false;
-		if (!hasTarget(player)) return false;
 		if (leftMousePressed && !IllusionClient.INPUT.held(minecraft.options.attackKey)) return false;
+		if (!hasTarget(player)) return false;
 		return true;
 	}
 }
