@@ -4,6 +4,7 @@ import org.codeberg.illusionclient.event.api.Listen;
 import net.minecraft.block.Block;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.living.player.LocalClientPlayerEntity;
+import net.minecraft.entity.living.player.PlayerEntity;
 import net.minecraft.entity.living.player.PlayerInventory;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
@@ -48,32 +49,32 @@ public class AutoWeapon extends Module {
 	public void onPlayerTick(PlayerTickEvent event) {
 		LocalClientPlayerEntity player = minecraft.player;
 		if (player == null) return;
-
-        if (!conditionsMet(player)) return;
       
 		PlayerInventory inventory = player.inventory;
 
-		Block block = target(player);
-		if (block == null) {
+		if (!conditionsMet(player)) {
 			countdown = ticks(activationTime);
-			release();
+			IllusionClient.MODULES.releaseSlot(this);
 			return;
 		}
 		if (countdown > 0) {
 			countdown--;
-			release();
+			IllusionClient.MODULES.releaseSlot(this);
 			return;
 		}
 
 		int current = inventory.selectedSlot;
-		int slot = -1;
         int slotToUse = -1;
 
         for (int i = 0; i < PlayerInventory.getHotbarSize(); i++) {
 			int slot = (current + i) % PlayerInventory.getHotbarSize();
 			ItemStack stack = inventory.items[slot];
-			if (Weapons.isWeapons(stack)) slotToUse = slot;
+			if (Weapons.isWeapons(stack)) {
+				slotToUse = slot;
+				break;
+			}
 		}
+
 		if (slotToUse == -1 || !IllusionClient.MODULES.claimSlot(this)) return;
 
 		inventory.selectedSlot = slotToUse;
