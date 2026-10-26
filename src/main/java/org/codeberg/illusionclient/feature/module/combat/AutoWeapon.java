@@ -25,7 +25,7 @@ import org.codeberg.illusionclient.util.CombatUtils;
 public class AutoWeapon extends Module {
 	private final Minecraft minecraft = Minecraft.getInstance();
 
-	@Description("The amount of time to aim on a player before Auto Weapon activates.")
+	@Description("The amount of time to aim on a player before activating.")
 	@Slider(value = "Activation Time", min = 0.0F, max = 250.0F)
 	public float activationTime = 150.0F;
 
