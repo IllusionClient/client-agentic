@@ -20,8 +20,8 @@ import org.codeberg.illusionclient.feature.module.api.ModuleInfo;
 import org.codeberg.illusionclient.feature.module.combat.Weapons;
 import org.codeberg.illusionclient.util.CombatUtils;
 
-@ModuleInfo(name = "Auto Weapon", category = Category.PLAYER)
-@Description("Switches to the best tool when you mine a block.")
+@ModuleInfo(name = "Auto Weapon", category = Category.COMBAT)
+@Description("Selects your weapon for you when aiming on a player.")
 public class AutoWeapon extends Module {
 	private final Minecraft minecraft = Minecraft.getInstance();
 
@@ -57,6 +57,7 @@ public class AutoWeapon extends Module {
 			IllusionClient.MODULES.releaseSlot(this);
 			return;
 		}
+
 		if (countdown > 0) {
 			countdown--;
 			IllusionClient.MODULES.releaseSlot(this);
@@ -80,21 +81,15 @@ public class AutoWeapon extends Module {
 		inventory.selectedSlot = slotToUse;
 	}
 
-  	private PlayerEntity findTarget(LocalClientPlayerEntity player) {
-		HitResult crosshair = minecraft.crosshairTarget;
-		if (crosshair != null && crosshair.entity instanceof PlayerEntity hovered && valid(hovered)) return hovered;
-
-		return null;
-	}
-
-	private static boolean valid(PlayerEntity player) {
-		return player.isAlive() && !player.isSleeping() && CombatUtils.isTarget(player);
+  	private PlayerEntity hasTarget(LocalClientPlayerEntity player) {
+		HitResult crosshair = minecraft.crosshairTarget;		
+		return crosshair != null && crosshair.entity instanceof PlayerEntity hovered && valid(hovered) && CombatUtils.isTarget(hovered);
 	}
 
   	private boolean conditionsMet(LocalClientPlayerEntity player) {
-		if (minecraft.screen != null || !player.isAlive()) return false;
+		if (minecraft.screen != null || !player.isAlive() || player.isSleeping()) return false;
       	if (Weapons.isHolding(player)) return false;
-		if (findTarget(player) == null) return false;
+		if (!hasTarget(player)) return false;
 		if (leftMousePressed && !IllusionClient.INPUT.held(minecraft.options.attackKey)) return false;
 		return true;
 	}
