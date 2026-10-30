@@ -11,6 +11,7 @@ import org.codeberg.illusionclient.event.input.KeyPressEvent;
 import org.codeberg.illusionclient.feature.module.api.Module;
 import org.codeberg.illusionclient.feature.module.client.AntiBot;
 import org.codeberg.illusionclient.feature.module.client.ClickGuiModule;
+import org.codeberg.illusionclient.feature.module.client.ObsProof;
 import org.codeberg.illusionclient.feature.module.client.Teams;
 import org.codeberg.illusionclient.feature.module.client.TestModule;
 import org.codeberg.illusionclient.feature.module.combat.AimAssist;
@@ -36,6 +37,7 @@ import org.codeberg.illusionclient.feature.module.visual.Bedplates;
 import org.codeberg.illusionclient.feature.module.visual.ChestEsp;
 import org.codeberg.illusionclient.feature.module.visual.Esp;
 import org.codeberg.illusionclient.feature.module.visual.ModOverlay;
+import org.codeberg.illusionclient.util.SwapHook;
 
 import java.util.Arrays;
 import java.util.List;
@@ -46,6 +48,7 @@ public final class ModuleManager {
 	private Module slotOwner;
 
 	public ModuleManager() {
+		if (SwapHook.SUPPORTED) modules.add(new ObsProof());
 		if (FabricLoader.getInstance().isDevelopmentEnvironment()) modules.add(new TestModule());
 		for (Module module : modules) byType.put(module.getClass(), module);
 		IllusionClient.BUS.subscribe(this);

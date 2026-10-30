@@ -12,6 +12,7 @@ import org.codeberg.illusionclient.IllusionClient;
 import org.codeberg.illusionclient.feature.module.api.Module;
 import org.codeberg.illusionclient.feature.module.client.ClickGuiModule;
 import org.codeberg.illusionclient.feature.ui.component.KeybindComponent;
+import org.codeberg.illusionclient.util.HiddenLayer;
 import org.codeberg.illusionclient.util.KeyboardUtils;
 import org.codeberg.illusionclient.util.MouseUtils;
 import org.lwjgl.input.Keyboard;
@@ -116,6 +117,7 @@ public abstract class ClickGui {
 	private void renderOverlay(float tickDelta) {
 		if (scale(minecraft) != scale || minecraft.width != displayWidth || minecraft.height != displayHeight) resize();
 
+		HiddenLayer.begin();
 		float factor = scale / (float) Draw.vanillaScale(minecraft);
 		GlStateManager.pushMatrix();
 		GlStateManager.scalef(factor, factor, 1.0F);
@@ -126,6 +128,7 @@ public abstract class ClickGui {
 		Draw.flush();
 		Draw.setPixelScale(0);
 		GlStateManager.popMatrix();
+		HiddenLayer.end();
 	}
 
 	private void mouseEvent() {

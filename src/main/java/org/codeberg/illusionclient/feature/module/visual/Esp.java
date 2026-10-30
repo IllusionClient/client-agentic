@@ -16,6 +16,7 @@ import org.codeberg.illusionclient.feature.module.api.Category;
 import org.codeberg.illusionclient.feature.module.api.Description;
 import org.codeberg.illusionclient.feature.module.api.Module;
 import org.codeberg.illusionclient.feature.module.api.ModuleInfo;
+import org.codeberg.illusionclient.feature.module.api.ObsHidden;
 import org.codeberg.illusionclient.util.render.EspRenderer;
 import org.codeberg.illusionclient.feature.ui.Draw;
 import org.codeberg.illusionclient.util.PlayerUtils;
@@ -23,6 +24,7 @@ import org.codeberg.illusionclient.util.PlayerUtils;
 import java.awt.*;
 
 @Description("Draws boxes and bars around players.")
+@ObsHidden
 @ModuleInfo(name = "ESP", category = Category.VISUAL)
 public class Esp extends Module {
 	private final EspRenderer<PlayerEntity> renderer = new EspRenderer<>();

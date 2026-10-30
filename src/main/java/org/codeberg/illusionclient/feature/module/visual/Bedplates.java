@@ -24,8 +24,10 @@ import org.codeberg.illusionclient.feature.module.api.Category;
 import org.codeberg.illusionclient.feature.module.api.Description;
 import org.codeberg.illusionclient.feature.module.api.Module;
 import org.codeberg.illusionclient.feature.module.api.ModuleInfo;
+import org.codeberg.illusionclient.feature.module.api.ObsHidden;
 import org.codeberg.illusionclient.feature.ui.Draw;
 import org.codeberg.illusionclient.util.BlockUtils;
+import org.codeberg.illusionclient.util.HiddenLayer;
 import org.codeberg.illusionclient.util.bed.Bed;
 import org.codeberg.illusionclient.util.render.EspRenderer;
 
@@ -38,6 +40,7 @@ import java.util.Map;
 import java.util.WeakHashMap;
 
 @Description("Shows the blocks defending each bed.")
+@ObsHidden
 @ModuleInfo(name = "Bed Plates", category = Category.VISUAL)
 public class Bedplates extends Module {
 	private static final ItemStack[] NONE = new ItemStack[0];
@@ -108,6 +111,7 @@ public class Bedplates extends Module {
 	public void onRender2D(Render2DEvent.Pre event) {
 		if (visible.isEmpty()) return;
 
+		HiddenLayer.begin();
 		int scale = event.window().getScale();
 		int plateHeight = ICON + PAD * 2;
 		for (Plate plate : visible) {
@@ -136,6 +140,7 @@ public class Bedplates extends Module {
 		GlStateManager.disableRescaleNormal();
 		GlStateManager.clear(GL11.GL_DEPTH_BUFFER_BIT);
 		GlStateManager.enableBlend();
+		HiddenLayer.end();
 	}
 
 	private ItemStack[] stacks(int[] cover, int limit) {

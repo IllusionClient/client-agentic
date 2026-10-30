@@ -9,7 +9,8 @@ public final class Tooltip {
 	private static final int PADDING = 6;
 	private static final int OFFSET = 10;
 
-	private static Description hovered, shown;
+	private static String hovered, shown;
+	private static boolean pinned;
 	private static List<String> lines;
 	private static int textWidth;
 	private static Font shownFont;
@@ -18,22 +19,29 @@ public final class Tooltip {
 	}
 
 	public static void show(Description description) {
-		hovered = description;
+		if (!pinned) hovered = description == null ? null : description.value();
+	}
+
+	public static void pin(String text) {
+		hovered = text;
+		pinned = true;
 	}
 
 	public static void hide() {
 		hovered = null;
+		pinned = false;
 	}
 
 	public static void render(int mouseX, int mouseY, int screenWidth, int screenHeight) {
-		Description description = hovered;
+		String text = hovered;
 		hovered = null;
-		if (description == null) return;
+		pinned = false;
+		if (text == null) return;
 
-		if (description != shown || Draw.font() != shownFont) {
-			shown = description;
+		if (!text.equals(shown) || Draw.font() != shownFont) {
+			shown = text;
 			shownFont = Draw.font();
-			lines = Draw.split(description.value(), MAX_WIDTH, Draw.Weight.REGULAR);
+			lines = Draw.split(text, MAX_WIDTH, Draw.Weight.REGULAR);
 			textWidth = 0;
 			for (String line : lines) textWidth = Math.max(textWidth, Draw.width(line, Draw.Weight.REGULAR));
 		}

@@ -15,6 +15,7 @@ public abstract class Module {
 	public final String key = getClass().getSimpleName();
 	public final Category category;
 	public final Description description;
+	public final ObsHidden obsHidden = getClass().getAnnotation(ObsHidden.class);
 	public final List<Option> options = new ObjectArrayList<>();
 
 	private int bind;

@@ -303,12 +303,13 @@ public class PanelGui extends ClickGui {
 		boolean chevronHovered = hovered && mouseX >= chevronX - PADDING;
 		Icon.CHEVRON.draw(chevronX, top + (CARD - Icon.CHEVRON.height) / 2, chevronHovered ? Draw.TEXT : hovered ? Draw.MUTED : Draw.FAINT);
 
-		int textRight = keyRight(left, width) - PADDING + 6;
+		ModuleComponent.drawObsMarker(entry, chevronLeft(left, width) - PADDING, top + KEY_Y, mouseX, mouseY, PADDING);
+		int textRight = keyRight(entry, left, width) - PADDING + 6;
 		boolean listening = KeybindComponent.listening(entry);
 		String key = ModuleComponent.keyLabel(entry, hovered, listening);
 		if (key != null) {
-			int keyX = keyLeft(key, left, width);
-			int keyWidth = keyRight(left, width) - keyX;
+			int keyX = keyLeft(entry, key, left, width);
+			int keyWidth = keyRight(entry, left, width) - keyX;
 			boolean keyHovered = hovered && within(mouseX, mouseY, keyX, top + KEY_Y, keyWidth, ModuleComponent.KEY_HEIGHT);
 			ModuleComponent.drawKey(keyX, top + KEY_Y, key, listening, entry.getBind() != Keyboard.KEY_NONE, keyHovered);
 			textRight = keyX - PADDING;
@@ -345,7 +346,7 @@ public class PanelGui extends ClickGui {
 		float nameY = module.description == null ? Draw.textY(top, HEADER) : twoLineY(top, HEADER);
 		Draw.text(module.name, left + PADDING, nameY, enabled ? Draw.ON_PRIMARY_CONTAINER : Draw.TEXT);
 
-		int textRight = left + width - PADDING;
+		int textRight = ModuleComponent.drawObsMarker(module, left + width - PADDING, top + (HEADER - ModuleComponent.KEY_HEIGHT) / 2, mouseX, mouseY, PADDING);
 
 		if (module.description != null) {
 			String text = module.description.value();
@@ -480,8 +481,8 @@ public class PanelGui extends ClickGui {
 				if (!within(mouseX, mouseY, contentLeft(), card.y, contentWidth(), CARD)) continue;
 
 				String key = ModuleComponent.keyLabel(card.module, true, false);
-				int keyX = keyLeft(key, contentLeft(), contentWidth());
-				boolean onKey = within(mouseX, mouseY, keyX, card.y + KEY_Y, keyRight(contentLeft(), contentWidth()) - keyX, ModuleComponent.KEY_HEIGHT);
+				int keyX = keyLeft(card.module, key, contentLeft(), contentWidth());
+				boolean onKey = within(mouseX, mouseY, keyX, card.y + KEY_Y, keyRight(card.module, contentLeft(), contentWidth()) - keyX, ModuleComponent.KEY_HEIGHT);
 				int holdX = holdLeft(keyX);
 				boolean onHold = ModuleComponent.showHold(card.module, true) && within(mouseX, mouseY, holdX, card.y + KEY_Y, keyX - 6 - holdX, ModuleComponent.KEY_HEIGHT);
 				boolean onChevron = mouseX >= chevronLeft(contentLeft(), contentWidth()) - PADDING;
@@ -711,12 +712,12 @@ public class PanelGui extends ClickGui {
 		return Draw.textY(top, height) - (Draw.textHeight() + LINE_GAP) / 2.0F;
 	}
 
-	private int keyRight(int left, int width) {
-		return chevronLeft(left, width) - PADDING;
+	private int keyRight(Module module, int left, int width) {
+		return chevronLeft(left, width) - PADDING - ModuleComponent.obsMarkerSpace(module, PADDING);
 	}
 
-	private int keyLeft(String label, int left, int width) {
-		return keyRight(left, width) - Draw.width(label) - 10;
+	private int keyLeft(Module module, String label, int left, int width) {
+		return keyRight(module, left, width) - Draw.width(label) - 10;
 	}
 
 	private int holdLeft(int keyLeft) {

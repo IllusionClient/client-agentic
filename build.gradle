@@ -116,6 +116,9 @@ jar {
     from('LICENSE') {
         rename { "${it}_${archivesName.get()}" }
     }
+    from('licenses') {
+        into 'licenses'
+    }
 }
 
 tasks.register('docs', JavaExec) {

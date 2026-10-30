@@ -6,6 +6,7 @@ import org.codeberg.illusionclient.feature.module.api.Category;
 import org.codeberg.illusionclient.feature.module.api.Description;
 import org.codeberg.illusionclient.feature.module.api.Module;
 import org.codeberg.illusionclient.feature.module.api.ModuleInfo;
+import org.codeberg.illusionclient.feature.module.api.ObsHidden;
 import org.codeberg.illusionclient.feature.ui.ClickGui;
 import org.codeberg.illusionclient.feature.ui.FramesGui;
 import org.codeberg.illusionclient.feature.ui.PanelGui;
@@ -14,6 +15,7 @@ import org.lwjgl.input.Keyboard;
 import java.awt.*;
 
 @Description("Opens this menu.")
+@ObsHidden
 @ModuleInfo(name = "ClickGui", category = Category.CLIENT, bind = Keyboard.KEY_RSHIFT)
 public class ClickGuiModule extends Module {
 	@Description("Panel shows one window with a sidebar, Frames shows a draggable window per category.")

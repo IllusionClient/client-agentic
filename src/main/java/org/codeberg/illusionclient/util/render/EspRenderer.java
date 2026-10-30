@@ -13,6 +13,7 @@ import net.minecraft.client.render.vertex.DefaultVertexFormat;
 import net.minecraft.util.math.Box;
 import org.codeberg.illusionclient.event.render.Render2DEvent;
 import org.codeberg.illusionclient.feature.ui.Draw;
+import org.codeberg.illusionclient.util.HiddenLayer;
 import org.lwjgl.opengl.GL11;
 
 import java.util.Arrays;
@@ -115,6 +116,7 @@ public final class EspRenderer<T> {
 	public void render2D(Render2DEvent event, Painter<T> painter) {
 		if (targets.isEmpty()) return;
 
+		HiddenLayer.begin();
 		GlStateManager.depthMask(false);
 		GlStateManager.pushMatrix();
 		double pixel = 1.0D / event.window().getScale();
@@ -128,6 +130,7 @@ public final class EspRenderer<T> {
 		GlStateManager.popMatrix();
 		GlStateManager.depthMask(true);
 		GlStateManager.enableBlend();
+		HiddenLayer.end();
 	}
 
 	public void box3D(Box box, int color) {
@@ -164,8 +167,10 @@ public final class EspRenderer<T> {
 		GlStateManager.enableBlend();
 		GlStateManager.blendFuncSeparate(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA, GL11.GL_ONE, GL11.GL_ZERO);
 
+		HiddenLayer.begin();
 		FACES.end();
 		UPLOADER.end(FACES);
+		HiddenLayer.end();
 
 		GlStateManager.disableBlend();
 		GlStateManager.depthMask(true);

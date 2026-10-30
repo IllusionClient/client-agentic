@@ -3,9 +3,11 @@ package org.codeberg.illusionclient.feature.ui.component;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import org.codeberg.illusionclient.feature.config.api.*;
 import org.codeberg.illusionclient.feature.module.api.Module;
+import org.codeberg.illusionclient.feature.module.api.ObsHidden;
 import org.codeberg.illusionclient.feature.module.client.ClickGuiModule;
 import org.codeberg.illusionclient.feature.ui.Draw;
 import org.codeberg.illusionclient.feature.ui.Tooltip;
+import org.codeberg.illusionclient.util.SwapHook;
 import org.lwjgl.input.Keyboard;
 
 import java.util.List;
@@ -13,6 +15,8 @@ import java.util.List;
 public class ModuleComponent extends Group {
 	public static final int KEY_HEIGHT = 14;
 	public static final String HOLD = "Hold";
+	private static final String OBS = "OBS";
+	private static final int OBS_HIDDEN = 0xFF2E7D4F, OBS_PARTIAL = 0xFFB58B1E, OBS_VISIBLE = 0xFFB3453C;
 
 	final Module module;
 	private int keyLeft, keyRight, holdLeft, holdRight;
@@ -58,6 +62,32 @@ public class ModuleComponent extends Group {
 		Draw.text(label, x + 5, Draw.textY(y, KEY_HEIGHT), color);
 	}
 
+	public static int obsMarkerSpace(Module module, int gap) {
+		return module.obsHidden == null || !SwapHook.SUPPORTED ? 0 : keyWidth(OBS) + gap;
+	}
+
+	public static int drawObsMarker(Module module, int right, int y, int mouseX, int mouseY, int gap) {
+		if (obsMarkerSpace(module, gap) == 0) return right;
+
+		ObsHidden info = module.obsHidden;
+		int width = keyWidth(OBS);
+		int left = right - width;
+		Draw.rounded(left, y, width, KEY_HEIGHT, 4.0F, switch (info.value()) {
+			case YES -> OBS_HIDDEN;
+			case PARTIAL -> OBS_PARTIAL;
+			case NO -> OBS_VISIBLE;
+		});
+		Draw.text(OBS, left + 5, Draw.textY(y, KEY_HEIGHT), 0xFFFFFFFF);
+		if (mouseX >= left && mouseX < right && mouseY >= y && mouseY < y + KEY_HEIGHT) {
+			Tooltip.pin(switch (info.value()) {
+				case YES -> "Hidden from OBS while OBS Proof is on.";
+				case PARTIAL -> "Hidden from OBS while OBS Proof is on, unless " + info.unless() + " is enabled.";
+				case NO -> "OBS Proof can't hide this module. It still shows up on stream.";
+			});
+		}
+		return left - gap;
+	}
+
 	public static List<Component> options(Module module) {
 		List<Component> components = new ObjectArrayList<>();
 		for (Option option : module.options) {
@@ -81,7 +111,7 @@ public class ModuleComponent extends Group {
 
 		Draw.rounded(x, y, width, HEIGHT, RADIUS, headerRadius(), fill(module, hovered));
 
-		int textRight = right();
+		int textRight = drawObsMarker(module, right(), y + (HEIGHT - KEY_HEIGHT) / 2, mouseX, mouseY, 6);
 		boolean listening = KeybindComponent.listening(module);
 		String key = keyLabel(module, hovered, listening);
 		keyLeft = keyRight = textRight;

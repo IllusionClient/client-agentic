@@ -8,9 +8,11 @@ import org.codeberg.illusionclient.feature.module.api.Category;
 import org.codeberg.illusionclient.feature.module.api.Description;
 import org.codeberg.illusionclient.feature.module.api.Module;
 import org.codeberg.illusionclient.feature.module.api.ModuleInfo;
+import org.codeberg.illusionclient.feature.module.api.ObsHidden;
 
 @ModuleInfo(name = "Anti Debuff", category = Category.VISUAL)
 @Description("Hides negative visual effects.")
+@ObsHidden(ObsHidden.Level.NO)
 public class AntiDebuff extends Module {
 	@Description("Removes the dark fog from Blindness.")
 	@Check("Blindness")

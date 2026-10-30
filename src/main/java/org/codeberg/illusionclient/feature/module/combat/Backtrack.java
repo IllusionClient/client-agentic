@@ -20,11 +20,13 @@ import org.codeberg.illusionclient.feature.module.api.Category;
 import org.codeberg.illusionclient.feature.module.api.Description;
 import org.codeberg.illusionclient.feature.module.api.Module;
 import org.codeberg.illusionclient.feature.module.api.ModuleInfo;
+import org.codeberg.illusionclient.feature.module.api.ObsHidden;
 import org.codeberg.illusionclient.util.CombatUtils;
 import org.codeberg.illusionclient.util.GhostPlayer;
 import org.codeberg.illusionclient.util.lag.LagManager;
 
 @ModuleInfo(name = "Backtrack", category = Category.COMBAT)
+@ObsHidden(value = ObsHidden.Level.PARTIAL, unless = "Show Ghost")
 @Description("Lags players leaving your range for extra hits.")
 public class Backtrack extends Module {
 	private static final int GHOST_LINGER_TICKS = 4;

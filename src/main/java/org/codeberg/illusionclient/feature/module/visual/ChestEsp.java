@@ -18,11 +18,14 @@ import org.codeberg.illusionclient.feature.module.api.Category;
 import org.codeberg.illusionclient.feature.module.api.Description;
 import org.codeberg.illusionclient.feature.module.api.Module;
 import org.codeberg.illusionclient.feature.module.api.ModuleInfo;
+import org.codeberg.illusionclient.feature.module.api.ObsHidden;
 import org.codeberg.illusionclient.util.render.EspRenderer;
 
 import java.awt.*;
+import java.util.List;
 
 @Description("Draws boxes around chests.")
+@ObsHidden
 @ModuleInfo(name = "Chest ESP", category = Category.VISUAL)
 public class ChestEsp extends Module {
 	private static final double INSET = 1.0D / 16.0D;
@@ -66,7 +69,10 @@ public class ChestEsp extends Module {
 
 		renderer.begin();
 		boolean flat = mode.equals("2D");
-		for (BlockEntity blockEntity : minecraft.world.blockEntities) {
+		// updateShape() can create a neighbor chest's block entity and append it to this list, so a for-each would throw
+		List<BlockEntity> blockEntities = minecraft.world.blockEntities;
+		for (int i = 0; i < blockEntities.size(); i++) {
+			BlockEntity blockEntity = blockEntities.get(i);
 			Box box = box(blockEntity);
 			if (box == null) continue;
 

@@ -13,8 +13,10 @@ import org.codeberg.illusionclient.feature.module.api.Category;
 import org.codeberg.illusionclient.feature.module.api.Description;
 import org.codeberg.illusionclient.feature.module.api.Module;
 import org.codeberg.illusionclient.feature.module.api.ModuleInfo;
+import org.codeberg.illusionclient.feature.module.api.ObsHidden;
 import org.codeberg.illusionclient.feature.ui.Draw;
 import org.codeberg.illusionclient.feature.ui.Font;
+import org.codeberg.illusionclient.util.HiddenLayer;
 
 import java.awt.*;
 import java.util.List;
@@ -22,6 +24,7 @@ import java.util.Locale;
 
 @ModuleInfo(name = "Mod Overlay", category = Category.VISUAL)
 @Description("Lists enabled modules in the corner.")
+@ObsHidden
 public class ModOverlay extends Module {
 	private final List<Row> rows = new ObjectArrayList<>();
 	private Row[] all;
@@ -102,6 +105,7 @@ public class ModOverlay extends Module {
 		}
 		if (rows.isEmpty()) return;
 		rows.sort((a, b) -> b.width - a.width);
+		HiddenLayer.begin();
 
 		int right = event.window().getWidth();
 		int height = Math.round(9 * textSize + paddingY * 2.0F);
@@ -128,6 +132,7 @@ public class ModOverlay extends Module {
 		GlStateManager.popMatrix();
 
 		GlStateManager.enableBlend();
+		HiddenLayer.end();
 	}
 
 	private String style(String text) {
