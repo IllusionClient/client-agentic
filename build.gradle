@@ -1,5 +1,3 @@
-import groovy.json.JsonBuilder
-
 plugins {
     alias(libs.plugins.loom)
     alias(libs.plugins.ploceus)
@@ -13,7 +11,6 @@ def gitOutput = { List<String> args ->
     }.standardOutput.asText.map { it.trim() }.orElse('')
 }
 def gitHash = gitOutput(['rev-parse', 'HEAD']).orElse('')
-def gitBranch = gitOutput(['rev-parse', '--abbrev-ref', 'HEAD']).orElse('')
 def production = providers.gradleProperty('production')
         .orElse(providers.environmentVariable('GITHUB_REF_TYPE').map { it == 'tag' ? 'true' : 'false' })
         .orElse('false')
@@ -36,12 +33,6 @@ sourceSets {
 repositories {
 	maven {
 		url = "https://maven.ornithemc.net/releases"
-	}
-	maven {
-		url = 'https://jitpack.io/'
-		content {
-			includeGroup 'io.github.nevalackin'
-		}
 	}
 }
 
@@ -83,30 +74,7 @@ afterEvaluate {
     }
 }
 
-def generateBuildData = tasks.register('generateBuildData') {
-    def output = layout.buildDirectory.file('generated/build-data/ILLUSION_BUILD_DATA')
-    def versionValue = baseVersion
-    inputs.property 'gitHash', gitHash
-    inputs.property 'gitBranch', gitBranch
-    inputs.property 'production', production
-    inputs.property 'version', versionValue
-    outputs.file output
-
-    doLast {
-        def fullHash = gitHash.get() ?: 'unknown'
-        def json = new JsonBuilder([
-            gitBranch   : gitBranch.get() ?: 'unknown',
-            gitHash     : fullHash.take(10),
-            fullGitHash : fullHash,
-            production  : production.get().toBoolean(),
-            version     : versionValue
-        ])
-        output.get().asFile.text = json.toPrettyString() + '\n'
-    }
-}
-
 jar {
-    from generateBuildData
     from sourceSets.standalone.output
     manifest {
         attributes 'Main-Class': 'org.codeberg.illusionclient.Main'
