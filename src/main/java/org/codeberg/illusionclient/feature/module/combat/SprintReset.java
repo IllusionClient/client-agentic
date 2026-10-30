@@ -140,7 +140,7 @@ public class SprintReset extends Module {
 		if (packet.getAction() != PlayerInteractEntityC2SPacket.Action.ATTACK) return;
 		if (!(packet.getInteractTarget(minecraft.world) instanceof PlayerEntity attacked) || !CombatUtils.isTarget(attacked)) return;
 		if (weaponsOnly && !Weapons.isHolding(player)) return;
-		if (attacked.invulnerableTimer > attacked.invulnerableTicks / 2) return;
+		if (!IllusionClient.COMBAT.landed(attacked)) return;
 
 		if (attacked != target) {
 			target = attacked;
@@ -200,7 +200,10 @@ public class SprintReset extends Module {
 		}
 
 		switch (tap) {
-			case FORWARD -> client.forward = false;
+			case FORWARD -> {
+				client.forward = false;
+				client.back = false;
+			}
 			case BACK -> {
 				client.back = true;
 				if (target != null && CombatUtils.distanceTo(target) < spacing) client.forward = false;
@@ -292,7 +295,7 @@ public class SprintReset extends Module {
 	}
 
 	private void strafe(LocalClientPlayerEntity player, InputState client) {
-		if (!mode.equals("Dynamic") || !zestTap || !zestTapStrafe || zestHits == 0 || target == null || ticks - hitTick > STRAFE_TICKS) return;
+		if (!zestTapStrafe || !zestTapping()) return;
 		if (!client.forward || client.back || client.left || client.right) return;
 
 		if (--strafeTicks <= 0 || strafe != 0 && !clear(player, strafe)) {
@@ -302,6 +305,10 @@ public class SprintReset extends Module {
 		}
 		client.left = strafe > 0;
 		client.right = strafe < 0;
+	}
+
+	public boolean zestTapping() {
+		return isEnabled() && mode.equals("Dynamic") && zestTap && zestHits > 0 && target != null && ticks - hitTick <= STRAFE_TICKS;
 	}
 
 	private boolean clear(LocalClientPlayerEntity player, int side) {

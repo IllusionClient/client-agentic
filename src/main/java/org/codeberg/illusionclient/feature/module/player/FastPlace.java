@@ -5,6 +5,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.options.KeyBinding;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
+import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.HitResult;
 import org.codeberg.illusionclient.IllusionClient;
@@ -30,7 +31,7 @@ public class FastPlace extends Module {
 	private static final double DIAGONAL_RATIO = Math.sin(Math.toRadians(22.5D));
 	private final Minecraft minecraft = Minecraft.getInstance();
 
-	@Description("Smart only places on the face you started on.")
+	@Description("Smart only places on the face you started on, except while bridging.")
 	@Combo(value = "Mode", options = {"Regular", "Smart"})
 	public String mode = "Regular";
 
@@ -45,6 +46,10 @@ public class FastPlace extends Module {
 	@Description("Only speeds up blocks, not other items.")
 	@Check("Blocks Only")
 	public boolean blocksOnly = true;
+
+	@Description("Places at normal speed on your own bed defense, so you don't waste blocks like obsidian.")
+	@Check("Bed Defense Guard")
+	public boolean bedDefenseGuard = true;
 
 	private Direction lockedFace;
 	private BlockPos lockedPos;
@@ -100,12 +105,11 @@ public class FastPlace extends Module {
 
 	@Listen
 	public void onUseItem(UseItemEvent event) {
-		boolean smart = mode.equals("Smart");
-		if (!smart || event.click && !syntheticClick) lockedFace = null;
-		if (!smart) return;
-
 		HitResult target = minecraft.crosshairTarget;
-		if (target == null || target.type != HitResult.Type.BLOCK) return;
+		boolean block = target != null && target.type == HitResult.Type.BLOCK;
+		boolean smart = mode.equals("Smart") && !(block && target.getPos().getY() < MathHelper.floor(minecraft.player.y));
+		if (!smart || event.click && !syntheticClick) lockedFace = null;
+		if (!smart || !block) return;
 		if (!ItemUtils.isBlock(minecraft.player.inventory.getSelectedItem())) return;
 
 		if (target.face == Direction.DOWN) {
@@ -151,6 +155,8 @@ public class FastPlace extends Module {
 		shortened = false;
 		released = false;
 		if (blocksOnly && !ItemUtils.isBlock(minecraft.player.inventory.getSelectedItem())) return;
+		HitResult target = minecraft.crosshairTarget;
+		if (bedDefenseGuard && target != null && target.type == HitResult.Type.BLOCK && BedWars.atDefense(target.getPos().offset(target.face))) return;
 
 		float ticks = TICKS_PER_SECOND / maximumCps + remainder;
 		int delay = (int) ticks;

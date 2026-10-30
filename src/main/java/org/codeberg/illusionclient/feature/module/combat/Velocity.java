@@ -19,6 +19,7 @@ import org.codeberg.illusionclient.feature.module.api.Category;
 import org.codeberg.illusionclient.feature.module.api.Description;
 import org.codeberg.illusionclient.feature.module.api.Module;
 import org.codeberg.illusionclient.feature.module.api.ModuleInfo;
+import org.codeberg.illusionclient.mixin.EntityVelocityS2CPacketAccessor;
 import org.codeberg.illusionclient.util.CombatUtils;
 
 import java.util.Random;
@@ -26,7 +27,6 @@ import java.util.Random;
 @ModuleInfo(name = "Velocity", category = Category.COMBAT)
 @Description("Reduces the knockback you take.")
 public class Velocity extends Module {
-	private static final double VELOCITY_SCALE = 8000.0D;
 	private static final int MAX_LATE_TICKS = 3;
 	private final Minecraft minecraft = Minecraft.getInstance();
 	private final Random random = new Random();
@@ -76,6 +76,7 @@ public class Velocity extends Module {
 
 	private int jumpDelay = -1;
 	private boolean resetting;
+	private EntityVelocityS2CPacket knockback;
 
 	@Override
 	public String details() {
@@ -86,6 +87,7 @@ public class Velocity extends Module {
 	public void onDisable() {
 		jumpDelay = -1;
 		resetting = false;
+		knockback = null;
 	}
 
 	@Listen
@@ -99,19 +101,23 @@ public class Velocity extends Module {
 		switch (mode) {
 			case "Ignore" -> event.cancelled = true;
 			case "Jump" -> {
-				if (player.onGround) jumpDelay = random.nextFloat() * 100.0F < accuracy ? 0 : 1 + random.nextInt(MAX_LATE_TICKS);
+				if (!player.onGround) return;
+				jumpDelay = random.nextFloat() * 100.0F < accuracy ? 0 : 1 + random.nextInt(MAX_LATE_TICKS);
+				knockback = packet;
 			}
 			default -> {
-				event.cancelled = true;
-				player.velocityX = packet.getVelocityX() / VELOCITY_SCALE * horizontal / 100.0F;
-				player.velocityY = packet.getVelocityY() / VELOCITY_SCALE * vertical / 100.0F;
-				player.velocityZ = packet.getVelocityZ() / VELOCITY_SCALE * horizontal / 100.0F;
+				EntityVelocityS2CPacketAccessor scaled = (EntityVelocityS2CPacketAccessor) packet;
+				scaled.illusion$setVelocityX(Math.round(packet.getVelocityX() * horizontal / 100.0F));
+				scaled.illusion$setVelocityY(Math.round(packet.getVelocityY() * vertical / 100.0F));
+				scaled.illusion$setVelocityZ(Math.round(packet.getVelocityZ() * horizontal / 100.0F));
 			}
 		}
 	}
 
 	@Listen
 	public void onInput(InputEvent event) {
+		if (knockback != null && IllusionClient.LAG.isHeld(knockback)) return;
+		knockback = null;
 		LocalClientPlayerEntity player = minecraft.player;
 		resetting = jumpDelay == 0 && player != null && player.onGround;
 		if (jumpDelay < 0 || jumpDelay-- > 0) return;

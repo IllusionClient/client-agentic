@@ -3,6 +3,7 @@ package org.codeberg.illusionclient.feature.module.api;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import org.codeberg.illusionclient.IllusionClient;
 import org.codeberg.illusionclient.feature.config.api.Option;
+import org.codeberg.illusionclient.feature.module.visual.Notifications;
 import org.lwjgl.input.Keyboard;
 
 import java.lang.reflect.Field;
@@ -103,6 +104,7 @@ public abstract class Module {
 	public final void toggle() {
 		IllusionClient.STATS.toggled(this);
 		setEnabled(!enabled);
+		Notifications.toggled(this);
 	}
 
 	public String details() {

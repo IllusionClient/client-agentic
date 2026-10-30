@@ -1,9 +1,11 @@
 package org.codeberg.illusionclient.feature.module.combat;
 
+import org.codeberg.illusionclient.IllusionClient;
 import org.codeberg.illusionclient.event.api.Listen;
 import net.minecraft.block.Blocks;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.living.player.LocalClientPlayerEntity;
+import net.minecraft.client.options.KeyBinding;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.living.LivingEntity;
 import net.minecraft.util.math.BlockPos;
@@ -30,6 +32,7 @@ import java.util.Random;
 public class HitSelect extends Module {
 	private static final int NO_PAUSE = 1001;
 	private static final int HURT_TICKS = 10;
+	private static final double CLOSING_SPEED = 0.03D;
 	private final Minecraft minecraft = Minecraft.getInstance();
 	private final Random random = new Random();
 	private final BlockPos.Mutable cursor = new BlockPos.Mutable();
@@ -61,6 +64,10 @@ public class HitSelect extends Module {
 	@Requires(value = "mode", is = "Criticals")
 	@Check("Only While Damaged")
 	public boolean onlyWhileDamaged = false;
+
+	@Description("Replays up to this many held back clicks as soon as the target can take damage again.")
+	@Slider(value = "Burst Clicks", min = 0.0F, max = 5.0F)
+	public float burstClicks = 0.0F;
 
 	@Description("Waits for the server to confirm hits instead of predicting them.")
 	@Check("Use Server Attack Time")
@@ -95,6 +102,8 @@ public class HitSelect extends Module {
 	private Entity target;
 	private double targetDistance = Double.MAX_VALUE;
 	private boolean closing;
+	private int held;
+	private int heldTick;
 
 	@Override
 	public String details() {
@@ -116,6 +125,19 @@ public class HitSelect extends Module {
 		LocalClientPlayerEntity player = minecraft.player;
 		decided = false;
 		undamagedTicks = player != null && minecraft.focused && player.damagedTimer == 0 ? undamagedTicks + 1 : 0;
+		if (held == 0 || player == null || minecraft.world == null) return;
+
+		HitResult crosshair = minecraft.crosshairTarget;
+		if (player.ticks - heldTick > HURT_TICKS || minecraft.screen != null || crosshair == null || crosshair.type != HitResult.Type.ENTITY) {
+			held = 0;
+			return;
+		}
+		cancelling = cancel(player);
+		decided = true;
+		if (cancelling) return;
+
+		for (int clicks = Math.min(held, (int) burstClicks); clicks > 0; clicks--) KeyBinding.click(minecraft.options.attackKey.getKeyCode());
+		held = 0;
 	}
 
 	@Listen
@@ -129,6 +151,11 @@ public class HitSelect extends Module {
 		}
 		if (!cancelling) return;
 
+		HitResult crosshair = minecraft.crosshairTarget;
+		if (burstClicks >= 1.0F && crosshair != null && crosshair.type == HitResult.Type.ENTITY) {
+			held++;
+			heldTick = player.ticks;
+		}
 		event.cancelled = true;
 		if (fakeSwing && player.getItemInUse() == null) swingLocally(player);
 	}
@@ -147,10 +174,10 @@ public class HitSelect extends Module {
 		}
 
 		double distance = target == null ? Double.MAX_VALUE : Math.hypot(target.x - player.x, target.z - player.z);
-		closing = !changed && distance < targetDistance;
+		closing = !changed && targetDistance - distance > CLOSING_SPEED;
 		targetDistance = distance;
 
-		updateClock(player, changed);
+		updateClock();
 	}
 
 	private boolean cancel(LocalClientPlayerEntity player) {
@@ -162,21 +189,23 @@ public class HitSelect extends Module {
 		if (crosshair.type == HitResult.Type.MISS) return roll(cancelRateMissedSwings);
 		if (crosshair.type != HitResult.Type.ENTITY || crosshair.entity == null) return false;
 
+		if (!useServerAttackTime) clock = Math.clamp(IllusionClient.COMBAT.hurtTime(crosshair.entity) - 1L, 0, NO_PAUSE);
 		int pause = roundRandomly(pauseDuration / MS_PER_TICK);
-		boolean closer = (!player.onGround || player.velocityY > 0.0D) && closing;
 
 		if (mode.equals("Criticals")) {
+			boolean closer = (!player.onGround || player.velocityY > 0.0D) && closing;
 			boolean cycle = clock < 2 || clock > 8 || useServerAttackTime;
 			if (!player.onGround && player.fallDistance > 0.0F && cycle) return false;
 			if (closer && (!cycle || disableDuringKnockback)) return false;
 			if (minecraft.world.getBlockState(cursor.set(MathHelper.floor(player.x), MathHelper.floor(player.y), MathHelper.floor(player.z))).getBlock() != Blocks.AIR) return false;
 			if (!player.onGround && player.velocityY > 0.0D && !(onlyWhileDamaged && player.damagedTimer == 0)) return true;
 		} else {
-			if (closer) return false;
-			if (clock < 15) waitingHits = 0;
+			boolean zesting = IllusionClient.MODULES.get(SprintReset.class).zestTapping();
+			if (closing && !zesting) return false;
+			if (zesting || clock < 15) waitingHits = 0;
 			else if (++waitingHits <= ticks(waitForFirstHit)) return true;
 
-			if (undamagedTicks < 10) pause += ticks(hitLaterInTrades);
+			if (undamagedTicks < 10 && !zesting) pause += ticks(hitLaterInTrades);
 			if (serverReset) {
 				serverReset = false;
 				return false;
@@ -185,24 +214,15 @@ public class HitSelect extends Module {
 		return clock + 1 < pause && roll(cancelRateInCombat);
 	}
 
-	private void updateClock(LocalClientPlayerEntity player, boolean changed) {
-		if (useServerAttackTime) {
-			if (target != null && target.isAlive() && ((LivingEntity) target).damagedTimer == HURT_TICKS) {
-				clock = 0;
-				serverReset = true;
-			} else {
-				tickClock();
-			}
-			return;
-		}
+	private void updateClock() {
+		if (!useServerAttackTime) return;
 
-		if (changed) {
-			clock = NO_PAUSE;
+		if (target != null && target.isAlive() && ((LivingEntity) target).damagedTimer == HURT_TICKS) {
+			clock = 0;
+			serverReset = true;
 		} else {
 			tickClock();
-			if (clock < HURT_TICKS) return;
 		}
-		if (player.getLastAttackTime() == player.ticks - 1) clock = 0;
 	}
 
 	private void tickClock() {
@@ -234,5 +254,6 @@ public class HitSelect extends Module {
 		target = null;
 		targetDistance = Double.MAX_VALUE;
 		closing = false;
+		held = 0;
 	}
 }

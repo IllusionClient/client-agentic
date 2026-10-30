@@ -6,7 +6,8 @@ import org.lwjgl.input.Mouse;
 public final class MouseUtils {
 	private static final int BUTTONS = 16;
 	private static final int[] pendingEvents = new int[BUTTONS];
-	private static final boolean[] lifted = new boolean[BUTTONS];
+	private static final boolean[] flipped = new boolean[BUTTONS];
+	private static final boolean[] physical = new boolean[BUTTONS];
 	private static int button;
 	private static boolean synthetic;
 
@@ -16,8 +17,7 @@ public final class MouseUtils {
 
 	public static void resync(int button) {
 		if (button < 0 || button >= BUTTONS) return;
-		pendingEvents[button] = lifted[button] && Mouse.isButtonDown(button) ? 1 : 0;
-		if (pendingEvents[button] == 0) lifted[button] = false;
+		pendingEvents[button] = flipped[button] ? 1 : 0;
 	}
 
 	public static boolean next(boolean hasEvent) {
@@ -25,13 +25,15 @@ public final class MouseUtils {
 		if (hasEvent) return true;
 		boolean screen = Minecraft.getInstance().screen != null;
 		for (int i = 0; i < BUTTONS; i++) {
-			if (lifted[i] && (screen || !Mouse.isButtonDown(i))) {
+			boolean down = Mouse.isButtonDown(i);
+			if (flipped[i] && (screen || down != physical[i])) {
 				pendingEvents[i] = 0;
-				lifted[i] = false;
+				flipped[i] = false;
 			}
 			if (pendingEvents[i] == 0) continue;
 			pendingEvents[i]--;
-			lifted[i] = !lifted[i];
+			flipped[i] = !flipped[i];
+			physical[i] = down;
 			button = i;
 			return synthetic = true;
 		}
@@ -47,6 +49,6 @@ public final class MouseUtils {
 	}
 
 	public static boolean eventState() {
-		return !lifted[button];
+		return physical[button] != flipped[button];
 	}
 }

@@ -5,9 +5,12 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import net.minecraft.block.Block;
 import net.minecraft.block.Blocks;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.entity.living.player.LocalClientPlayerEntity;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.chunk.WorldChunk;
 import org.codeberg.illusionclient.IllusionClient;
+import org.codeberg.illusionclient.event.player.PlayerTickEvent;
 import org.codeberg.illusionclient.event.world.BlockChangeEvent;
 import org.codeberg.illusionclient.event.world.ChunkLoadEvent;
 import org.codeberg.illusionclient.event.world.ChunkUnloadEvent;
@@ -22,10 +25,13 @@ public final class BedManager {
 	private static final int OCCUPIED_BIT = 4;
 	private static final int HEAD_BIT = 8;
 	private static final int HEAD_MASK = ~(FACING_BITS | OCCUPIED_BIT);
+	private static final double OWN_RANGE = 20.0D;
 
 	private final BlockPos.Mutable key = new BlockPos.Mutable();
 	private final Long2ObjectMap<Bed> beds = new Long2ObjectOpenHashMap<>();
 	private final Collection<Bed> view = Collections.unmodifiableCollection(beds.values());
+	private long own;
+	private boolean ownFound;
 
 	public BedManager() {
 		IllusionClient.BUS.subscribe(this);
@@ -35,9 +41,30 @@ public final class BedManager {
 		return view;
 	}
 
+	public Bed own() {
+		return ownFound ? beds.get(own) : null;
+	}
+
 	@Listen
 	public void onWorldLoad(WorldLoadEvent event) {
 		beds.clear();
+		ownFound = false;
+	}
+
+	@Listen
+	public void onPlayerTick(PlayerTickEvent event) {
+		LocalClientPlayerEntity player = Minecraft.getInstance().player;
+		if (ownFound || player == null) return;
+
+		double closest = OWN_RANGE * OWN_RANGE;
+		for (Bed bed : beds.values()) {
+			double x = bed.centerX() - player.x;
+			double z = bed.centerZ() - player.z;
+			if (x * x + z * z > closest) continue;
+			closest = x * x + z * z;
+			own = key.set(bed.x, bed.y, bed.z).toLong();
+			ownFound = true;
+		}
 	}
 
 	@Listen

@@ -8,7 +8,10 @@ import net.minecraft.util.math.Vec3d;
 
 public final class RotationUtils {
 	public static float[] rotationTo(Vec3d point) {
-		Vec3d eye = Minecraft.getInstance().player.getEyePosition(1.0F);
+		return rotationTo(Minecraft.getInstance().player.getEyePosition(1.0F), point);
+	}
+
+	public static float[] rotationTo(Vec3d eye, Vec3d point) {
 		double x = point.x - eye.x;
 		double y = point.y - eye.y;
 		double z = point.z - eye.z;

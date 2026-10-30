@@ -45,9 +45,16 @@ public final class LagManager {
 		return false;
 	}
 
+	public boolean isHeld(Packet<?> packet) {
+		for (Held held : inbound) {
+			if (held.packet == packet) return true;
+		}
+		return false;
+	}
+
 	@Listen
 	public void onPacketReceive(PacketReceiveEvent event) {
-		if (inbound.isEmpty() && !wanted(false)) return;
+		if (event.cancelled || inbound.isEmpty() && !wanted(false)) return;
 
 		Packet<PacketHandler> packet = event.packet();
 		PacketHandler listener = event.listener();
@@ -57,7 +64,7 @@ public final class LagManager {
 
 	@Listen
 	public void onPacketSend(PacketSendEvent event) {
-		if (outbound.isEmpty() && !wanted(true)) return;
+		if (event.cancelled || outbound.isEmpty() && !wanted(true)) return;
 
 		event.cancelled = true;
 		outbound.add(new Held(event.packet(), true, () -> event.connection().send(event.packet()), System.currentTimeMillis()));

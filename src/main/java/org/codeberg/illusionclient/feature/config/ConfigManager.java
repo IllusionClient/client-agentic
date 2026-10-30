@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import org.codeberg.illusionclient.IllusionClient;
 import org.codeberg.illusionclient.feature.config.api.*;
 import org.codeberg.illusionclient.feature.module.api.Module;
+import org.codeberg.illusionclient.feature.module.visual.Notifications;
 import org.lwjgl.input.Keyboard;
 
 import java.awt.*;
@@ -21,8 +22,10 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Consumer;
 
 public final class ConfigManager {
@@ -32,17 +35,22 @@ public final class ConfigManager {
 	private static final String VERSION_KEY = "configVersion";
 	private static final String STATS_KEY = "stats";
 	private static final String GUI_KEY = "gui";
+	private static final String PROFILE_KEY = "profile";
 	private static final Map<String, String> RENAMED_LABELS = Map.of("Randomize Inventory", "Randomize Inventory Speed");
 	private static final List<Consumer<JsonObject>> MIGRATIONS = List.of(
 		ConfigManager::keyByFieldName,
-		ConfigManager::keyByClassName
+		ConfigManager::keyByClassName,
+		ConfigManager::weaponsAsSelections
 	);
 	private static final int VERSION = MIGRATIONS.size();
 
 	private final Path file = FabricLoader.getInstance().getConfigDir()
 		.resolve(IllusionClient.ID).resolve("settings.json");
 
+	private final Path profiles = file.resolveSibling("profiles");
+
 	public JsonObject gui = new JsonObject();
+	public String profile;
 
 	private static void keyByFieldName(JsonObject root) {
 		for (Module module : IllusionClient.MODULES.modules) {
@@ -72,6 +80,23 @@ public final class ConfigManager {
 			if (entry != null) entries.put(module.key, entry);
 		}
 		entries.forEach(root::add);
+	}
+
+	private static void weaponsAsSelections(JsonObject root) {
+		JsonElement entry = root.get("Weapons");
+		if (entry == null || !entry.isJsonObject() || !(entry.getAsJsonObject().get("settings") instanceof JsonObject settings) || !settings.has("swords")) return;
+
+		settings.add("items", selected(settings, Map.of("swords", "Swords", "axes", "Axes", "sticks", "Sticks", "fists", "Fists")));
+		settings.add("enchantments", selected(settings, Map.of("sharpness", "Sharpness", "knockback", "Knockback", "fireAspect", "Fire Aspect")));
+	}
+
+	private static JsonArray selected(JsonObject settings, Map<String, String> checks) {
+		JsonArray selected = new JsonArray();
+		checks.forEach((key, name) -> {
+			JsonElement value = settings.remove(key);
+			if (value != null && value.isJsonPrimitive() && value.getAsBoolean()) selected.add(name);
+		});
+		return selected;
 	}
 
 	private static int readVersion(JsonObject root) {
@@ -174,6 +199,15 @@ public final class ConfigManager {
 			return new float[]{Math.min(low, high), Math.max(low, high)};
 		}
 
+		if (option.info instanceof MultiSelect) {
+			List<String> choices = Arrays.asList(option.choices());
+			Set<String> selected = new LinkedHashSet<>();
+			for (JsonElement element : value.getAsJsonArray()) {
+				if (choices.contains(element.getAsString())) selected.add(element.getAsString());
+			}
+			return selected;
+		}
+
 		String choice = value.getAsString();
 		if (!Arrays.asList(option.choices()).contains(choice)) {
 			throw new IllegalArgumentException("unknown option " + choice);
@@ -188,10 +222,8 @@ public final class ConfigManager {
 		return value.getAsBoolean();
 	}
 
-	public synchronized void save() {
+	private static JsonObject writeModules() {
 		JsonObject root = new JsonObject();
-		root.addProperty(VERSION_KEY, VERSION);
-
 		for (Module module : IllusionClient.MODULES.modules) {
 			JsonObject settings = new JsonObject();
 			for (Option option : module.options) {
@@ -208,6 +240,21 @@ public final class ConfigManager {
 			entry.add("settings", settings);
 			root.add(module.key, entry);
 		}
+		return root;
+	}
+
+	private static void loadModules(JsonObject root) {
+		for (Module module : IllusionClient.MODULES.modules) {
+			JsonElement entry = root.get(module.key);
+			if (entry != null && entry.isJsonObject()) load(module, entry.getAsJsonObject());
+		}
+	}
+
+	public synchronized void save() {
+		JsonObject root = new JsonObject();
+		root.addProperty(VERSION_KEY, VERSION);
+
+		writeModules().asMap().forEach(root::add);
 
 		JsonObject stats = new JsonObject();
 		stats.addProperty("playtime", IllusionClient.STATS.playtime());
@@ -216,22 +263,84 @@ public final class ConfigManager {
 		stats.add("toggles", writeCounts(IllusionClient.STATS.toggles));
 		root.add(STATS_KEY, stats);
 		root.add(GUI_KEY, gui);
+		if (profile != null) root.addProperty(PROFILE_KEY, profile);
+		write(file, root);
+	}
 
-		Path temp = file.resolveSibling(file.getFileName() + ".tmp");
+	private static boolean write(Path target, JsonObject root) {
+		Path temp = target.resolveSibling(target.getFileName() + ".tmp");
 		try {
-			Files.createDirectories(file.getParent());
+			Files.createDirectories(target.getParent());
 			try (Writer writer = Files.newBufferedWriter(temp, StandardCharsets.UTF_8)) {
 				GSON.toJson(root, writer);
 			}
 
 			try {
-				Files.move(temp, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+				Files.move(temp, target, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
 			} catch (AtomicMoveNotSupportedException _) {
-				Files.move(temp, file, StandardCopyOption.REPLACE_EXISTING);
+				Files.move(temp, target, StandardCopyOption.REPLACE_EXISTING);
 			}
+			return true;
 		} catch (IOException e) {
-			LOGGER.error("Failed to save configuration to {}", file, e);
+			LOGGER.error("Failed to save {}", target, e);
+			return false;
 		}
+	}
+
+	public List<String> profiles() {
+		try (var files = Files.list(profiles)) {
+			return files.map(path -> path.getFileName().toString())
+				.filter(name -> name.endsWith(".json"))
+				.map(name -> name.substring(0, name.length() - 5))
+				.sorted(String.CASE_INSENSITIVE_ORDER)
+				.toList();
+		} catch (IOException _) {
+			return List.of();
+		}
+	}
+
+	public void createProfile() {
+		createProfile("Profile");
+	}
+
+	public synchronized void createProfile(String prefix) {
+		List<String> existing = profiles();
+		int number = 1;
+		while (existing.contains(prefix + " " + number)) number++;
+		profile = prefix + " " + number;
+		saveProfile();
+	}
+
+	public synchronized void saveProfile() {
+		if (profile == null) createProfile();
+		else if (write(profiles.resolve(profile + ".json"), writeModules())) save();
+	}
+
+	public synchronized void loadProfile(String name) {
+		if (!profiles().contains(name)) return;
+
+		try (Reader reader = Files.newBufferedReader(profiles.resolve(name + ".json"), StandardCharsets.UTF_8)) {
+			loadModules(JsonParser.parseReader(reader).getAsJsonObject());
+		} catch (IOException | RuntimeException e) {
+			LOGGER.error("Failed to load profile {}", name, e);
+			return;
+		}
+		profile = name;
+		save();
+		Notifications.profileLoaded(name);
+	}
+
+	public synchronized void deleteProfile() {
+		if (profile == null) return;
+
+		try {
+			Files.deleteIfExists(profiles.resolve(profile + ".json"));
+		} catch (IOException e) {
+			LOGGER.error("Failed to delete profile {}", profile, e);
+			return;
+		}
+		profile = null;
+		save();
 	}
 
 	public synchronized void load() {
@@ -261,10 +370,10 @@ public final class ConfigManager {
 			LOGGER.info("Migrated {} from version {} to {}, the original is at {}", file, version, VERSION, copy);
 		}
 
-		for (Module module : IllusionClient.MODULES.modules) {
-			JsonElement entry = root.get(module.key);
-			if (entry != null && entry.isJsonObject()) load(module, entry.getAsJsonObject());
-		}
+		loadModules(root);
+
+		JsonElement active = root.get(PROFILE_KEY);
+		if (active != null && active.isJsonPrimitive() && profiles().contains(active.getAsString())) profile = active.getAsString();
 
 		JsonElement stats = root.get(STATS_KEY);
 		if (stats != null && stats.isJsonObject()) loadStats(stats.getAsJsonObject());

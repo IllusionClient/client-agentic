@@ -2,6 +2,7 @@ package org.codeberg.illusionclient.util;
 
 import net.minecraft.block.Block;
 import net.minecraft.block.Blocks;
+import net.minecraft.entity.living.player.PlayerInventory;
 import net.minecraft.item.BlockItem;
 import net.minecraft.item.ItemStack;
 
@@ -21,5 +22,19 @@ public final class ItemUtils {
 		if (block == Blocks.PLANKS || block == Blocks.LOG || block == Blocks.LOG2 || block == Blocks.GLASS || block == Blocks.SANDSTONE
 			|| block == Blocks.NETHERRACK || block == Blocks.END_STONE || block == Blocks.STAINED_HARDENED_CLAY) return 1;
 		return -1;
+	}
+
+	public static int bestBlockSlot(PlayerInventory inventory, Block preferred) {
+		int best = -1;
+		int bestPriority = -1;
+		for (int slot = 0; slot < PlayerInventory.getHotbarSize(); slot++) {
+			if (preferred != null && block(inventory.items[slot]) == preferred) return slot;
+			int priority = blockPriority(inventory.items[slot]);
+			if (priority > bestPriority || priority == bestPriority && priority >= 0 && slot == inventory.selectedSlot) {
+				best = slot;
+				bestPriority = priority;
+			}
+		}
+		return best;
 	}
 }

@@ -1,6 +1,7 @@
 package org.codeberg.illusionclient.feature.ui.component;
 
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import org.codeberg.illusionclient.IllusionClient;
 import org.codeberg.illusionclient.feature.config.api.*;
 import org.codeberg.illusionclient.feature.module.api.Module;
 import org.codeberg.illusionclient.feature.module.api.ObsHidden;
@@ -90,16 +91,30 @@ public class ModuleComponent extends Group {
 
 	public static List<Component> options(Module module) {
 		List<Component> components = new ObjectArrayList<>();
+		SectionComponent section = null;
 		for (Option option : module.options) {
-			switch (option.info) {
-				case Check _ -> components.add(new CheckComponent(option));
-				case Slider _ -> components.add(new SliderComponent(option));
-				case RangeSlider _ -> components.add(new RangeSliderComponent(option));
-				case Combo _ -> components.add(new ComboComponent(option));
-				case null, default -> components.add(new ColorComponent(option));
+			Component component = switch (option.info) {
+				case Check _ -> new CheckComponent(option);
+				case Slider _ -> new SliderComponent(option);
+				case RangeSlider _ -> new RangeSliderComponent(option);
+				case Combo _ -> new ComboComponent(option);
+				case MultiSelect _ -> new MultiSelectComponent(option);
+				case null, default -> new ColorComponent(option);
+			};
+			if (option.section() == null) {
+				components.add(component);
+				continue;
 			}
+			if (section == null || !section.name.equals(option.section())) components.add(section = new SectionComponent(option.section()));
+			section.children.add(component);
 		}
-		if (module instanceof ClickGuiModule gui) components.add(new ButtonComponent("Positions", "Reset", gui::resetPositions));
+		if (module instanceof ClickGuiModule gui) {
+			components.add(new ButtonComponent("Positions", "Reset", gui::resetPositions));
+			components.add(new ProfileComponent());
+			components.add(new ButtonComponent("Profile", "Save", IllusionClient.CONFIG::saveProfile));
+			components.add(new ButtonComponent("Profile", "New", IllusionClient.CONFIG::createProfile));
+			components.add(new ButtonComponent("Profile", "Delete", IllusionClient.CONFIG::deleteProfile));
+		}
 		components.add(new KeybindComponent(module));
 		return components;
 	}

@@ -53,6 +53,20 @@ public final class Bed {
 		this.footZ = z - FACING_Z[facing];
 	}
 
+	public double centerX() {
+		return (x + footX) / 2.0D + 0.5D;
+	}
+
+	public double centerZ() {
+		return (z + footZ) / 2.0D + 0.5D;
+	}
+
+	public int distance(int x, int y, int z) {
+		int dx = Math.max(0, Math.max(Math.min(this.x, footX) - x, x - Math.max(this.x, footX)));
+		int dz = Math.max(0, Math.max(Math.min(this.z, footZ) - z, z - Math.max(this.z, footZ)));
+		return dx + Math.abs(y - this.y) + dz;
+	}
+
 	public boolean exposed() {
 		refresh();
 		return exposed;

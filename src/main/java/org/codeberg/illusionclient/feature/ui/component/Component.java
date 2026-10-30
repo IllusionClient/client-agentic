@@ -12,6 +12,7 @@ public abstract class Component {
 
 	protected int x, y, width = WIDTH;
 	protected boolean bottom;
+	protected int indent;
 	protected Description description;
 
 	public int height() {
@@ -59,7 +60,7 @@ public abstract class Component {
 
 		Draw.rounded(x, y, width, height(), 0.0F, bottom ? RADIUS : 0.0F, hovered ? Draw.CONTAINER_HIGH : Draw.CONTAINER);
 		Draw.rect(left(), y, right() - left(), 2, Draw.DIVIDER);
-		Draw.text(label, left(), Draw.textY(y, HEIGHT), Draw.TEXT);
+		Draw.text(label, left() + indent, Draw.textY(y, HEIGHT), Draw.TEXT);
 	}
 
 	protected final void value(String text) {

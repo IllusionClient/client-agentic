@@ -1,0 +1,16 @@
+package org.codeberg.illusionclient.feature.config.api;
+
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+
+@Target(ElementType.FIELD)
+@Retention(RetentionPolicy.RUNTIME)
+public @interface MultiSelect {
+	String value();
+
+	String[] options() default {};
+
+	String source() default "";
+}

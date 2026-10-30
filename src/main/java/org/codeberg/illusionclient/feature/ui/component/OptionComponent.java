@@ -8,6 +8,7 @@ public abstract class OptionComponent extends Component {
 	protected OptionComponent(Option option) {
 		this.option = option;
 		this.description = option.description;
+		this.indent = option.depth() * PADDING;
 	}
 
 	@Override

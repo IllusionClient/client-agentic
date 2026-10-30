@@ -1,5 +1,6 @@
 package org.codeberg.illusionclient.feature.module.player;
 
+import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import org.codeberg.illusionclient.event.api.Listen;
 import net.minecraft.block.Block;
 import net.minecraft.client.Minecraft;
@@ -16,12 +17,14 @@ import org.codeberg.illusionclient.event.player.UseItemEvent;
 import org.codeberg.illusionclient.feature.config.api.Check;
 import org.codeberg.illusionclient.feature.config.api.Combo;
 import org.codeberg.illusionclient.feature.config.api.Requires;
+import org.codeberg.illusionclient.feature.config.api.Section;
 import org.codeberg.illusionclient.feature.config.api.Slider;
 import org.codeberg.illusionclient.feature.module.api.Category;
 import org.codeberg.illusionclient.feature.module.api.Description;
 import org.codeberg.illusionclient.feature.module.api.Module;
 import org.codeberg.illusionclient.feature.module.api.ModuleInfo;
 import org.codeberg.illusionclient.util.ItemUtils;
+import org.codeberg.illusionclient.util.MoveUtils;
 import org.codeberg.illusionclient.util.NoiseUtils;
 import org.codeberg.illusionclient.util.SimulatedPlayer;
 import org.codeberg.illusionclient.util.input.InputState;
@@ -38,9 +41,28 @@ public class BridgeAssist extends Module {
 	private static final double EDGE_TOLERANCE = 0.1D;
 	private static final double LATCH_RADIUS = 0.15D;
 	private static final float MIN_AXIS_SHARE = 0.38F;
+	private static final float OFFSET_STEP = 0.01F;
+	private static final float RANDOM_OFFSET_SHIFT = 0.075F;
+	private static final int MIN_SAMPLES = 10;
+	private static final int MAX_RECORDED_TICKS = 20;
+	private static final int MIN_JUMP_SAMPLES = 3;
+	private static final float MAX_JUMP_HEIGHT = 1.25F;
+	private static final float BRIDGE_ANGLE = 45.0F;
+	private static final float BRIDGE_ANGLE_TOLERANCE = 7.5F;
+	private static final float MIN_TURN = 30.0F;
+	private static final int STILL_TICKS = 3;
+	private static final float DIAGONAL_TOLERANCE = 10.0F;
+	private static final double ALIGN_START = 0.2D;
+	private static final double ALIGN_STOP = 0.1D;
+	private static final float INPUT_SCALE = 0.98F;
+	private static final float SNEAK_SCALE = 0.3F;
+	private static final double AIR_SPEED = 0.02D;
+	private static final double AIR_DRAG = 0.91D;
+	private static final double GROUND_DRAG = 0.6D * AIR_DRAG;
 	private final Minecraft minecraft = Minecraft.getInstance();
 	private final Random random = new Random();
 
+	@Section("General")
 	@Description("How far past the edge before sneaking.")
 	@Slider(value = "Edge Offset", min = 0.0F, max = 0.3F, step = 0.01F)
 	public float edgeOffset = 0.2F;
@@ -49,22 +71,31 @@ public class BridgeAssist extends Module {
 	@Slider(value = "Unsneak Delay", min = 0.0F, max = 300.0F)
 	public float unsneakDelay = 150.0F;
 
-	@Description("Swaps to hotbar blocks.")
-	@Combo(value = "Select Blocks", options = {"No", "On depletion", "Always"})
-	public String selectBlocks = "On depletion";
-
 	@Description("Varies the edge offset and unsneak delay.")
 	@Check("Randomize")
 	public boolean randomize = true;
 
-	@Description("Also sneaks at edges while rising from a jump.")
-	@Check("Sneak On Jump")
-	public boolean sneakOnJump = false;
+	@Description("Watches you bridge without helping, then sets the options to match and saves them as a new profile.")
+	@Check("Record")
+	public boolean record = false;
 
-	@Description("Only sneaks in the air while you hold a movement key.")
-	@Requires("sneakOnJump")
-	@Check("Only While Moving")
-	public boolean onlyWhileMoving = true;
+	@Section("Misc. Features")
+	@Description("Swaps to hotbar blocks.")
+	@Combo(value = "Select Blocks", options = {"No", "On depletion", "Always"})
+	public String selectBlocks = "On depletion";
+
+	@Description("Sneaks as you turn to bridge near an edge, until edge sneaking takes over.")
+	@Check("Pre-Sneak")
+	public boolean preSneak = false;
+
+	@Description("How close to an open edge you need to be for pre-sneak.")
+	@Requires("preSneak")
+	@Slider(value = "Pre-Sneak Distance", min = 0.0F, max = 0.5F)
+	public float preSneakDistance = 0.5F;
+
+	@Description("Strafes you onto the block diagonal when bridging diagonally backwards.")
+	@Check("Strafe Align")
+	public boolean strafeAlign = false;
 
 	@Description("Blocks placements that would leave you at the edge and need a second sneak.")
 	@Check("Avoid Double-Sneaking")
@@ -74,13 +105,29 @@ public class BridgeAssist extends Module {
 	@Check("Wait For Edge")
 	public boolean waitForEdge = false;
 
-	@Description("Only works while you hold sneak, and lets go of it for you away from edges.")
-	@Check("Sneak Key Pressed")
-	public boolean sneakKeyPressed = false;
-
 	@Description("Lets you place the next block without sneaking first.")
 	@Check("Skip Sneak")
 	public boolean skipSneak = false;
+
+	@Section("Sneak On Jump")
+	@Description("Also sneaks at edges while rising from a jump, and on the way down below the jump sneak height.")
+	@Check("Sneak On Jump")
+	public boolean sneakOnJump = false;
+
+	@Description("How high above your takeoff point to start sneaking on the way down.")
+	@Requires("sneakOnJump")
+	@Slider(value = "Jump Sneak Height", min = 0.0F, max = MAX_JUMP_HEIGHT, step = 0.01F)
+	public float jumpSneakHeight = 0.8F;
+
+	@Description("Only sneaks in the air while you hold a movement key.")
+	@Requires("sneakOnJump")
+	@Check("Only While Moving")
+	public boolean onlyWhileMoving = true;
+
+	@Section("Conditions")
+	@Description("Only works while you hold sneak, and lets go of it for you away from edges.")
+	@Check("Sneak Key Pressed")
+	public boolean sneakKeyPressed = false;
 
 	@Description("Only works while you hold blocks.")
 	@Check("Holding Blocks")
@@ -109,16 +156,34 @@ public class BridgeAssist extends Module {
 	private double latchZ;
 	private Block lastBlock;
 	private int lastSlot = -1;
+	private FloatArrayList recordedOffsets;
+	private FloatArrayList recordedDelays;
+	private FloatArrayList recordedHeights;
+	private double groundY;
+	private boolean tracking;
+	private float lastYaw;
+	private float lastPitch;
+	private float turned;
+	private int stillTicks;
+	private boolean preSneaking;
+	private boolean bridged;
+	private int alignDirection;
+	private boolean wasSneaking;
+	private float sampleOffset = -1.0F;
+	private int backTicks;
 
 	@Override
 	public String details() {
+		if (recordedOffsets != null) return recordedDelays.size() + " sneaks";
 		return number(unsneakDelay) + "ms";
 	}
 
 	@Override
 	public void onDisable() {
-		sneaking = armed = sneakedSincePlace = pendingSneak = holdSneak = false;
-		unsneakTicks = placementTicks = nonBlockTicks = groundTicks = latchedPlacements = 0;
+		syncRecording();
+		sneaking = armed = sneakedSincePlace = pendingSneak = holdSneak = tracking = preSneaking = bridged = false;
+		unsneakTicks = placementTicks = nonBlockTicks = groundTicks = latchedPlacements = stillTicks = alignDirection = 0;
+		turned = 0.0F;
 		lastBlock = null;
 		lastSlot = -1;
 	}
@@ -127,14 +192,22 @@ public class BridgeAssist extends Module {
 	public void onInput(InputEvent event) {
 		LocalClientPlayerEntity player = minecraft.player;
 		InputState input = IllusionClient.INPUT.player;
+		syncRecording();
+		if (player.onGround) groundY = player.y;
+		if (recordedOffsets != null) {
+			recordSneak(player, input);
+			return;
+		}
 		nonBlockTicks = ItemUtils.isBlock(player.inventory.getSelectedItem()) ? 0 : nonBlockTicks + 1;
 		if (!armed) latchedPlacements = 0;
 		armed = false;
+		trackRotation(player);
 		if (!conditionsMet(player, input)) {
-			sneaking = pendingSneak = holdSneak = false;
-			unsneakTicks = 0;
+			sneaking = pendingSneak = holdSneak = preSneaking = bridged = false;
+			unsneakTicks = alignDirection = 0;
 			return;
 		}
+		if (strafeAlign) align(player, input);
 		if (placementTicks == 0) holdSneak = false;
 		if (pendingSneak) {
 			pendingSneak = false;
@@ -153,8 +226,10 @@ public class BridgeAssist extends Module {
 		}
 
 		boolean edge = edgeAhead(player, edgeOffset());
+		if (preSneak) updatePreSneak(player, input, edge);
+		edge |= preSneaking;
 		if (!sneaking) {
-			sneaking = edge && (sneakKeyPressed || player.onGround || rising(player, input));
+			sneaking = edge && (sneakKeyPressed || player.onGround || jumpSneak(player, input));
 			if (sneaking) {
 				sneakedSincePlace = true;
 				delay = nextDelay();
@@ -205,6 +280,8 @@ public class BridgeAssist extends Module {
 		placementTicks = PLACEMENT_TICKS;
 		if (event.click && !skipSneak && !sneakedSincePlace && player.onGround && edgeReach(player, target) >= 0) pendingSneak = true;
 		sneakedSincePlace = false;
+		bridged = true;
+		preSneaking = false;
 	}
 
 	@Listen
@@ -218,10 +295,10 @@ public class BridgeAssist extends Module {
 		PlayerInventory inventory = player.inventory;
 		int slot = -1;
 		if (selectBlocks.equals("Always")) {
-			slot = bestSlot(inventory, null);
+			slot = ItemUtils.bestBlockSlot(inventory, null);
 		} else if (selectBlocks.equals("On depletion") && lastBlock != null
 			&& inventory.selectedSlot == lastSlot && inventory.getSelectedItem() == null) {
-			slot = bestSlot(inventory, lastBlock);
+			slot = ItemUtils.bestBlockSlot(inventory, lastBlock);
 		}
 		if (slot != -1 && slot != inventory.selectedSlot && IllusionClient.MODULES.claimSlot(this)) {
 			inventory.selectedSlot = slot;
@@ -232,6 +309,80 @@ public class BridgeAssist extends Module {
 		lastSlot = inventory.selectedSlot;
 	}
 
+	private void syncRecording() {
+		boolean recording = isEnabled() && record;
+		if (recording == (recordedOffsets != null)) return;
+
+		if (recording) {
+			recordedOffsets = new FloatArrayList();
+			recordedDelays = new FloatArrayList();
+			recordedHeights = new FloatArrayList();
+			sampleOffset = -1.0F;
+			return;
+		}
+		if (recordedDelays.size() >= MIN_SAMPLES) {
+			float offset = mean(recordedOffsets);
+			float delay = mean(recordedDelays);
+			randomize = deviation(recordedDelays, delay) >= 0.5F || deviation(recordedOffsets, offset) >= RANDOM_OFFSET_SHIFT / 2.0F;
+			if (randomize) offset += RANDOM_OFFSET_SHIFT;
+			edgeOffset = Math.round(Math.clamp(offset, 0.0F, 0.3F) / OFFSET_STEP) * OFFSET_STEP;
+			unsneakDelay = Math.round(Math.clamp(delay * MS_PER_TICK, 0.0F, 300.0F));
+			if (recordedHeights.size() >= MIN_JUMP_SAMPLES) {
+				sneakOnJump = true;
+				jumpSneakHeight = Math.round(Math.clamp(mean(recordedHeights), 0.0F, MAX_JUMP_HEIGHT) / OFFSET_STEP) * OFFSET_STEP;
+			}
+			record = false;
+			IllusionClient.CONFIG.createProfile("Bridging");
+		}
+		recordedOffsets = null;
+		recordedDelays = null;
+		recordedHeights = null;
+		detailsChanged();
+	}
+
+	private void recordSneak(LocalClientPlayerEntity player, InputState input) {
+		boolean pressed = input.sneak && !wasSneaking;
+		boolean released = !input.sneak && wasSneaking;
+		wasSneaking = input.sneak;
+
+		if (sampleOffset >= 0.0F) {
+			backTicks = edgeAhead(player, sampleOffset) ? 0 : backTicks + 1;
+			if (backTicks > MAX_RECORDED_TICKS) {
+				sampleOffset = -1.0F;
+			} else if (released) {
+				recordedOffsets.add(sampleOffset);
+				recordedDelays.add(backTicks);
+				sampleOffset = -1.0F;
+				detailsChanged();
+			}
+		}
+		if (!pressed || !ItemUtils.isBlock(player.inventory.getSelectedItem())) return;
+		if (player.onGround) {
+			sampleOffset = pastEdge(player);
+			backTicks = 0;
+		} else if (player.velocityY <= 0.0D) {
+			recordedHeights.add((float) (player.y - groundY));
+		}
+	}
+
+	private float pastEdge(LocalClientPlayerEntity player) {
+		float offset = -1.0F;
+		for (float step = OFFSET_STEP; step <= player.width / 2.0F && edgeAhead(player, step); step += OFFSET_STEP) offset = step;
+		return offset;
+	}
+
+	private static float mean(FloatArrayList values) {
+		float sum = 0.0F;
+		for (int i = 0; i < values.size(); i++) sum += values.getFloat(i);
+		return sum / values.size();
+	}
+
+	private static float deviation(FloatArrayList values, float mean) {
+		float sum = 0.0F;
+		for (int i = 0; i < values.size(); i++) sum += (values.getFloat(i) - mean) * (values.getFloat(i) - mean);
+		return (float) Math.sqrt(sum / values.size());
+	}
+
 	private boolean conditionsMet(LocalClientPlayerEntity player, InputState input) {
 		if (!minecraft.focused || minecraft.screen != null) return false;
 		if (input.sneak != sneakKeyPressed) return false;
@@ -240,8 +391,8 @@ public class BridgeAssist extends Module {
 		return !notMovingForward || input.forwardAxis() <= 0.0F;
 	}
 
-	private boolean rising(LocalClientPlayerEntity player, InputState input) {
-		if (!sneakOnJump || player.velocityY <= 0.0D) return false;
+	private boolean jumpSneak(LocalClientPlayerEntity player, InputState input) {
+		if (!sneakOnJump || player.velocityY <= 0.0D && player.y - groundY > jumpSneakHeight) return false;
 		return !onlyWhileMoving || input.forward || input.back || input.left || input.right;
 	}
 
@@ -314,17 +465,91 @@ public class BridgeAssist extends Module {
 		return dx < 1.0D && dz < 1.0D && (dx < 0.0D || dz < 0.0D) ? 1 : -1;
 	}
 
-	private static int bestSlot(PlayerInventory inventory, Block preferred) {
-		int best = -1;
-		int bestPriority = -1;
-		for (int slot = 0; slot < PlayerInventory.getHotbarSize(); slot++) {
-			if (preferred != null && ItemUtils.block(inventory.items[slot]) == preferred) return slot;
-			int priority = ItemUtils.blockPriority(inventory.items[slot]);
-			if (priority > bestPriority || priority == bestPriority && priority >= 0 && slot == inventory.selectedSlot) {
-				best = slot;
-				bestPriority = priority;
-			}
+	private void trackRotation(LocalClientPlayerEntity player) {
+		float yawDelta = MathHelper.wrapDegrees(player.yaw - lastYaw);
+		float pitchDelta = player.pitch - lastPitch;
+		boolean rotating = tracking && (yawDelta != 0.0F || pitchDelta != 0.0F);
+		tracking = true;
+		lastYaw = player.yaw;
+		lastPitch = player.pitch;
+
+		if (rotating) {
+			stillTicks = 0;
+			turned += (float) Math.hypot(yawDelta, pitchDelta);
+		} else if (++stillTicks >= STILL_TICKS) {
+			turned = 0.0F;
 		}
-		return best;
+	}
+
+	private void updatePreSneak(LocalClientPlayerEntity player, InputState input, boolean edge) {
+		if (!player.onGround || input.forward || input.jump || edgeDistance(player) >= preSneakDistance) {
+			preSneaking = bridged = false;
+			return;
+		}
+		if (edge || bridged) {
+			preSneaking = false;
+		} else if (!preSneaking) {
+			preSneaking = turned >= MIN_TURN && player.pitch >= LOOKING_DOWN_PITCH
+				&& angleFrom(player.yaw, BRIDGE_ANGLE, 0.0F) <= BRIDGE_ANGLE_TOLERANCE;
+		}
+	}
+
+	private double edgeDistance(LocalClientPlayerEntity player) {
+		int x = (int) Math.floor(player.x);
+		int y = (int) Math.floor(player.y) - 1;
+		int z = (int) Math.floor(player.z);
+		double distance = Double.MAX_VALUE;
+		if (open(x - 1, y, z)) distance = player.x - x;
+		if (open(x + 1, y, z)) distance = Math.min(distance, x + 1 - player.x);
+		if (open(x, y, z - 1)) distance = Math.min(distance, player.z - z);
+		if (open(x, y, z + 1)) distance = Math.min(distance, z + 1 - player.z);
+		return distance;
+	}
+
+	private boolean open(int x, int y, int z) {
+		return minecraft.world.isAir(new BlockPos(x, y, z));
+	}
+
+	private void align(LocalClientPlayerEntity player, InputState input) {
+		if (!input.back || input.forward || input.left || input.right
+			|| angleFrom(player.yaw, 90.0F, 45.0F) > DIAGONAL_TOLERANCE) {
+			alignDirection = 0;
+			return;
+		}
+
+		double[] back = acceleration(player, -1.0F, 0.0F);
+		double[] backLeft = acceleration(player, -1.0F, 1.0F);
+		double slope = Math.signum(back[0]) * Math.signum(back[1]);
+		double settle = 1.0D / (1.0D - (player.onGround ? GROUND_DRAG : AIR_DRAG));
+		double line = player.x - slope * player.z + (player.velocityX + back[0] - slope * (player.velocityZ + back[1])) * settle;
+		double error = line - Math.round(line);
+		if (alignDirection == 0) {
+			if (Math.abs(error) <= ALIGN_START) return;
+			alignDirection = error > 0.0D ? 1 : -1;
+		}
+
+		double shift = (backLeft[0] - back[0] - slope * (backLeft[1] - back[1])) * settle;
+		if (error * alignDirection <= Math.max(ALIGN_STOP, Math.abs(shift) / 2.0D)) {
+			alignDirection = 0;
+			return;
+		}
+		InputState client = IllusionClient.INPUT.client;
+		client.left = error * shift < 0.0D;
+		client.right = error * shift > 0.0D;
+	}
+
+	private double[] acceleration(LocalClientPlayerEntity player, float forward, float sideways) {
+		float scale = sneaking ? INPUT_SCALE * SNEAK_SCALE : INPUT_SCALE;
+		forward *= scale;
+		sideways *= scale;
+		double speed = (player.onGround ? player.getSpeed() : AIR_SPEED) / Math.max(1.0D, Math.hypot(forward, sideways));
+		double[] direction = MoveUtils.inputDirection(player.yaw, forward, sideways);
+		return new double[]{direction[0] * speed, direction[1] * speed};
+	}
+
+	private static float angleFrom(float yaw, float step, float target) {
+		float angle = (yaw % step + step) % step;
+		float distance = Math.abs(angle - target);
+		return Math.min(distance, step - distance);
 	}
 }

@@ -35,7 +35,7 @@ public class LivingEntityMixin {
 	private float illusion$jumpYaw(float yaw) {
 		if (!PlayerUtils.isLocalPlayer(this)) return yaw;
 
-		JumpYawEvent event = JumpYawEvent.of(yaw);
+		JumpYawEvent event = JumpYawEvent.of(IllusionClient.ROTATION.moveYaw(yaw));
 		IllusionClient.BUS.publish(event);
 		return event.yaw;
 	}

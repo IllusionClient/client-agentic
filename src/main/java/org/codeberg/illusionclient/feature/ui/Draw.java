@@ -289,6 +289,13 @@ public final class Draw {
 		quad(shapes(), left, top, right, bottom, topColor, topColor, bottomColor, bottomColor);
 	}
 
+	public static void triangle(float x1, float y1, float x2, float y2, float x3, float y3, int color) {
+		BufferBuilder buffer = shapes();
+		vertex(buffer, x1, y1, color);
+		vertex(buffer, x2, y2, color);
+		vertex(buffer, x3, y3, color);
+	}
+
 	public static void gradient(int x, int y, int width, int height, int topLeft, int topRight, int bottomLeft, int bottomRight) {
 		quad(shapes(), x, y, x + width, y + height, topLeft, topRight, bottomLeft, bottomRight);
 	}

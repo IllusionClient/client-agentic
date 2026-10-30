@@ -25,6 +25,7 @@ public final class EspRenderer<T> {
 	private static final int BOX_VERTICES = 24;
 	private static final BufferUploader UPLOADER = new BufferUploader();
 	private static final BufferBuilder FACES = new BufferBuilder(16384);
+	private static final BufferBuilder LINES = new BufferBuilder(1024);
 
 	private final List<T> targets = new ObjectArrayList<>();
 	private final float[] screen = new float[2];
@@ -157,7 +158,32 @@ public final class EspRenderer<T> {
 	public void end3D() {
 		if (!drawing3D) return;
 		drawing3D = false;
+		draw(FACES);
+	}
 
+	public void outline3D(Box box, int color, float width) {
+		if (!frustum.isVisible(box)) return;
+
+		double minX = box.minX - cameraX, minY = box.minY - cameraY, minZ = box.minZ - cameraZ;
+		double maxX = box.maxX - cameraX, maxY = box.maxY - cameraY, maxZ = box.maxZ - cameraZ;
+		LINES.begin(GL11.GL_LINES, DefaultVertexFormat.POSITION_COLOR);
+		for (int edge = 0; edge < 4; edge++) {
+			double x = (edge & 1) == 0 ? minX : maxX;
+			double z = (edge & 2) == 0 ? minZ : maxZ;
+			vertex(LINES, x, minY, z, color);
+			vertex(LINES, x, maxY, z, color);
+			vertex(LINES, minX, (edge & 1) == 0 ? minY : maxY, z, color);
+			vertex(LINES, maxX, (edge & 1) == 0 ? minY : maxY, z, color);
+			vertex(LINES, x, (edge & 2) == 0 ? minY : maxY, minZ, color);
+			vertex(LINES, x, (edge & 2) == 0 ? minY : maxY, maxZ, color);
+		}
+
+		GL11.glLineWidth(width);
+		draw(LINES);
+		GL11.glLineWidth(1.0F);
+	}
+
+	private static void draw(BufferBuilder buffer) {
 		boolean fog = GL11.glIsEnabled(GL11.GL_FOG);
 		GlStateManager.disableFog();
 		GlStateManager.disableTexture();
@@ -168,8 +194,8 @@ public final class EspRenderer<T> {
 		GlStateManager.blendFuncSeparate(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA, GL11.GL_ONE, GL11.GL_ZERO);
 
 		HiddenLayer.begin();
-		FACES.end();
-		UPLOADER.end(FACES);
+		buffer.end();
+		UPLOADER.end(buffer);
 		HiddenLayer.end();
 
 		GlStateManager.disableBlend();

@@ -35,4 +35,9 @@ public class KeyboardInputMixin extends Input {
 		movementForward *= scale;
 		movementSideways *= scale;
 	}
+
+	@Inject(method = "tick", at = @At("TAIL"))
+	private void illusion$correctStrafe(CallbackInfo ci) {
+		IllusionClient.ROTATION.correctInput(this);
+	}
 }

@@ -4,11 +4,14 @@ import java.util.function.Predicate;
 import java.util.function.ToDoubleFunction;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.living.player.LocalClientPlayerEntity;
+import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.living.LivingEntity;
 import net.minecraft.entity.living.player.PlayerEntity;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Vec3d;
 import org.codeberg.illusionclient.feature.module.client.AntiBot;
+import org.codeberg.illusionclient.feature.module.client.Tags;
 import org.codeberg.illusionclient.feature.module.client.Teams;
 
 public final class CombatUtils {
@@ -17,7 +20,7 @@ public final class CombatUtils {
 	public static boolean isTarget(Entity entity) {
 		if (!(entity instanceof PlayerEntity player)) return false;
 
-		return !Teams.isTeammate(player) && !AntiBot.isBot(player);
+		return !Teams.isTeammate(player) && !AntiBot.isBot(player) && !Tags.isIgnored(player);
 	}
 
 	public static double distanceTo(Entity entity) {
@@ -67,5 +70,28 @@ public final class CombatUtils {
 			(entity.x - entity.prevX) * lead - (self.x - self.prevX) * back,
 			(entity.y - entity.prevY) * back - (self.y - self.prevY) * back,
 			(entity.z - entity.prevZ) * lead - (self.z - self.prevZ) * back);
+	}
+
+	public static Vec3d predictKnockback(Entity target, LivingEntity attacker) {
+		double vx = (target.x - target.prevX) / 2.0D;
+		double vy = (target.onGround ? -0.0784D : target.y - target.prevY) / 2.0D;
+		double vz = (target.z - target.prevZ) / 2.0D;
+		double dx = attacker.x - target.x;
+		double dz = attacker.z - target.z;
+		double length = Math.hypot(dx, dz);
+		if (length >= 1.0E-4D) {
+			vx -= dx / length * 0.4D;
+			vz -= dz / length * 0.4D;
+		}
+		vy = Math.min(vy + 0.4D, 0.4D);
+
+		int bonus = EnchantmentHelper.getKnockbackLevel(attacker) + (attacker.isSprinting() ? 1 : 0);
+		if (bonus > 0) {
+			double yaw = Math.toRadians(attacker.yaw);
+			vx -= Math.sin(yaw) * bonus * 0.5D;
+			vy += 0.1D;
+			vz += Math.cos(yaw) * bonus * 0.5D;
+		}
+		return new Vec3d(vx, vy, vz);
 	}
 }

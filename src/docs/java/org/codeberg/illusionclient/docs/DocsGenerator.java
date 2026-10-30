@@ -1,8 +1,10 @@
 package org.codeberg.illusionclient.docs;
 
 import org.codeberg.illusionclient.IllusionClient;
+import org.codeberg.illusionclient.feature.config.api.MultiSelect;
 import org.codeberg.illusionclient.feature.config.api.Option;
 import org.codeberg.illusionclient.feature.config.api.Requires;
+import org.codeberg.illusionclient.feature.config.api.Slider;
 import org.codeberg.illusionclient.feature.module.ModuleManager;
 import org.codeberg.illusionclient.feature.module.api.Category;
 import org.codeberg.illusionclient.feature.module.api.Description;
@@ -84,7 +86,12 @@ public final class DocsGenerator {
 		}
 
 		out.append("<div class=\"settings\">\n");
+		String section = null;
 		for (Option option : module.options) {
+			if (option.section() != null && !option.section().equals(section)) {
+				section = option.section();
+				out.append("<h4 class=\"section\">").append(escape(section)).append("</h4>\n");
+			}
 			Requires requires = requires(module, option);
 			out.append("<div class=\"setting\" data-search=\"").append(escape((option.name + " " + text(option.description)).toLowerCase(Locale.ROOT))).append("\">\n")
 				.append("<h4>").append(escape(option.name)).append("</h4>").append(description(option.description));
@@ -123,8 +130,8 @@ public final class DocsGenerator {
 	private static String requirement(Module module, Requires requires) {
 		Option required = module.options.stream().filter(option -> option.key.equals(requires.value())).findFirst().orElseThrow();
 		String name = "<strong>" + escape(required.name) + "</strong>";
-		if (requires.is().length == 0) return "Shown when " + name + " is on.";
-		return "Shown when " + name + " is " + list(requires.is()) + ".";
+		if (requires.is().length == 0) return "Shown when " + name + (required.info instanceof Slider ? " is above 0." : " is on.");
+		return "Shown when " + name + (required.info instanceof MultiSelect ? " includes " : " is ") + list(requires.is()) + ".";
 	}
 
 	private static String escape(String text) {

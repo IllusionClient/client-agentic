@@ -5,42 +5,24 @@ import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.entity.living.player.PlayerEntity;
 import net.minecraft.item.*;
 import org.codeberg.illusionclient.IllusionClient;
-import org.codeberg.illusionclient.feature.config.api.Check;
+import org.codeberg.illusionclient.feature.config.api.MultiSelect;
 import org.codeberg.illusionclient.feature.module.api.Category;
 import org.codeberg.illusionclient.feature.module.api.Description;
 import org.codeberg.illusionclient.feature.module.api.Module;
 import org.codeberg.illusionclient.feature.module.api.ModuleInfo;
 
+import java.util.Set;
+
 @Description("Limits Aim Assist and Auto Clicker to weapons.")
 @ModuleInfo(name = "Weapons", category = Category.COMBAT)
 public class Weapons extends Module {
-	@Description("Counts swords as weapons.")
-	@Check("Swords")
-	public boolean swords = true;
+	@Description("Item types that count as weapons. Fists means an empty hand.")
+	@MultiSelect(value = "Items", options = {"Swords", "Axes", "Sticks", "Fists"})
+	public Set<String> items = Set.of("Swords", "Axes");
 
-	@Description("Counts axes as weapons.")
-	@Check("Axes")
-	public boolean axes = true;
-
-	@Description("Counts sticks as weapons.")
-	@Check("Sticks")
-	public boolean sticks = false;
-
-	@Description("Counts an empty hand as a weapon.")
-	@Check("Fists")
-	public boolean fists = false;
-
-	@Description("Counts any item with Sharpness as a weapon.")
-	@Check("Sharpness")
-	public boolean sharpness = true;
-
-	@Description("Counts any item with Knockback as a weapon.")
-	@Check("Knockback")
-	public boolean knockback = true;
-
-	@Description("Counts any item with Fire Aspect as a weapon.")
-	@Check("Fire Aspect")
-	public boolean fireAspect = true;
+	@Description("Any item with one of these enchantments counts as a weapon.")
+	@MultiSelect(value = "Enchantments", options = {"Sharpness", "Knockback", "Fire Aspect"})
+	public Set<String> enchantments = Set.of("Sharpness", "Knockback", "Fire Aspect");
 
 	public static boolean isHolding(PlayerEntity player) {
 		return isWeapons(player.getItemInHand());
@@ -49,15 +31,15 @@ public class Weapons extends Module {
 	public static boolean isWeapons(ItemStack stack) {
 		Weapons weapons = IllusionClient.MODULES.get(Weapons.class);
 		if (!weapons.isEnabled()) return true;
-		if (stack == null) return weapons.fists;
+		if (stack == null) return weapons.items.contains("Fists");
 
 		Item item = stack.getItem();
-		if (weapons.swords && item instanceof SwordItem) return true;
-		if (weapons.axes && item instanceof AxeItem) return true;
-		if (weapons.sticks && item == Items.STICK) return true;
+		if (weapons.items.contains("Swords") && item instanceof SwordItem) return true;
+		if (weapons.items.contains("Axes") && item instanceof AxeItem) return true;
+		if (weapons.items.contains("Sticks") && item == Items.STICK) return true;
 
-		return weapons.sharpness && EnchantmentHelper.getLevel(Enchantment.SHARPNESS.id, stack) > 0
-			|| weapons.knockback && EnchantmentHelper.getLevel(Enchantment.KNOCKBACK.id, stack) > 0
-			|| weapons.fireAspect && EnchantmentHelper.getLevel(Enchantment.FIRE_ASPECT.id, stack) > 0;
+		return weapons.enchantments.contains("Sharpness") && EnchantmentHelper.getLevel(Enchantment.SHARPNESS.id, stack) > 0
+			|| weapons.enchantments.contains("Knockback") && EnchantmentHelper.getLevel(Enchantment.KNOCKBACK.id, stack) > 0
+			|| weapons.enchantments.contains("Fire Aspect") && EnchantmentHelper.getLevel(Enchantment.FIRE_ASPECT.id, stack) > 0;
 	}
 }

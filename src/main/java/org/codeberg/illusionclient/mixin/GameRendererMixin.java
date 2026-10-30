@@ -1,5 +1,6 @@
 package org.codeberg.illusionclient.mixin;
 
+import com.llamalad7.mixinextras.injector.v2.WrapWithCondition;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import net.minecraft.client.gui.screen.Screen;
@@ -9,6 +10,7 @@ import net.minecraft.entity.living.effect.StatusEffect;
 import org.codeberg.illusionclient.IllusionClient;
 import org.codeberg.illusionclient.event.render.EffectVisualEvent;
 import org.codeberg.illusionclient.event.render.Render3DEvent;
+import org.codeberg.illusionclient.feature.module.visual.NoHurtCam;
 import org.codeberg.illusionclient.feature.ui.ClickGui;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -41,5 +43,10 @@ public class GameRendererMixin {
 		EffectVisualEvent event = EffectVisualEvent.of(effect, original.call(entity, effect));
 		IllusionClient.BUS.publish(event);
 		return event.visible;
+	}
+
+	@WrapWithCondition(method = {"setupCamera", "renderItemInHand"}, at = @At(value = "INVOKE", target = "Lnet/minecraft/client/render/GameRenderer;applyHurtCam(F)V"))
+	private boolean illusion$noHurtCam(GameRenderer renderer, float tickDelta) {
+		return !IllusionClient.MODULES.get(NoHurtCam.class).isEnabled();
 	}
 }
