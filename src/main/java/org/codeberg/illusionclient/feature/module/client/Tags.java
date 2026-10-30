@@ -36,12 +36,9 @@ import java.util.stream.Stream;
 @Description("Tags players. Type .tag <player> <tags> in chat, comma separated, or .tag <player> to clear.")
 @ModuleInfo(name = "Tags", category = Category.CLIENT)
 public class Tags extends Module {
-	private static final Path FILE = FabricLoader.getInstance().getConfigDir().resolve(IllusionClient.ID).resolve("tags.json");
 	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 	private static final String FRIEND = "friend";
 	private static final String COMMAND = ".tag";
-
-	private static final Map<String, Set<String>> TAGS = load();
 
 	@Description("Middle click a player to toggle the friend tag.")
 	@Check("Middle click friend")
@@ -52,7 +49,7 @@ public class Tags extends Module {
 	public String ignoreTag = FRIEND;
 
 	public static Set<String> of(PlayerEntity player) {
-		return TAGS.getOrDefault(player.getName().toLowerCase(Locale.ROOT), Set.of());
+		return Store.TAGS.getOrDefault(player.getName().toLowerCase(Locale.ROOT), Set.of());
 	}
 
 	public static boolean has(PlayerEntity player, String tag) {
@@ -65,7 +62,7 @@ public class Tags extends Module {
 	}
 
 	public String[] tagNames() {
-		return Stream.concat(Stream.of("None", FRIEND), TAGS.values().stream().flatMap(Set::stream))
+		return Stream.concat(Stream.of("None", FRIEND), Store.TAGS.values().stream().flatMap(Set::stream))
 			.distinct()
 			.toArray(String[]::new);
 	}
@@ -109,8 +106,8 @@ public class Tags extends Module {
 	}
 
 	private static void set(String name, Set<String> tags) {
-		if (tags.isEmpty()) TAGS.remove(name.toLowerCase(Locale.ROOT));
-		else TAGS.put(name.toLowerCase(Locale.ROOT), tags);
+		if (tags.isEmpty()) Store.TAGS.remove(name.toLowerCase(Locale.ROOT));
+		else Store.TAGS.put(name.toLowerCase(Locale.ROOT), tags);
 		save();
 		print(tags.isEmpty() ? "Cleared tags for " + name : "Tagged " + name + ": " + String.join(", ", tags));
 	}
@@ -120,23 +117,28 @@ public class Tags extends Module {
 	}
 
 	private static Map<String, Set<String>> load() {
-		if (!Files.exists(FILE)) return new TreeMap<>();
+		if (!Files.exists(Store.FILE)) return new TreeMap<>();
 		try {
-			Map<String, Set<String>> tags = GSON.fromJson(Files.readString(FILE, StandardCharsets.UTF_8),
+			Map<String, Set<String>> tags = GSON.fromJson(Files.readString(Store.FILE, StandardCharsets.UTF_8),
 				new TypeToken<TreeMap<String, TreeSet<String>>>() {}.getType());
 			return tags == null ? new TreeMap<>() : tags;
 		} catch (IOException | RuntimeException e) {
-			IllusionClient.LOGGER.error("Failed to load {}", FILE, e);
+			IllusionClient.LOGGER.error("Failed to load {}", Store.FILE, e);
 			return new TreeMap<>();
 		}
 	}
 
 	private static void save() {
 		try {
-			Files.createDirectories(FILE.getParent());
-			Files.writeString(FILE, GSON.toJson(TAGS), StandardCharsets.UTF_8);
+			Files.createDirectories(Store.FILE.getParent());
+			Files.writeString(Store.FILE, GSON.toJson(Store.TAGS), StandardCharsets.UTF_8);
 		} catch (IOException e) {
-			IllusionClient.LOGGER.error("Failed to save {}", FILE, e);
+			IllusionClient.LOGGER.error("Failed to save {}", Store.FILE, e);
 		}
+	}
+
+	private static final class Store {
+		static final Path FILE = FabricLoader.getInstance().getConfigDir().resolve(IllusionClient.ID).resolve("tags.json");
+		static final Map<String, Set<String>> TAGS = load();
 	}
 }

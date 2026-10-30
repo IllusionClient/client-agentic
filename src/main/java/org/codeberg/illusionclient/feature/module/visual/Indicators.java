@@ -33,9 +33,6 @@ import java.awt.*;
 @ObsHidden
 @ModuleInfo(name = "Indicators", category = Category.VISUAL)
 public class Indicators extends Module {
-	private static final ItemStack ARROW = new ItemStack(Items.ARROW);
-	private static final ItemStack PEARL = new ItemStack(Items.ENDER_PEARL);
-	private static final ItemStack FIREBALL = new ItemStack(Items.FIRE_CHARGE);
 	private static final int ICON = 16;
 
 	private final Minecraft minecraft = Minecraft.getInstance();
@@ -127,9 +124,15 @@ public class Indicators extends Module {
 	}
 
 	private ItemStack icon(Entity entity) {
-		if (arrows && entity instanceof ArrowEntity) return ARROW;
-		if (pearls && entity instanceof EnderPearlEntity) return PEARL;
-		if (fireballs && (entity instanceof FireballEntity || entity instanceof SmallFireballEntity)) return FIREBALL;
+		if (arrows && entity instanceof ArrowEntity) return Icons.ARROW;
+		if (pearls && entity instanceof EnderPearlEntity) return Icons.PEARL;
+		if (fireballs && (entity instanceof FireballEntity || entity instanceof SmallFireballEntity)) return Icons.FIREBALL;
 		return null;
+	}
+
+	private static final class Icons {
+		static final ItemStack ARROW = new ItemStack(Items.ARROW);
+		static final ItemStack PEARL = new ItemStack(Items.ENDER_PEARL);
+		static final ItemStack FIREBALL = new ItemStack(Items.FIRE_CHARGE);
 	}
 }
