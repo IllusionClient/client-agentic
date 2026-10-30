@@ -4,81 +4,140 @@ import org.codeberg.illusionclient.event.api.Listen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.living.player.LocalClientPlayerEntity;
 import net.minecraft.entity.living.player.PlayerEntity;
-import net.minecraft.entity.living.player.PlayerInventory;
-import net.minecraft.item.ItemStack;
+import net.minecraft.network.packet.Packet;
+import net.minecraft.network.packet.s2c.play.EntityVelocityS2CPacket;
 import net.minecraft.world.HitResult;
 import org.codeberg.illusionclient.IllusionClient;
-import org.codeberg.illusionclient.event.player.InputEvent;
+import org.codeberg.illusionclient.event.input.InputEvent;
+import org.codeberg.illusionclient.event.network.PacketReceiveEvent;
+import org.codeberg.illusionclient.event.player.JumpEvent;
 import org.codeberg.illusionclient.feature.config.api.Check;
+import org.codeberg.illusionclient.feature.config.api.Combo;
+import org.codeberg.illusionclient.feature.config.api.Requires;
 import org.codeberg.illusionclient.feature.config.api.Slider;
 import org.codeberg.illusionclient.feature.module.api.Category;
 import org.codeberg.illusionclient.feature.module.api.Description;
 import org.codeberg.illusionclient.feature.module.api.Module;
 import org.codeberg.illusionclient.feature.module.api.ModuleInfo;
-import org.codeberg.illusionclient.feature.module.combat.Weapons;
-import org.codeberg.illusionclient.util.input.InputState;
 import org.codeberg.illusionclient.util.CombatUtils;
 
-@ModuleInfo(name = "Velocity", category = Category.COMBAT)
-@Description("Selects your weapon for you when aiming on a player.")
-public class Velocity extends Module {
-	private final Minecraft minecraft = Minecraft.getInstance();
+import java.util.Random;
 
-  	@Description("Regular reduces motion, Ignore prevents knockback entirely, Jump automatically jumps after knockback.")
+@ModuleInfo(name = "Velocity", category = Category.COMBAT)
+@Description("Reduces the knockback you take.")
+public class Velocity extends Module {
+	private static final double VELOCITY_SCALE = 8000.0D;
+	private static final int MAX_LATE_TICKS = 3;
+	private final Minecraft minecraft = Minecraft.getInstance();
+	private final Random random = new Random();
+
+	@Description("Regular reduces motion, Ignore prevents knockback entirely, Jump automatically jumps after knockback.")
 	@Combo(value = "Mode", options = {"Regular", "Ignore", "Jump"})
 	public String mode = "Regular";
+
+	@Description("How much horizontal knockback to keep.")
+	@Requires(value = "mode", is = "Regular")
+	@Slider(value = "Horizontal (%)", min = 0.0F, max = 100.0F)
+	public float horizontal = 90.0F;
+
+	@Description("How much vertical knockback to keep.")
+	@Requires(value = "mode", is = "Regular")
+	@Slider(value = "Vertical (%)", min = 0.0F, max = 100.0F)
+	public float vertical = 100.0F;
+
+	@Description("How often the jump lands on the right tick. Missed jumps come 1 to 3 ticks late.")
+	@Requires(value = "mode", is = "Jump")
+	@Slider(value = "Accuracy (%)", min = 0.0F, max = 100.0F)
+	public float accuracy = 100.0F;
 
 	@Description("Chance to activate.")
 	@Slider(value = "Chance (%)", min = 0.0F, max = 100.0F)
 	public float chance = 100.0F;
 
-  	@Description("Only activates while looking at a player.")
+	@Description("Only activates while looking at a player.")
 	@Check("Looking At Player")
 	public boolean lookingAtPlayer = true;
 
-  	@Description("Only works when pressing forward.")
+	@Description("Only works when pressing forward.")
 	@Check("Moving Forward")
-	public boolean notMovingForward = false;
+	public boolean movingForward = false;
 
 	@Description("Only activates while the attack key is held.")
 	@Check("Left Mouse Pressed")
 	public boolean leftMousePressed = true;
 
-  	@Description("Only activates while holding a weapon.")
+	@Description("Only activates while holding a weapon.")
 	@Check("Weapons Only")
 	public boolean weaponsOnly = true;
-	
-  	@Description("Only activates while holding a weapon.")
+
+	@Description("Only activates while sprinting.")
 	@Check("Sprinting")
 	public boolean sprinting = true;
+
+	private int jumpDelay = -1;
+	private boolean resetting;
+
+	@Override
+	public String details() {
+		return mode;
+	}
+
+	@Override
+	public void onDisable() {
+		jumpDelay = -1;
+		resetting = false;
+	}
+
+	@Listen
+	public void onPacketReceive(PacketReceiveEvent event) {
+		LocalClientPlayerEntity player = minecraft.player;
+		Packet<?> received = event.packet();
+		if (player == null || !(received instanceof EntityVelocityS2CPacket packet) || packet.getId() != player.getNetworkId()) return;
+		if (player.damagedTimer != player.damagedTime) return;
+		if (!conditionsMet(player) || random.nextFloat() * 100.0F >= chance) return;
+
+		switch (mode) {
+			case "Ignore" -> event.cancelled = true;
+			case "Jump" -> {
+				if (player.onGround) jumpDelay = random.nextFloat() * 100.0F < accuracy ? 0 : 1 + random.nextInt(MAX_LATE_TICKS);
+			}
+			default -> {
+				event.cancelled = true;
+				player.velocityX = packet.getVelocityX() / VELOCITY_SCALE * horizontal / 100.0F;
+				player.velocityY = packet.getVelocityY() / VELOCITY_SCALE * vertical / 100.0F;
+				player.velocityZ = packet.getVelocityZ() / VELOCITY_SCALE * horizontal / 100.0F;
+			}
+		}
+	}
 
 	@Listen
 	public void onInput(InputEvent event) {
 		LocalClientPlayerEntity player = minecraft.player;
-		if (player == null) return;
-      
-		PlayerInventory inventory = player.inventory;
-      	InputState input = IllusionClient.INPUT.player;
-
-		if (!conditionsMet(player, input)) return;
-		if (random.nextFloat() * 100.0F < chance) return;
+		resetting = jumpDelay == 0 && player != null && player.onGround;
+		if (jumpDelay < 0 || jumpDelay-- > 0) return;
 
 		IllusionClient.INPUT.client.jump = true;
 	}
 
-  	private boolean hasTarget(LocalClientPlayerEntity player) {
-		HitResult crosshair = minecraft.crosshairTarget;
+	@Listen
+	public void onJump(JumpEvent event) {
+		if (!resetting) return;
 
+		resetting = false;
+		if (!minecraft.player.isSprinting()) event.cancelled = true;
+	}
+
+	private boolean hasTarget() {
+		HitResult crosshair = minecraft.crosshairTarget;
 		return crosshair != null && crosshair.entity instanceof PlayerEntity hovered && CombatUtils.isTarget(hovered);
 	}
 
-  	private boolean conditionsMet(LocalClientPlayerEntity player, InputState input) {
+	private boolean conditionsMet(LocalClientPlayerEntity player) {
 		if (minecraft.screen != null || !player.isAlive() || player.isSleeping()) return false;
-      	if (weaponsOnly && Weapons.isHolding(player)) return false;
+		if (weaponsOnly && !Weapons.isHolding(player)) return false;
 		if (leftMousePressed && !IllusionClient.INPUT.held(minecraft.options.attackKey)) return false;
-		if (lookingAtPlayer && !hasTarget(player)) return false;
-        if (movingForward && input.forwardAxis() <= 0.0F) return false;
-		if (sprinting && !player.sprinting) return false;
-		return true;
+		if (lookingAtPlayer && !hasTarget()) return false;
+		if (movingForward && IllusionClient.INPUT.player.forwardAxis() <= 0.0F) return false;
+		return !sprinting || player.isSprinting();
 	}
 }
