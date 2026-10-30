@@ -48,4 +48,4 @@ Sign every commit with GPG or SSH ([setup guide](https://docs.codeberg.org/secur
 
 ## License
 
-Illusion is licensed under the [GPL-3.0](LICENSE), and contributions are accepted under the same license.
+Illusion is licensed under the [GPL-3.0-or-later](LICENSE) with the Minecraft linking exception at the end of that file. Contributions are accepted under the same license, exception included.
