@@ -111,3 +111,10 @@ tasks.register('docs', JavaExec) {
 
     doFirst { runDir.get().asFile.mkdirs() }
 }
+
+tasks.named('runClient', JavaExec) {
+    if (file('/usr/bin/obs-gamecapture').exists()) {
+        environment 'LD_PRELOAD', '/usr/$LIB/obs_glcapture/libobs_glcapture.so'
+        environment 'OBS_VKCAPTURE', '1'
+    }
+}
