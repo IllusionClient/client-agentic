@@ -34,12 +34,18 @@ repositories {
 	maven {
 		url = "https://maven.ornithemc.net/releases"
 	}
+	maven {
+		url = "https://repo.awruff.dog/releases"
+	}
 }
 
 dependencies {
     minecraft libs.minecraft
 	mappings libs.feather
 	modImplementation libs.loader
+	implementation libs.eventbus
+	include libs.eventbus
+	annotationProcessor libs.eventbus
 
 	ploceus.dependOsl(libs.versions.osl.get())
 }

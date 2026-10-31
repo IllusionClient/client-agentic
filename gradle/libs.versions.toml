@@ -3,6 +3,7 @@ minecraft = "1.8.9"
 feather = "1.8.9+build.2"
 loader = "0.20.1"
 osl = "0.23.0"
+eventbus = "1.0.0"
 
 loom = "1.19.3"
 ploceus = "1.19.1"
@@ -11,6 +12,7 @@ ploceus = "1.19.1"
 minecraft = { module = "com.mojang:minecraft", version.ref = "minecraft" }
 feather = { module = "net.ornithemc:feather-gen2", version.ref = "feather" }
 loader = { module = "net.fabricmc:fabric-loader", version.ref = "loader" }
+eventbus = { module = "org.codeberg.illusionclient:eventbus", version.ref = "eventbus" }
 
 [plugins]
 ploceus = { id = "ploceus", version.ref = "ploceus" }

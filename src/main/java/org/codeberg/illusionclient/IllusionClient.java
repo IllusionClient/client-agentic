@@ -2,7 +2,6 @@ package org.codeberg.illusionclient;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.codeberg.illusionclient.event.Event;
 import org.codeberg.illusionclient.event.api.PubSub;
 import org.codeberg.illusionclient.feature.config.ConfigManager;
 import org.codeberg.illusionclient.feature.module.ModuleManager;
@@ -20,7 +19,7 @@ public final class IllusionClient {
 
 	public static final Logger LOGGER = LoggerFactory.getLogger(NAME);
 
-	public static final PubSub<Event> BUS = new PubSub<>(LOGGER::error);
+	public static final PubSub BUS = new PubSub(t -> LOGGER.error("Event listener failed", t));
 	public static ModuleManager MODULES;
 	public static ConfigManager CONFIG;
 	public static InputManager INPUT;
