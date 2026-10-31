@@ -9,7 +9,9 @@ import org.codeberg.illusionclient.feature.module.api.Module;
 import org.codeberg.illusionclient.feature.ui.Draw;
 import org.codeberg.illusionclient.feature.ui.Icon;
 
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 public class Frame extends Group {
@@ -23,17 +25,29 @@ public class Frame extends Group {
 	private int dragX, dragY, lastHeight;
 	private int lastOn = -1;
 	private String onLabel;
+	private int version = -1;
 
 	public Frame(Category category) {
 		this.category = category;
+		sync();
+	}
 
+	private void sync() {
+		if (version == IllusionClient.MODULES.version) return;
+		version = IllusionClient.MODULES.version;
+		lastOn = -1;
+
+		Map<Module, Component> existing = new HashMap<>();
+		for (Component child : children) existing.put(((ModuleComponent) child).module, child);
+		children.clear();
 		for (Module module : IllusionClient.MODULES.modules) {
-			if (module.category == category) children.add(new ModuleComponent(module));
+			if (module.category == category) children.add(existing.computeIfAbsent(module, ModuleComponent::new));
 		}
 	}
 
 	@Override
 	public int height() {
+		sync();
 		if (!open || children.isEmpty()) return TITLE;
 
 		int height = TITLE;

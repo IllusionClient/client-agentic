@@ -51,6 +51,7 @@ import org.codeberg.illusionclient.feature.module.player.FastMine;
 import org.codeberg.illusionclient.feature.module.player.FastPlace;
 import org.codeberg.illusionclient.feature.module.player.InventoryCleaner;
 import org.codeberg.illusionclient.feature.module.player.Refill;
+import org.codeberg.illusionclient.feature.module.profiles.CreateProfile;
 import org.codeberg.illusionclient.feature.module.visual.AntiDebuff;
 import org.codeberg.illusionclient.feature.module.visual.Bedplates;
 import org.codeberg.illusionclient.feature.module.visual.ChestEsp;
@@ -71,6 +72,7 @@ public final class ModuleManager {
 	public final List<Module> modules = builtIn();
 	private final Reference2ObjectMap<Class<?>, Module> byType = new Reference2ObjectOpenHashMap<>();
 	private Module slotOwner;
+	public int version;
 
 	public ModuleManager() {
 		if (SwapHook.SUPPORTED) modules.add(new ObsProof());
@@ -131,6 +133,7 @@ public final class ModuleManager {
 			new ModOverlay(),
 			new Nametags(),
 			new NoHurtCam(),
+			new CreateProfile(),
 			new Notifications()
 		));
 	}
@@ -161,7 +164,7 @@ public final class ModuleManager {
 
 		if (Minecraft.getInstance().screen != null && event.down()) return;
 
-		for (Module module : modules) {
+		for (Module module : List.copyOf(modules)) {
 			if (module.getBind() != event.key()) continue;
 
 			if (module.isHold()) {

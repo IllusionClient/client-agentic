@@ -10,6 +10,7 @@ public enum Icon {
 	PLAYER("player", 8, 8),
 	VISUAL("visual", 8, 8),
 	CLIENT("client", 8, 8),
+	PROFILES("profiles", 8, 8),
 	SEARCH("search", 8, 8),
 	CHEVRON("chevron", 4, 7),
 	LOGO("logo", 9, 8);

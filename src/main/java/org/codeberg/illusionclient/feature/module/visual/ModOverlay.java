@@ -13,6 +13,7 @@ import org.codeberg.illusionclient.feature.module.api.Category;
 import org.codeberg.illusionclient.feature.module.api.Description;
 import org.codeberg.illusionclient.feature.module.api.Module;
 import org.codeberg.illusionclient.feature.module.api.ModuleInfo;
+import org.codeberg.illusionclient.feature.module.profiles.ProfileModule;
 import org.codeberg.illusionclient.feature.module.api.ObsHidden;
 import org.codeberg.illusionclient.feature.ui.Draw;
 import org.codeberg.illusionclient.feature.ui.Font;
@@ -71,12 +72,10 @@ public class ModOverlay extends Module {
 		int gap = Draw.width(" ");
 
 		if (all == null) {
-			List<Module> modules = IllusionClient.MODULES.modules;
-			all = new Row[modules.size() - 1];
-			int count = 0;
-			for (Module module : modules) {
-				if (module != this) all[count++] = new Row(module);
-			}
+			all = IllusionClient.MODULES.modules.stream()
+				.filter(module -> module != this && !(module instanceof ProfileModule))
+				.map(Row::new)
+				.toArray(Row[]::new);
 		}
 
 		rows.clear();

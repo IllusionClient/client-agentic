@@ -31,7 +31,7 @@
 - Added Bed Wars, which alerts you when enemies get near your bed or hold fireballs, TNT, invisibility potions, obsidian or ender pearls, and stops you from breaking your own bed or misplacing blocks around its defense.
 - Added Auto Rod, which throws your fishing rod at opponents so it lands right as they can take damage again, then swaps back to your weapon.
 - Added Auto Lava, which places lava from a bucket under opponents to burn and slow them, then picks it back up. It can wait for a critical so it pairs with Combat Jump.
-- Added config profiles. Save, create, switch and delete them from the ClickGui module's settings.
+- Added config profiles under the new Profiles category. Each profile shows up there like a module: click it to switch, bind a key to it, and pick which categories (Client and Visual by default) keep your current settings when you switch. Create Profile saves your current settings as a new one. The Default profile always keeps the default settings, so changing anything on it makes a new profile for you.
 - Added multi-select settings, which let you pick several entries from a list in the ClickGui.
 - Added setting sections, which group related settings under collapsible headers. Dependent settings are indented beneath the setting they depend on.
 - The click GUI now opens as an overlay on top of any screen, and draws correctly alongside other mods' screen rendering.

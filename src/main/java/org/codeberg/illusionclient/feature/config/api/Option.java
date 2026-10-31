@@ -1,5 +1,6 @@
 package org.codeberg.illusionclient.feature.config.api;
 
+import org.codeberg.illusionclient.IllusionClient;
 import org.codeberg.illusionclient.feature.module.api.Description;
 import org.codeberg.illusionclient.feature.module.api.Module;
 
@@ -161,6 +162,7 @@ public final class Option {
 			throw new IllegalStateException(e);
 		}
 		changed();
+		if (IllusionClient.CONFIG != null) IllusionClient.CONFIG.edited(owner);
 	}
 
 	public void changed() {

@@ -13,7 +13,7 @@ public abstract class Module {
 	protected static final float MS_PER_TICK = 50.0F;
 
 	public final String name;
-	public final String key = getClass().getSimpleName();
+	public final String key;
 	public final Category category;
 	public final Description description;
 	public final ObsHidden obsHidden = getClass().getAnnotation(ObsHidden.class);
@@ -27,10 +27,15 @@ public abstract class Module {
 	private int detailsVersion;
 
 	public Module() {
+		this(null, null);
+	}
+
+	protected Module(String name, String key) {
 		ModuleInfo info = getClass().getAnnotation(ModuleInfo.class);
 		if (info == null) throw new IllegalStateException(getClass().getName() + " is missing @ModuleInfo");
 
-		this.name = info.name();
+		this.name = name == null ? info.name() : name;
+		this.key = key == null ? getClass().getSimpleName() : key;
 		this.category = info.category();
 		this.description = getClass().getAnnotation(Description.class);
 		this.bind = info.bind();
@@ -66,6 +71,7 @@ public abstract class Module {
 
 	public void setBind(int bind) {
 		this.bind = bind;
+		if (IllusionClient.CONFIG != null) IllusionClient.CONFIG.edited(this);
 	}
 
 	public final String bindName() {
@@ -82,6 +88,7 @@ public abstract class Module {
 
 	public final void setHold(boolean hold) {
 		this.hold = hold;
+		if (IllusionClient.CONFIG != null) IllusionClient.CONFIG.edited(this);
 	}
 
 	public final boolean isEnabled() {
@@ -103,7 +110,9 @@ public abstract class Module {
 
 	public final void toggle() {
 		IllusionClient.STATS.toggled(this);
-		setEnabled(!enabled);
+		boolean was = enabled;
+		setEnabled(!was);
+		if (enabled != was) IllusionClient.CONFIG.edited(this);
 		Notifications.toggled(this);
 	}
 

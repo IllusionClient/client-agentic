@@ -6,6 +6,8 @@ import org.codeberg.illusionclient.feature.config.api.*;
 import org.codeberg.illusionclient.feature.module.api.Module;
 import org.codeberg.illusionclient.feature.module.api.ObsHidden;
 import org.codeberg.illusionclient.feature.module.client.ClickGuiModule;
+import org.codeberg.illusionclient.feature.config.ConfigManager;
+import org.codeberg.illusionclient.feature.module.profiles.ProfileModule;
 import org.codeberg.illusionclient.feature.ui.Draw;
 import org.codeberg.illusionclient.feature.ui.Tooltip;
 import org.codeberg.illusionclient.util.SwapHook;
@@ -110,10 +112,10 @@ public class ModuleComponent extends Group {
 		}
 		if (module instanceof ClickGuiModule gui) {
 			components.add(new ButtonComponent("Positions", "Reset", gui::resetPositions));
-			components.add(new ProfileComponent());
-			components.add(new ButtonComponent("Profile", "Save", IllusionClient.CONFIG::saveProfile));
-			components.add(new ButtonComponent("Profile", "New", IllusionClient.CONFIG::createProfile));
-			components.add(new ButtonComponent("Profile", "Delete", IllusionClient.CONFIG::deleteProfile));
+		}
+		if (module instanceof ProfileModule profile && !profile.profile.equals(ConfigManager.DEFAULT_PROFILE)) {
+			components.add(new ButtonComponent("Current Settings", "Save", () -> IllusionClient.CONFIG.saveProfile(profile.profile)));
+			components.add(new ButtonComponent("Profile", "Delete", () -> IllusionClient.CONFIG.deleteProfile(profile.profile)));
 		}
 		components.add(new KeybindComponent(module));
 		return components;

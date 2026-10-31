@@ -7,7 +7,8 @@ public enum Category {
 	COMBAT,
 	MOVEMENT,
 	PLAYER,
-	VISUAL;
+	VISUAL,
+	PROFILES;
 
 	public String title() {
 		return name().charAt(0) + name().substring(1).toLowerCase(Locale.ROOT);

@@ -21,10 +21,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Comparator;
-import java.util.EnumMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 
 public class PanelGui extends ClickGui {
 	private static final Logger LOGGER = LoggerFactory.getLogger(PanelGui.class);
@@ -52,7 +50,6 @@ public class PanelGui extends ClickGui {
 	private static final Category[] CATEGORIES = Category.values();
 	private static final String[] STAT_NAMES = {"Playtime", "Auto clicks", "Best combo", "Most toggled", "Modules on", "FPS", "Ping"};
 
-	private final Map<Category, List<Module>> modules = new EnumMap<>(Category.class);
 	private final Reference2ObjectMap<Module, List<Component>> components = new Reference2ObjectOpenHashMap<>();
 	private final List<Card> cards = new ObjectArrayList<>();
 	private final List<Chip> chips = new ObjectArrayList<>();
@@ -60,6 +57,7 @@ public class PanelGui extends ClickGui {
 	private final List<Component> visibleOptions = new ObjectArrayList<>();
 	private String matchedQuery;
 	private List<Module> matched = List.of();
+	private int matchedVersion;
 	private final TextField search = new TextField(MAX_QUERY);
 	private int x = Integer.MIN_VALUE, y, panelWidth, panelHeight;
 	private int dragX, dragY;
@@ -76,9 +74,6 @@ public class PanelGui extends ClickGui {
 	private String headerLabel;
 
 	public PanelGui() {
-		for (Category category : CATEGORIES) {
-			modules.put(category, IllusionClient.MODULES.modules.stream().filter(module -> module.category == category).toList());
-		}
 		history.add(new Page(null, null));
 		load();
 	}
@@ -142,6 +137,7 @@ public class PanelGui extends ClickGui {
 	@Override
 	protected void renderScaled(int mouseX, int mouseY, float tickDelta) {
 		Draw.accent();
+		if (module != null && !IllusionClient.MODULES.modules.contains(module)) navigate(new Page(module.category, null));
 		if (dragging) {
 			x = mouseX - dragX;
 			y = mouseY - dragY;
@@ -229,7 +225,7 @@ public class PanelGui extends ClickGui {
 			Icon.CHEVRON.draw(left + parentWidth + 6, y + (TITLE - Icon.CHEVRON.height) / 2, Draw.FAINT);
 			Draw.text(module.name, left + parentWidth + 6 + Icon.CHEVRON.width + 6, textY, Draw.TEXT);
 		} else if (category != null) {
-			List<Module> list = modules.get(category);
+			List<Module> list = modules(category);
 			int on = enabledCount(list);
 			Draw.text(category.title(), left, textY, Draw.TEXT);
 			if (on != headerOn || list.size() != headerSize) {
@@ -258,7 +254,7 @@ public class PanelGui extends ClickGui {
 		int scrolled = top - contentScroll;
 		if (!search.isEmpty()) contentHeight = renderSearchResults(scrolled, inside, mouseX, mouseY);
 		else if (module != null) contentHeight = renderModule(module, scrolled, mouseX, mouseY);
-		else if (category != null) contentHeight = renderCards(modules.get(category), scrolled, inside, mouseX, mouseY);
+		else if (category != null) contentHeight = renderCards(modules(category), scrolled, inside, mouseX, mouseY);
 		else contentHeight = renderHome(scrolled, inside, mouseX, mouseY);
 		endScissor();
 		if (contentScroll > 0) {
@@ -655,10 +651,15 @@ public class PanelGui extends ClickGui {
 		return count;
 	}
 
+	private static List<Module> modules(Category category) {
+		return IllusionClient.MODULES.modules.stream().filter(module -> module.category == category).toList();
+	}
+
 	private List<Module> matches() {
-		if (search.text().equals(matchedQuery)) return matched;
+		if (search.text().equals(matchedQuery) && matchedVersion == IllusionClient.MODULES.version) return matched;
 
 		matchedQuery = search.text();
+		matchedVersion = IllusionClient.MODULES.version;
 		String needle = normalize(matchedQuery);
 		matched = IllusionClient.MODULES.modules.stream()
 			.filter(entry -> rank(entry, needle) < 3)
