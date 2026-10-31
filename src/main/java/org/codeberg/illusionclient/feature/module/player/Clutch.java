@@ -17,6 +17,7 @@ import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.HitResult;
 import org.codeberg.illusionclient.IllusionClient;
 import org.codeberg.illusionclient.event.api.Listen;
+import org.codeberg.illusionclient.event.input.InputEvent;
 import org.codeberg.illusionclient.event.player.PickEvent;
 import org.codeberg.illusionclient.event.render.Render3DEvent;
 import org.codeberg.illusionclient.feature.config.api.Check;
@@ -31,6 +32,7 @@ import org.codeberg.illusionclient.util.ItemUtils;
 import org.codeberg.illusionclient.util.NoiseUtils;
 import org.codeberg.illusionclient.util.RotationUtils;
 import org.codeberg.illusionclient.util.SimulatedPlayer;
+import org.codeberg.illusionclient.util.input.InputState;
 
 import java.util.List;
 import java.util.Random;
@@ -212,6 +214,27 @@ public class Clutch extends Module {
 	}
 
 	@Listen
+	public void onInput(InputEvent event) {
+		LocalClientPlayerEntity player = minecraft.player;
+		if (!active || player == null) return;
+
+		InputState input = IllusionClient.INPUT.client;
+		float forward = input.forwardAxis();
+		float sideways = input.sidewaysAxis();
+		if (forward == 0.0F && sideways == 0.0F) return;
+
+		double radians = Math.toRadians(originYaw - player.yaw);
+		double cos = Math.cos(radians);
+		double sin = Math.sin(radians);
+		long newForward = Math.round(forward * cos + sideways * sin);
+		long newSideways = Math.round(sideways * cos - forward * sin);
+		input.forward = newForward > 0;
+		input.back = newForward < 0;
+		input.left = newSideways > 0;
+		input.right = newSideways < 0;
+	}
+
+	@Listen
 	public void onRender3D(Render3DEvent event) {
 		long now = System.nanoTime();
 		float delta = Math.min(0.1F, (now - lastFrame) / 1.0E9F);
@@ -227,6 +250,8 @@ public class Clutch extends Module {
 		long millis = System.currentTimeMillis();
 		long returnStart = plannedAt + (long) snapDelay;
 		if (plan == null && millis < returnStart) return;
+		HitResult target = minecraft.crosshairTarget;
+		if (plan != null && target != null && target.type == HitResult.Type.BLOCK && useful(player, target)) return;
 
 		float[] goal = plan == null ? new float[]{originYaw, originPitch} : RotationUtils.rotationTo(aimPoint(plan, player));
 		float yawDiff = MathHelper.wrapDegrees(goal[0] - player.yaw);
@@ -327,7 +352,7 @@ public class Clutch extends Module {
 				BlockPos next = cell.offset(direction);
 				if (support(next)) {
 					Plan candidate = candidate(player, cell, next, direction.getOpposite(), depth);
-					if (candidate != null && (best == null || candidate.angle < best.angle)) best = candidate;
+					if (candidate != null && (best == null || better(candidate, best))) best = candidate;
 				} else if (depth + 1 < range && empty(next) && !depths.containsKey(next)) {
 					depths.put(next, depth + 1);
 					queue.add(next);
@@ -335,6 +360,15 @@ public class Clutch extends Module {
 			}
 		}
 		return best;
+	}
+
+	private boolean better(Plan candidate, Plan best) {
+		if (retained(best)) return false;
+		return retained(candidate) || candidate.angle < best.angle;
+	}
+
+	private boolean retained(Plan candidate) {
+		return plan != null && candidate.support.equals(plan.support) && candidate.face == plan.face;
 	}
 
 	private Plan candidate(LocalClientPlayerEntity player, BlockPos cell, BlockPos support, Direction face, int depth) {
@@ -359,7 +393,7 @@ public class Clutch extends Module {
 		Direction face = plan.face;
 		BlockPos support = plan.support;
 		Vec3d center = faceCenter(support, face);
-		Vec3d target = center;
+		Vec3d target = new Vec3d(face.getOffsetX() == 0 ? player.x : center.x, center.y, face.getOffsetZ() == 0 ? player.z : center.z);
 		if (multipoint) {
 			Vec3d eye = player.getEyePosition(1.0F);
 			Vec3d look = player.getRotationVector(1.0F);
