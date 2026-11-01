@@ -63,10 +63,57 @@ public class AutoClicker extends Module {
 	@Check("Randomize")
 	public boolean randomize = true;
 
+	@Description("How much click timing varies. 1 is the default.")
+	@Requires(value = "clickPattern", is = {"Jitter", "Butterfly"})
+	@Requires("randomize")
+	@Slider(value = "Timing Variance", min = 0.0F, max = 2.0F)
+	public float timingVariance = 1.0F;
+
+	@Description("How much the CPS wanders up and down over time. 1 is the default.")
+	@Requires(value = "clickPattern", is = {"Jitter", "Butterfly"})
+	@Requires("randomize")
+	@Slider(value = "CPS Drift", min = 0.0F, max = 2.0F)
+	public float cpsDrift = 1.0F;
+
+	@Description("How much the time each click is held varies. 1 is the default.")
+	@Requires(value = "clickPattern", is = {"Jitter", "Butterfly"})
+	@Requires("randomize")
+	@Slider(value = "Hold Variance", min = 0.0F, max = 2.0F)
+	public float holdVariance = 1.0F;
+
+	@Description("How much the gap between the two Butterfly clicks varies. 1 is the default.")
+	@Requires(value = "clickPattern", is = "Butterfly")
+	@Requires("randomize")
+	@Slider(value = "Gap Variance", min = 0.0F, max = 2.0F)
+	public float gapVariance = 1.0F;
+
+	@Description("How often Butterfly clicks once instead of twice. 1 is the default.")
+	@Requires(value = "clickPattern", is = "Butterfly")
+	@Requires("randomize")
+	@Slider(value = "Single Clicks", min = 0.0F, max = 3.0F)
+	public float singleClicks = 1.0F;
+
+	@Description("How long clicking takes to reach full speed. 1 is the default, 0 starts at full speed.")
+	@Requires(value = "clickPattern", is = {"Jitter", "Butterfly"})
+	@Slider(value = "Ramp Up", min = 0.0F, max = 3.0F)
+	public float rampUp = 1.0F;
+
 	@Description("Sometimes slows down briefly, like a tired hand.")
 	@Requires(value = "clickPattern", is = {"Jitter", "Butterfly"})
 	@Check("Simulate Exhaust")
 	public boolean simulateExhaust = true;
+
+	@Description("How often slowdowns happen. 1 is the default.")
+	@Requires(value = "clickPattern", is = {"Jitter", "Butterfly"})
+	@Requires("simulateExhaust")
+	@Slider(value = "Drop Frequency", min = 0.0F, max = 3.0F)
+	public float dropFrequency = 1.0F;
+
+	@Description("How long each slowdown lasts. 1 is the default.")
+	@Requires(value = "clickPattern", is = {"Jitter", "Butterfly"})
+	@Requires("simulateExhaust")
+	@Slider(value = "Drop Length", min = 0.0F, max = 3.0F)
+	public float dropLength = 1.0F;
 
 	@Description("Pauses on blocks so you can mine.")
 	@Check("Allow Breaking Blocks")
@@ -169,6 +216,14 @@ public class AutoClicker extends Module {
 		}
 		if (screen && !pacedInventory()) return;
 
+		pattern.variance = timingVariance;
+		pattern.dropFrequency = dropFrequency;
+		pattern.dropLength = dropLength;
+		pattern.drift = cpsDrift;
+		pattern.holdVariance = holdVariance;
+		pattern.gapVariance = gapVariance;
+		pattern.singles = singleClicks;
+		pattern.rampUp = rampUp;
 		int edges = pattern.advance(delta, profile, targetCps, randomize, simulateExhaust, clickPattern.equals("Butterfly"));
 		if (screen) {
 			inventoryClicks += pattern.presses();

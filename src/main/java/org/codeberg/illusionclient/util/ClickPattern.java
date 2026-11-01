@@ -7,7 +7,7 @@ import java.util.Random;
 
 public final class ClickPattern {
 	private static final float MIN_UP = 6.0F;
-	private static final float PAUSE_SHARE = 0.14F;
+	private static final float PAUSE_SHARE = 0.06F;
 	private final Random random = new Random();
 	private final Drift phaseCps = new Drift(75_000L);
 	private final Drift streakCps = new Drift(18_000L);
@@ -24,6 +24,14 @@ public final class ClickPattern {
 	private final Drift tiring = new Drift(120_000L);
 	private final Drift[] holdShare = {new Drift(40_000L), new Drift(55_000L)};
 	private final ArrayDeque<float[]> queue = new ArrayDeque<>();
+	public float variance = 1.0F;
+	public float dropFrequency = 1.0F;
+	public float dropLength = 1.0F;
+	public float drift = 1.0F;
+	public float holdVariance = 1.0F;
+	public float gapVariance = 1.0F;
+	public float singles = 1.0F;
+	public float rampUp = 1.0F;
 	private float cps;
 	private boolean randomize;
 	private boolean simulateExhaust;
@@ -78,12 +86,12 @@ public final class ClickPattern {
 			cursor = 0.0F;
 			noise = 0.0F;
 			exhaustClicks = 0;
-			untilPause = 4 + random.nextInt(24);
+			untilPause = (int) ((15 + random.nextInt(30)) / dropFrequency);
 			down = false;
 			streak = -1;
 			effort *= (float) Math.exp((stopped - now) / 6000.0);
 			rampStart = now;
-			rampLength = butterfly ? 500.0F + random.nextFloat() * 500.0F : randomize ? 250.0F + random.nextFloat() * 400.0F : 0.0F;
+			rampLength = rampUp * (butterfly ? 500.0F + random.nextFloat() * 500.0F : randomize ? 250.0F + random.nextFloat() * 400.0F : 0.0F);
 			wait = next();
 		}
 		effort += delta;
@@ -153,10 +161,6 @@ public final class ClickPattern {
 
 	private void push(float start, float hold) {
 		float[] last = queue.peekLast();
-		if (last != null && start < last[1]) {
-			last[1] = Math.max(last[1], start + hold);
-			return;
-		}
 		start = Math.max(start, (last != null ? last[1] : cursor) + MIN_UP);
 		queue.addLast(new float[]{start, start + hold});
 	}
@@ -176,11 +180,11 @@ public final class ClickPattern {
 	private float period(long now) {
 		float base = 1000.0F / (cps * ramp(now));
 		if (!randomize) return base;
-		base /= 1.0F + PAUSE_SHARE;
+		if (simulateExhaust) base /= 1.0F + PAUSE_SHARE * dropFrequency * dropLength;
 
 		float fatigue = fatigue(now);
-		float drift = 1.0F + phaseCps.signed(now) * 0.1F + streakCps.signed(now) * 0.07F + jitterCps.signed(now) * 0.04F;
-		float sigma = deviation.range(now, 0.13F, 0.24F) * (1.0F + fatigue * 2.0F + activity * 0.3F);
+		float drift = 1.0F + this.drift * (phaseCps.signed(now) * 0.1F + streakCps.signed(now) * 0.07F + jitterCps.signed(now) * 0.04F);
+		float sigma = variance * deviation.range(now, 0.13F, 0.24F) * (1.0F + fatigue * 2.0F + activity * 0.3F);
 		float rho = correlation.range(now, 0.25F, 0.5F);
 		noise = noise * rho + (float) random.nextGaussian() * (float) Math.sqrt(1.0F - rho * rho);
 		return base / (1.0F - fatigue) / drift * (float) Math.exp(sigma * noise - sigma * sigma / 2.0F);
@@ -192,29 +196,29 @@ public final class ClickPattern {
 			? holdShare[finger].range(now, 0.2F, 0.34F) * Math.min(1000.0F / cps, 70.0F)
 			: holdShare[finger].range(now, 0.28F, 0.45F) * 1000.0F / cps;
 		ms = Math.clamp(ms, 12.0F, 90.0F);
-		return ms * (float) Math.exp(0.16F * random.nextGaussian());
+		return ms * (float) Math.exp(holdVariance * 0.16F * random.nextGaussian());
 	}
 
 	private float gap(long now) {
 		if (!randomize) return 30.0F;
-		float ms = gapSpread.range(now, 20.0F, 42.0F) + gapWander.signed(now) * 8.0F;
-		return Math.max(8.0F, ms * (float) Math.exp(0.2F * random.nextGaussian()));
+		float ms = gapSpread.range(now, 20.0F, 42.0F) + gapVariance * gapWander.signed(now) * 8.0F;
+		return Math.max(8.0F, ms * (float) Math.exp(gapVariance * 0.2F * random.nextGaussian()));
 	}
 
 	private float singleChance(long now) {
-		float chance = randomize ? singleChance.range(now, 0.03F, 0.07F) : 0.0F;
+		float chance = randomize ? singles * singleChance.range(now, 0.03F, 0.07F) : 0.0F;
 		return chance + (1.0F - ramp(now)) * 0.6F;
 	}
 
 	private float hitch(long now) {
-		if (!randomize) return 0.0F;
+		if (!randomize || !simulateExhaust) return 0.0F;
 		if (--untilPause <= 0) {
-			untilPause = 12 + random.nextInt((int) pauseGap.range(now, 18.0F, 32.0F));
+			untilPause = (int) ((30 + random.nextInt((int) pauseGap.range(now, 30.0F, 60.0F))) / dropFrequency);
 			float r = random.nextFloat();
-			return Math.max(150.0F, 1000.0F / cps * (2.5F + 3.5F * r * r));
+			return dropLength * Math.max(100.0F, 1000.0F / cps * (1.5F + 1.5F * r * r));
 		}
-		float stumble = hitchChance.range(now, 0.02F, 0.045F) + activity * 0.015F;
-		if (random.nextFloat() < stumble) return 1000.0F / cps * (0.6F + 1.2F * random.nextFloat());
+		float stumble = dropFrequency * (hitchChance.range(now, 0.01F, 0.025F) + activity * 0.005F);
+		if (random.nextFloat() < stumble) return dropLength * 1000.0F / cps * (0.3F + 0.5F * random.nextFloat());
 		return 0.0F;
 	}
 
@@ -223,13 +227,13 @@ public final class ClickPattern {
 			exhaustClicks--;
 			return exhaust * (1.0F + 0.35F * gaussian());
 		}
-		if (!simulateExhaust || random.nextFloat() >= exhaustChance.range(now, 0.012F, 0.035F) + activity * 0.5F) {
+		if (!simulateExhaust || random.nextFloat() >= dropFrequency * (exhaustChance.range(now, 0.012F, 0.035F) + activity * 0.03F)) {
 			return 0.0F;
 		}
 
 		float keep = exhaustLength.range(now, 0.1F, 0.25F);
 		while (exhaustClicks < 3 && random.nextFloat() < keep) exhaustClicks++;
-		exhaust = 18.0F + random.nextFloat() * 22.0F;
+		exhaust = dropLength * (18.0F + random.nextFloat() * 22.0F);
 		return exhaust * (1.0F + 0.35F * gaussian());
 	}
 
