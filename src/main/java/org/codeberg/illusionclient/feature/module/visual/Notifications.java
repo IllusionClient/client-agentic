@@ -6,6 +6,7 @@ import org.codeberg.illusionclient.IllusionClient;
 import org.codeberg.illusionclient.event.api.Listen;
 import org.codeberg.illusionclient.event.render.Render2DEvent;
 import org.codeberg.illusionclient.feature.config.api.Check;
+import org.codeberg.illusionclient.feature.config.api.Combo;
 import org.codeberg.illusionclient.feature.config.api.Slider;
 import org.codeberg.illusionclient.feature.module.api.Category;
 import org.codeberg.illusionclient.feature.module.api.Description;
@@ -27,7 +28,9 @@ public class Notifications extends Module {
 	private static final int MAX_SHOWN = 5;
 	private static final long SLIDE_MS = 200L;
 	private static final int PADDING = 4;
-	private static final int MARGIN = 4;
+	private static final int GAP = 3;
+	private static final int DOT = 4;
+	private static final float RADIUS = 4.0F;
 
 	private final List<Entry> entries = new ObjectArrayList<>();
 
@@ -42,6 +45,10 @@ public class Notifications extends Module {
 	@Description("How long each notification stays, in seconds.")
 	@Slider(value = "Duration", min = 0.5F, max = 10.0F)
 	public float duration = 2.0F;
+
+	@Description("Which corner of the screen notifications appear in.")
+	@Combo(value = "Position", options = {"Top Left", "Top Right", "Bottom Left", "Bottom Right"})
+	public String position = "Bottom Right";
 
 	public static void post(String text) {
 		Notifications notifications = IllusionClient.MODULES.get(Notifications.class);
@@ -74,22 +81,28 @@ public class Notifications extends Module {
 		if (entries.isEmpty()) return;
 		HiddenLayer.begin();
 
-		int right = event.window().getWidth() - MARGIN;
-		int height = 9 + PADDING * 2;
-		int y = event.window().getHeight() - MARGIN - height;
-		int accent = Draw.accent().getRGB();
+		Draw.accent();
+		boolean left = position.endsWith("Left");
+		boolean top = position.startsWith("Top");
+		int screenWidth = event.window().getWidth();
+		int height = Math.round(Draw.textHeight()) + PADDING * 2;
+		int corner = top ? GAP : event.window().getHeight() - GAP - height;
+		float offset = 0.0F;
 
 		for (int i = entries.size() - 1; i >= 0; i--) {
 			Entry entry = entries.get(i);
-			int width = Draw.width(entry.text) + PADDING * 3;
+			int width = PADDING * 3 + DOT + Draw.width(entry.text);
 			long age = now - entry.posted;
-			float shown = Math.clamp(Math.min(age, lifetime - age) / (float) SLIDE_MS, 0.0F, 1.0F);
-			int x = right - Math.round(width * shown);
+			float progress = Math.clamp(Math.min(age, lifetime - age) / (float) SLIDE_MS, 0.0F, 1.0F);
+			float shown = 1.0F - (1.0F - progress) * (1.0F - progress) * (1.0F - progress);
+			int slide = Math.round((width + GAP) * shown);
+			int x = left ? slide - width : screenWidth - slide;
+			int y = Math.round(top ? corner + offset : corner - offset);
 
-			Draw.rounded(x, y, width, height, 3.0F, Draw.HUD_BACKGROUND);
-			Draw.rect(x, y + 2, 2, height - 4, accent);
-			Draw.text(entry.text, x + PADDING * 2, y + PADDING + 0.5F, 0xFFFFFFFF);
-			y -= height + 2;
+			Draw.rounded(x, y, width, height, RADIUS, Draw.TOOLTIP_INK);
+			Draw.rounded(x + PADDING, y + (height - DOT) / 2, DOT, DOT, DOT / 2.0F, Draw.PRIMARY);
+			Draw.text(entry.text, x + PADDING * 2 + DOT, Draw.textY(y, height), Draw.TEXT);
+			offset += (height + GAP) * shown;
 		}
 		Draw.flush();
 
