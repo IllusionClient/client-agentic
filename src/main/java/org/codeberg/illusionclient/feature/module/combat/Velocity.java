@@ -19,6 +19,7 @@ import org.codeberg.illusionclient.feature.module.api.Category;
 import org.codeberg.illusionclient.feature.module.api.Description;
 import org.codeberg.illusionclient.feature.module.api.Module;
 import org.codeberg.illusionclient.feature.module.api.ModuleInfo;
+import org.codeberg.illusionclient.feature.module.client.Weapons;
 import org.codeberg.illusionclient.mixin.EntityVelocityS2CPacketAccessor;
 import org.codeberg.illusionclient.util.CombatUtils;
 

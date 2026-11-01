@@ -1,4 +1,4 @@
-package org.codeberg.illusionclient.feature.module.combat;
+package org.codeberg.illusionclient.feature.module.client;
 
 import net.minecraft.enchantment.Enchantment;
 import net.minecraft.enchantment.EnchantmentHelper;
@@ -13,8 +13,8 @@ import org.codeberg.illusionclient.feature.module.api.ModuleInfo;
 
 import java.util.Set;
 
-@Description("Limits Aim Assist and Auto Clicker to weapons.")
-@ModuleInfo(name = "Weapons", category = Category.COMBAT)
+@Description("Sets which items count as weapons for Weapons Only checks.")
+@ModuleInfo(name = "Weapons", category = Category.CLIENT)
 public class Weapons extends Module {
 	@Description("Item types that count as weapons. Fists means an empty hand.")
 	@MultiSelect(value = "Items", options = {"Swords", "Axes", "Sticks", "Fists"})

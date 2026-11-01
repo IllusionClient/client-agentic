@@ -30,7 +30,7 @@ import org.codeberg.illusionclient.feature.module.combat.NoHitDelay;
 import org.codeberg.illusionclient.feature.module.combat.SprintReset;
 import org.codeberg.illusionclient.feature.module.combat.TimerRange;
 import org.codeberg.illusionclient.feature.module.combat.Velocity;
-import org.codeberg.illusionclient.feature.module.combat.Weapons;
+import org.codeberg.illusionclient.feature.module.client.Weapons;
 import org.codeberg.illusionclient.feature.module.movement.InstantStop;
 import org.codeberg.illusionclient.feature.module.movement.NoJumpDelay;
 import org.codeberg.illusionclient.feature.module.movement.NoSlow;
