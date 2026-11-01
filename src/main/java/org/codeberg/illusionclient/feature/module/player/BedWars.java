@@ -4,6 +4,8 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
+import it.unimi.dsi.fastutil.objects.Object2LongMap;
+import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockWithBlockEntity;
 import net.minecraft.block.Blocks;
@@ -35,6 +37,7 @@ import org.codeberg.illusionclient.feature.module.api.Module;
 import org.codeberg.illusionclient.feature.module.api.ModuleInfo;
 import org.codeberg.illusionclient.feature.module.client.AntiBot;
 import org.codeberg.illusionclient.feature.module.client.Teams;
+import org.codeberg.illusionclient.feature.module.visual.Notifications;
 import org.codeberg.illusionclient.util.ItemUtils;
 import org.codeberg.illusionclient.util.bed.Bed;
 
@@ -44,6 +47,7 @@ import java.util.List;
 @Description("Warns you about threats to your bed and stops misclicks around it. Your bed is the one you spawn next to.")
 public class BedWars extends Module {
 	private static final int GUARD_MARGIN = 2;
+	private static final long ITEM_ALERT_COOLDOWN_MS = 15_000L;
 	private final Minecraft minecraft = Minecraft.getInstance();
 
 	@Section("Alerts")
@@ -79,6 +83,7 @@ public class BedWars extends Module {
 
 	private final IntSet near = new IntOpenHashSet();
 	private final Int2ObjectMap<String> held = new Int2ObjectOpenHashMap<>();
+	private final Object2LongMap<String> itemAlerted = new Object2LongOpenHashMap<>();
 
 	public static boolean atDefense(BlockPos pos) {
 		Bed bed = IllusionClient.BEDS.own();
@@ -90,12 +95,14 @@ public class BedWars extends Module {
 	public void onDisable() {
 		near.clear();
 		held.clear();
+		itemAlerted.clear();
 	}
 
 	@Listen
 	public void onWorldLoad(WorldLoadEvent event) {
 		near.clear();
 		held.clear();
+		itemAlerted.clear();
 	}
 
 	@Listen
@@ -120,13 +127,21 @@ public class BedWars extends Module {
 			if (itemAlerts) {
 				String item = special(player.getItemInHand());
 				if (item == null) held.remove(id);
-				else if (!item.equals(held.put(id, item))) alert(player.getName() + " is holding " + item);
+				else if (!item.equals(held.put(id, item))) {
+					long now = System.currentTimeMillis();
+					String key = id + item;
+					if (now - itemAlerted.getLong(key) >= ITEM_ALERT_COOLDOWN_MS) {
+						itemAlerted.put(key, now);
+						alert(player.getName() + " is holding " + item);
+					}
+				}
 			}
 		}
 	}
 
 	private void alert(String message) {
-		minecraft.gui.getChat().addMessage(new LiteralText("[Illusion] " + Formatting.RED + message));
+		if (IllusionClient.MODULES.get(Notifications.class).isEnabled()) Notifications.post(message);
+		else minecraft.gui.getChat().addMessage(new LiteralText("[Illusion] " + Formatting.RED + message));
 		if (alertSound) minecraft.player.playSound("note.pling", 1.0F, 1.0F);
 	}
 
