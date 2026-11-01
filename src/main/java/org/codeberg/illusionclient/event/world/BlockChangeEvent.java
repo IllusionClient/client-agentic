@@ -2,9 +2,8 @@ package org.codeberg.illusionclient.event.world;
 
 import net.minecraft.block.state.BlockState;
 import net.minecraft.util.math.BlockPos;
-import org.codeberg.illusionclient.event.Event;
 
-public final class BlockChangeEvent implements Event {
+public final class BlockChangeEvent {
 	private static final BlockChangeEvent INSTANCE = new BlockChangeEvent();
 	private BlockPos pos;
 	private BlockState oldState;

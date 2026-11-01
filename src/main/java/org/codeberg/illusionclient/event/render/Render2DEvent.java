@@ -1,9 +1,8 @@
 package org.codeberg.illusionclient.event.render;
 
 import net.minecraft.client.render.Window;
-import org.codeberg.illusionclient.event.Event;
 
-public abstract class Render2DEvent implements Event {
+public abstract class Render2DEvent {
 	private Window window;
 
 	private Render2DEvent() {

@@ -1,8 +1,7 @@
 package org.codeberg.illusionclient.event.render;
 
-import org.codeberg.illusionclient.event.Event;
 
-public final class Render3DEvent implements Event {
+public final class Render3DEvent {
 	private static final Render3DEvent INSTANCE = new Render3DEvent();
 	private float partialTicks;
 

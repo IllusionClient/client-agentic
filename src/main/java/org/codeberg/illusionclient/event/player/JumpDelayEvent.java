@@ -1,8 +1,7 @@
 package org.codeberg.illusionclient.event.player;
 
-import org.codeberg.illusionclient.event.Event;
 
-public final class JumpDelayEvent implements Event {
+public final class JumpDelayEvent {
 	private static final JumpDelayEvent INSTANCE = new JumpDelayEvent();
 	public int ticks;
 

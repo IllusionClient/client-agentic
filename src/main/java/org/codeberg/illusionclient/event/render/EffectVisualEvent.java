@@ -1,9 +1,8 @@
 package org.codeberg.illusionclient.event.render;
 
 import net.minecraft.entity.living.effect.StatusEffect;
-import org.codeberg.illusionclient.event.Event;
 
-public final class EffectVisualEvent implements Event {
+public final class EffectVisualEvent {
 	private static final EffectVisualEvent INSTANCE = new EffectVisualEvent();
 	public StatusEffect effect;
 	public boolean visible;

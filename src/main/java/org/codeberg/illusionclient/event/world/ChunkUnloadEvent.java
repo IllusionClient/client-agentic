@@ -1,8 +1,7 @@
 package org.codeberg.illusionclient.event.world;
 
-import org.codeberg.illusionclient.event.Event;
 
-public final class ChunkUnloadEvent implements Event {
+public final class ChunkUnloadEvent {
 	private static final ChunkUnloadEvent INSTANCE = new ChunkUnloadEvent();
 	private int chunkX;
 	private int chunkZ;

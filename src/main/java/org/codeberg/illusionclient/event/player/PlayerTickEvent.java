@@ -1,8 +1,7 @@
 package org.codeberg.illusionclient.event.player;
 
-import org.codeberg.illusionclient.event.Event;
 
-public final class PlayerTickEvent implements Event {
+public final class PlayerTickEvent {
 	public static final PlayerTickEvent INSTANCE = new PlayerTickEvent();
 
 	private PlayerTickEvent() {

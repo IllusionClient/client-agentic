@@ -1,8 +1,7 @@
 package org.codeberg.illusionclient.event.player;
 
-import org.codeberg.illusionclient.event.Event;
 
-public final class MotionEvent implements Event {
+public final class MotionEvent {
 	private static final MotionEvent INSTANCE = new MotionEvent();
 	public boolean pre;
 

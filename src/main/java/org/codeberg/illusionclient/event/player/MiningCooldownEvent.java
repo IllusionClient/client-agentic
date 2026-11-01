@@ -1,8 +1,7 @@
 package org.codeberg.illusionclient.event.player;
 
-import org.codeberg.illusionclient.event.Event;
 
-public final class MiningCooldownEvent implements Event {
+public final class MiningCooldownEvent {
 	private static final MiningCooldownEvent INSTANCE = new MiningCooldownEvent();
 	public int cooldown;
 

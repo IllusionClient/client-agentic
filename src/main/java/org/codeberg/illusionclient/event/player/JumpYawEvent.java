@@ -1,8 +1,7 @@
 package org.codeberg.illusionclient.event.player;
 
-import org.codeberg.illusionclient.event.Event;
 
-public final class JumpYawEvent implements Event {
+public final class JumpYawEvent {
 	private static final JumpYawEvent INSTANCE = new JumpYawEvent();
 	public float yaw;
 

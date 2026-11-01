@@ -1,8 +1,7 @@
 package org.codeberg.illusionclient.event.input;
 
-import org.codeberg.illusionclient.event.Event;
 
-public final class KeyPressEvent implements Event {
+public final class KeyPressEvent {
 	private static final KeyPressEvent INSTANCE = new KeyPressEvent();
 	private int key;
 	private boolean down;

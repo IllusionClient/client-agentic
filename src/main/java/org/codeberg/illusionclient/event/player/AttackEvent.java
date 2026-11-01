@@ -1,8 +1,7 @@
 package org.codeberg.illusionclient.event.player;
 
-import org.codeberg.illusionclient.event.Event;
 
-public final class AttackEvent implements Event {
+public final class AttackEvent {
 	private static final AttackEvent INSTANCE = new AttackEvent();
 	public boolean resetCooldown;
 

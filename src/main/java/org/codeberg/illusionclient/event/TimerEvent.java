@@ -1,6 +1,6 @@
 package org.codeberg.illusionclient.event;
 
-public final class TimerEvent implements Event {
+public final class TimerEvent {
 	private static final TimerEvent INSTANCE = new TimerEvent();
 	public int ticks;
 	public float partialTick;
