@@ -20,7 +20,7 @@
 - Added Chams, which draws players through walls, skipping teammates and bots. It can draw them in a flat color with an opacity slider or at full brightness, and the same options can apply to your first-person hand. It works with Argentum's entity instancing and entity culling.
 - Added Item ESP, which draws boxes around dropped items like iron, gold, diamonds, emeralds, golden apples and ender pearls. It can show stack counts and highlight everything else in one color.
 - Added Fast Mine, which mines blocks faster and shortens the pause after breaking one. It can also count that pause down while you aren't mining, which looks the same as vanilla.
-- Added Tags, which lets you tag players with `.tag <player> <tags>` in chat, or toggle "friend" by middle-clicking them. Combat modules skip players with a chosen tag when picking targets.
+- Added Tags, which lets you tag players with `.tag <player> <tags>` in chat, or toggle "friend" by middle-clicking them. Combat modules skip players with a chosen tag when picking targets. Tagged players also show up in their own Tags category in the ClickGUI, where you can change their tags or click one to toggle "friend".
 - Added Fake Block, which shows your sword as blocking without actually blocking. Only you can see it.
 - Added Auto Heal, which eats soup and golden heads from your hotbar when your health drops low, uses two in a row after a big hit, and can drop the empty bowls.
 - Added Indicators, which shows arrows around your crosshair pointing at incoming arrows, ender pearls and fireballs, with their distance.

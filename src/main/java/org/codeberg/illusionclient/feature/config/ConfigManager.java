@@ -9,6 +9,7 @@ import org.codeberg.illusionclient.IllusionClient;
 import org.codeberg.illusionclient.feature.config.api.*;
 import org.codeberg.illusionclient.feature.module.api.Module;
 import org.codeberg.illusionclient.feature.module.profiles.ProfileModule;
+import org.codeberg.illusionclient.feature.module.tags.TagModule;
 import org.codeberg.illusionclient.feature.module.visual.Notifications;
 import org.lwjgl.input.Keyboard;
 
@@ -272,7 +273,7 @@ public final class ConfigManager {
 	private static JsonObject writeModules() {
 		JsonObject root = new JsonObject();
 		for (Module module : IllusionClient.MODULES.modules) {
-			if (!(module instanceof ProfileModule)) root.add(module.key, write(module));
+			if (!(module instanceof ProfileModule || module instanceof TagModule)) root.add(module.key, write(module));
 		}
 		return root;
 	}
@@ -292,6 +293,10 @@ public final class ConfigManager {
 	}
 
 	public synchronized void edited(Object source) {
+		if (source instanceof TagModule tag) {
+			tag.save();
+			return;
+		}
 		if (profile == null && !loading && !(source instanceof ProfileModule)) createProfile();
 	}
 

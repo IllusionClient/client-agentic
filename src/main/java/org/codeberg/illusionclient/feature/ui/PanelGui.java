@@ -477,7 +477,7 @@ public class PanelGui extends ClickGui {
 				if (!within(mouseX, mouseY, contentLeft(), card.y, contentWidth(), CARD)) continue;
 
 				String key = ModuleComponent.keyLabel(card.module, true, false);
-				int keyX = keyLeft(card.module, key, contentLeft(), contentWidth());
+				int keyX = key == null ? keyRight(card.module, contentLeft(), contentWidth()) : keyLeft(card.module, key, contentLeft(), contentWidth());
 				boolean onKey = within(mouseX, mouseY, keyX, card.y + KEY_Y, keyRight(card.module, contentLeft(), contentWidth()) - keyX, ModuleComponent.KEY_HEIGHT);
 				int holdX = holdLeft(keyX);
 				boolean onHold = ModuleComponent.showHold(card.module, true) && within(mouseX, mouseY, holdX, card.y + KEY_Y, keyX - 6 - holdX, ModuleComponent.KEY_HEIGHT);

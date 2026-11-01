@@ -15,6 +15,7 @@ public abstract class Module {
 	public final String name;
 	public final String key;
 	public final Category category;
+	public final boolean bindable;
 	public final Description description;
 	public final ObsHidden obsHidden = getClass().getAnnotation(ObsHidden.class);
 	public final List<Option> options = new ObjectArrayList<>();
@@ -38,6 +39,7 @@ public abstract class Module {
 		this.key = key == null ? getClass().getSimpleName() : key;
 		this.category = info.category();
 		this.description = getClass().getAnnotation(Description.class);
+		this.bindable = info.bindable();
 		this.bind = info.bind();
 
 		for (Field field : getClass().getDeclaredFields()) {
@@ -70,6 +72,7 @@ public abstract class Module {
 	}
 
 	public void setBind(int bind) {
+		if (!bindable) return;
 		this.bind = bind;
 		if (IllusionClient.CONFIG != null) IllusionClient.CONFIG.edited(this);
 	}

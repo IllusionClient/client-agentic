@@ -16,6 +16,7 @@ import org.codeberg.illusionclient.feature.module.api.ObsHidden;
 import org.codeberg.illusionclient.feature.module.client.ClickGuiModule;
 import org.codeberg.illusionclient.feature.module.profiles.CreateProfile;
 import org.codeberg.illusionclient.feature.module.profiles.ProfileModule;
+import org.codeberg.illusionclient.feature.module.tags.TagModule;
 import org.codeberg.illusionclient.feature.ui.Draw;
 import org.codeberg.illusionclient.util.HiddenLayer;
 
@@ -60,7 +61,7 @@ public class Notifications extends Module {
 	}
 
 	public static void toggled(Module module) {
-		if (module instanceof ClickGuiModule || module instanceof CreateProfile || module instanceof ProfileModule || !IllusionClient.MODULES.get(Notifications.class).moduleToggles) return;
+		if (module instanceof ClickGuiModule || module instanceof CreateProfile || module instanceof ProfileModule || module instanceof TagModule || !IllusionClient.MODULES.get(Notifications.class).moduleToggles) return;
 		post(module.name + (module.isEnabled() ? " enabled" : " disabled"));
 	}
 

@@ -37,7 +37,7 @@ import org.codeberg.illusionclient.feature.module.movement.NoSlow;
 import org.codeberg.illusionclient.feature.module.movement.NullMove;
 import org.codeberg.illusionclient.feature.module.movement.Sprint;
 import org.codeberg.illusionclient.feature.module.movement.Timer;
-import org.codeberg.illusionclient.feature.module.player.AutoSoup;
+import org.codeberg.illusionclient.feature.module.player.AutoHeal;
 import org.codeberg.illusionclient.feature.module.player.AutoTool;
 import org.codeberg.illusionclient.feature.module.player.BedWars;
 import org.codeberg.illusionclient.feature.module.player.Blink;
@@ -62,6 +62,7 @@ import org.codeberg.illusionclient.feature.module.visual.ModOverlay;
 import org.codeberg.illusionclient.feature.module.visual.Nametags;
 import org.codeberg.illusionclient.feature.module.visual.NoHurtCam;
 import org.codeberg.illusionclient.feature.module.visual.Notifications;
+import org.codeberg.illusionclient.feature.module.visual.Pointers;
 import org.codeberg.illusionclient.util.SwapHook;
 
 import java.util.Arrays;
@@ -109,7 +110,7 @@ public final class ModuleManager {
 			new NullMove(),
 			new Sprint(),
 			new Timer(),
-			new AutoSoup(),
+			new AutoHeal(),
 			new AutoTool(),
 			new BedWars(),
 			new Blink(),
@@ -132,6 +133,7 @@ public final class ModuleManager {
 			new ModOverlay(),
 			new Nametags(),
 			new NoHurtCam(),
+			new Pointers(),
 			new CreateProfile(),
 			new Notifications()
 		));

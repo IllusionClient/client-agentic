@@ -21,7 +21,7 @@ public class KeybindComponent extends Component {
 	}
 
 	public static void listen(Module module) {
-		listening = module;
+		if (module.bindable) listening = module;
 	}
 
 	public static void stopListening() {

@@ -13,4 +13,6 @@ public @interface ModuleInfo {
 	Category category();
 
 	int bind() default 0;
+
+	boolean bindable() default true;
 }

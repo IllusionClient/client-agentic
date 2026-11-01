@@ -8,7 +8,8 @@ public enum Category {
 	MOVEMENT,
 	PLAYER,
 	VISUAL,
-	PROFILES;
+	PROFILES,
+	TAGS;
 
 	public String title() {
 		return name().charAt(0) + name().substring(1).toLowerCase(Locale.ROOT);

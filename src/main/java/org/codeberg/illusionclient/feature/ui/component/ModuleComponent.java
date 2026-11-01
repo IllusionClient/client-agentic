@@ -35,6 +35,7 @@ public class ModuleComponent extends Group {
 	}
 
 	public static String keyLabel(Module module, boolean hovered, boolean listening) {
+		if (!module.bindable) return null;
 		if (listening) return "Press a key...";
 		if (module.getBind() != Keyboard.KEY_NONE) return module.bindName();
 		return hovered ? "None" : null;
@@ -117,7 +118,7 @@ public class ModuleComponent extends Group {
 			components.add(new ButtonComponent("Current Settings", "Save", () -> IllusionClient.CONFIG.saveProfile(profile.profile)));
 			components.add(new ButtonComponent("Profile", "Delete", () -> IllusionClient.CONFIG.deleteProfile(profile.profile)));
 		}
-		components.add(new KeybindComponent(module));
+		if (module.bindable) components.add(new KeybindComponent(module));
 		return components;
 	}
 

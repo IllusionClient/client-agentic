@@ -14,6 +14,7 @@ import org.codeberg.illusionclient.feature.module.api.Description;
 import org.codeberg.illusionclient.feature.module.api.Module;
 import org.codeberg.illusionclient.feature.module.api.ModuleInfo;
 import org.codeberg.illusionclient.feature.module.profiles.ProfileModule;
+import org.codeberg.illusionclient.feature.module.tags.TagModule;
 import org.codeberg.illusionclient.feature.module.api.ObsHidden;
 import org.codeberg.illusionclient.feature.ui.Draw;
 import org.codeberg.illusionclient.feature.ui.Font;
@@ -73,7 +74,7 @@ public class ModOverlay extends Module {
 
 		if (all == null) {
 			all = IllusionClient.MODULES.modules.stream()
-				.filter(module -> module != this && !(module instanceof ProfileModule))
+				.filter(module -> module != this && !(module instanceof ProfileModule || module instanceof TagModule))
 				.map(Row::new)
 				.toArray(Row[]::new);
 		}

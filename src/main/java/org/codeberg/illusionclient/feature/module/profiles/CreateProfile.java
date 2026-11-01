@@ -7,7 +7,7 @@ import org.codeberg.illusionclient.feature.module.api.Module;
 import org.codeberg.illusionclient.feature.module.api.ModuleInfo;
 
 @Description("Saves your current settings as a new profile. The Default profile always keeps the default settings, so changing anything on it makes a new profile for you.")
-@ModuleInfo(name = "Create Profile", category = Category.PROFILES)
+@ModuleInfo(name = "Create Profile", category = Category.PROFILES, bindable = false)
 public class CreateProfile extends Module {
 	@Override
 	public void onEnable() {

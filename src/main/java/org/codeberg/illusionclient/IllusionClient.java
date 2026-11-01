@@ -5,6 +5,7 @@ import org.slf4j.LoggerFactory;
 import org.codeberg.illusionclient.event.api.PubSub;
 import org.codeberg.illusionclient.feature.config.ConfigManager;
 import org.codeberg.illusionclient.feature.module.ModuleManager;
+import org.codeberg.illusionclient.feature.module.client.Tags;
 import org.codeberg.illusionclient.util.bed.BedManager;
 import org.codeberg.illusionclient.util.combat.CombatManager;
 import org.codeberg.illusionclient.util.input.InputManager;
@@ -42,6 +43,7 @@ public final class IllusionClient {
 		CONFIG = new ConfigManager();
 
 		CONFIG.load();
+		Tags.sync();
 		BUS.subscribe(STATS);
 		Runtime.getRuntime().addShutdownHook(new Thread(CONFIG::save));
 	}
