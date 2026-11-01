@@ -157,7 +157,7 @@ public class ModuleComponent extends Group {
 	protected void headerClicked(int mouseX, int mouseY, int button) {
 		if (button == 2 || button == 0 && mouseX >= keyLeft && mouseX < keyRight) KeybindComponent.listen(module);
 		else if (button == 0 && mouseX >= holdLeft && mouseX < holdRight) module.setHold(!module.isHold());
-		else if (button == 0) module.toggle();
-		else if (button == 1) open = !open;
+		else if (button == 0 && module.toggleable) module.toggle();
+		else if (button == 1 || button == 0) open = !open;
 	}
 }

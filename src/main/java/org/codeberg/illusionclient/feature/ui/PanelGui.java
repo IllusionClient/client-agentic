@@ -484,7 +484,7 @@ public class PanelGui extends ClickGui {
 				boolean onChevron = mouseX >= chevronLeft(contentLeft(), contentWidth()) - PADDING;
 				if (button == 2 || button == 0 && onKey) KeybindComponent.listen(card.module);
 				else if (button == 0 && onHold) card.module.setHold(!card.module.isHold());
-				else if (button == 1 || button == 0 && (onChevron || card.module instanceof ClickGuiModule)) open(card.module);
+				else if (button == 1 || button == 0 && (onChevron || !card.module.toggleable || card.module instanceof ClickGuiModule)) open(card.module);
 				else if (button == 0) card.module.toggle();
 				return;
 			}

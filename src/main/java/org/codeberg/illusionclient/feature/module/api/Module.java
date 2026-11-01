@@ -16,6 +16,7 @@ public abstract class Module {
 	public final String key;
 	public final Category category;
 	public final boolean bindable;
+	public final boolean toggleable;
 	public final Description description;
 	public final ObsHidden obsHidden = getClass().getAnnotation(ObsHidden.class);
 	public final List<Option> options = new ObjectArrayList<>();
@@ -40,6 +41,7 @@ public abstract class Module {
 		this.category = info.category();
 		this.description = getClass().getAnnotation(Description.class);
 		this.bindable = info.bindable();
+		this.toggleable = info.toggleable();
 		this.bind = info.bind();
 
 		for (Field field : getClass().getDeclaredFields()) {
@@ -99,7 +101,7 @@ public abstract class Module {
 	}
 
 	public final void setEnabled(boolean enabled) {
-		if (this.enabled == enabled) return;
+		if (!toggleable || this.enabled == enabled) return;
 		this.enabled = enabled;
 
 		if (enabled) {
@@ -112,6 +114,7 @@ public abstract class Module {
 	}
 
 	public final void toggle() {
+		if (!toggleable) return;
 		IllusionClient.STATS.toggled(this);
 		boolean was = enabled;
 		setEnabled(!was);

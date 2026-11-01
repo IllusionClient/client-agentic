@@ -15,4 +15,6 @@ public @interface ModuleInfo {
 	int bind() default 0;
 
 	boolean bindable() default true;
+
+	boolean toggleable() default true;
 }

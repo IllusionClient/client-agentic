@@ -14,7 +14,7 @@ import org.codeberg.illusionclient.feature.module.api.ModuleInfo;
 import java.util.Set;
 
 @Description("Sets which items count as weapons for Weapons Only checks.")
-@ModuleInfo(name = "Weapons", category = Category.CLIENT)
+@ModuleInfo(name = "Weapons", category = Category.CLIENT, bindable = false, toggleable = false)
 public class Weapons extends Module {
 	@Description("Item types that count as weapons. Fists means an empty hand.")
 	@MultiSelect(value = "Items", options = {"Swords", "Axes", "Sticks", "Fists"})
@@ -30,7 +30,6 @@ public class Weapons extends Module {
 
 	public static boolean isWeapons(ItemStack stack) {
 		Weapons weapons = IllusionClient.MODULES.get(Weapons.class);
-		if (!weapons.isEnabled()) return true;
 		if (stack == null) return weapons.items.contains("Fists");
 
 		Item item = stack.getItem();
