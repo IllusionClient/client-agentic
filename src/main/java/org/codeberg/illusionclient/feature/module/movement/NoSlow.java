@@ -23,8 +23,8 @@ import org.codeberg.illusionclient.feature.module.api.ModuleInfo;
 public class NoSlow extends Module {
 	private final Minecraft minecraft = Minecraft.getInstance();
 
-	@Description("Vanilla only changes the slowdown, NCP re-blocks around each movement packet and Switch swaps slots each tick. Packet modes only affect swords.")
-	@Combo(value = "Mode", options = {"Vanilla", "NCP", "Switch"})
+	@Description("Vanilla only changes the slowdown, Old NCP re-blocks around each movement packet and Switch swaps slots each tick. Packet modes only affect swords.")
+	@Combo(value = "Mode", options = {"Vanilla", "Old NCP", "Switch"})
 	public String mode = "Vanilla";
 
 	@Description("Speed kept while blocking with a sword. 0.2 is vanilla.")

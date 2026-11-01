@@ -49,7 +49,8 @@ public final class ConfigManager {
 		ConfigManager::keyByClassName,
 		ConfigManager::weaponsAsSelections,
 		ConfigManager::forkWithoutProfile,
-		ConfigManager::autoSoupAsAutoHeal
+		ConfigManager::autoSoupAsAutoHeal,
+		ConfigManager::noSlowOldNcp
 	);
 	private static final int VERSION = MIGRATIONS.size();
 
@@ -105,6 +106,13 @@ public final class ConfigManager {
 
 	private static void forkWithoutProfile(JsonObject root) {
 		if (!root.has(PROFILE_KEY)) root.addProperty(FORK_KEY, true);
+	}
+
+	private static void noSlowOldNcp(JsonObject root) {
+		if (root.get("NoSlow") instanceof JsonObject entry && entry.get("settings") instanceof JsonObject settings
+			&& settings.get("mode") instanceof JsonPrimitive mode && mode.getAsString().equals("NCP")) {
+			settings.addProperty("mode", "Old NCP");
+		}
 	}
 
 	private static void autoSoupAsAutoHeal(JsonObject root) {
