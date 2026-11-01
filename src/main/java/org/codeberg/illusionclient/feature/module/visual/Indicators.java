@@ -101,7 +101,7 @@ public class Indicators extends Module {
 			float cos = (float) -Math.cos(angle);
 			float baseX = centerX + sin * radius;
 			float baseY = centerY + cos * radius;
-			Draw.triangle(baseX + sin * 8.0F, baseY + cos * 8.0F, baseX - cos * 5.0F, baseY + sin * 5.0F, baseX + cos * 5.0F, baseY - sin * 5.0F, color.getRGB());
+			Draw.pointer(baseX + sin * 3.0F, baseY + cos * 3.0F, sin, cos, 6.0F, color.getRGB());
 			Draw.flush();
 
 			int iconX = Math.round(baseX - sin * (ICON / 2.0F + 4.0F) - ICON / 2.0F);

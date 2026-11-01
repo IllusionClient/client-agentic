@@ -42,6 +42,14 @@ public final class Draw {
 	private static final float[] EDGE_Y = new float[OUTLINE_POINTS];
 	private static final float[] FRINGE_X = new float[OUTLINE_POINTS];
 	private static final float[] FRINGE_Y = new float[OUTLINE_POINTS];
+	private static final float[] POINTER_X = {1.0F, -0.55F, -0.2F, -0.55F};
+	private static final float[] POINTER_Y = {0.0F, 0.75F, 0.0F, -0.75F};
+	private static final float[] MITER_X = new float[4];
+	private static final float[] MITER_Y = new float[4];
+	private static final float[] POINTER_RIM_X = new float[4];
+	private static final float[] POINTER_RIM_Y = new float[4];
+	private static final float[] POINTER_EDGE_X = new float[4];
+	private static final float[] POINTER_EDGE_Y = new float[4];
 	private static final Object2ObjectMap<Identifier, Batch> TEXTURED = new Object2ObjectOpenHashMap<>();
 	private static final List<Batch> TEXTURES_PENDING = new ObjectArrayList<>();
 	private static ClickGuiModule settings;
@@ -57,6 +65,22 @@ public final class Draw {
 			double angle = (i / ARC_POINTS + (i % ARC_POINTS) / (double) ARC_SEGMENTS) * Math.PI / 2.0D;
 			COS[i] = (float) Math.cos(angle);
 			SIN[i] = (float) Math.sin(angle);
+		}
+		for (int i = 0; i < 4; i++) {
+			int prev = (i + 3) & 3, next = (i + 1) & 3;
+			float inX = POINTER_Y[i] - POINTER_Y[prev], inY = POINTER_X[prev] - POINTER_X[i];
+			float inLength = (float) Math.hypot(inX, inY);
+			float outX = POINTER_Y[next] - POINTER_Y[i], outY = POINTER_X[i] - POINTER_X[next];
+			float outLength = (float) Math.hypot(outX, outY);
+			inX /= inLength;
+			inY /= inLength;
+			outX /= outLength;
+			outY /= outLength;
+			float miter = 1.0F + inX * outX + inY * outY;
+			float x = (inX + outX) / miter, y = (inY + outY) / miter;
+			float limit = Math.min(1.0F, 2.0F / (float) Math.hypot(x, y));
+			MITER_X[i] = x * limit;
+			MITER_Y[i] = y * limit;
 		}
 	}
 
@@ -290,10 +314,51 @@ public final class Draw {
 	}
 
 	public static void triangle(float x1, float y1, float x2, float y2, float x3, float y3, int color) {
+		triangle(shapes(), x1, y1, color, x2, y2, color, x3, y3, color);
+	}
+
+	private static void triangle(BufferBuilder buffer, float x1, float y1, int color1, float x2, float y2, int color2, float x3, float y3, int color3) {
+		vertex(buffer, x1, y1, color1);
+		if ((x2 - x1) * (y3 - y1) - (y2 - y1) * (x3 - x1) > 0.0F) {
+			vertex(buffer, x3, y3, color3);
+			vertex(buffer, x2, y2, color2);
+		} else {
+			vertex(buffer, x2, y2, color2);
+			vertex(buffer, x3, y3, color3);
+		}
+	}
+
+	public static void pointer(float x, float y, float dirX, float dirY, float size, int color) {
+		float rim = 1.0F;
+		int ink = Math.round((TOOLTIP_INK >>> 24) * (color >>> 24) / 255.0F) << 24 | TOOLTIP_INK & 0xFFFFFF;
+		int clear = ink & 0xFFFFFF;
 		BufferBuilder buffer = shapes();
-		vertex(buffer, x1, y1, color);
-		vertex(buffer, x2, y2, color);
-		vertex(buffer, x3, y3, color);
+
+		chevron(x, y, dirX, dirY, size, rim, POINTER_RIM_X, POINTER_RIM_Y);
+		chevron(x, y, dirX, dirY, size, rim + feather() * 2.0F, POINTER_EDGE_X, POINTER_EDGE_Y);
+		fillChevron(buffer, POINTER_RIM_X, POINTER_RIM_Y, ink);
+		for (int i = 0; i < 4; i++) {
+			int next = (i + 1) & 3;
+			triangle(buffer, POINTER_RIM_X[i], POINTER_RIM_Y[i], ink, POINTER_EDGE_X[i], POINTER_EDGE_Y[i], clear, POINTER_EDGE_X[next], POINTER_EDGE_Y[next], clear);
+			triangle(buffer, POINTER_RIM_X[i], POINTER_RIM_Y[i], ink, POINTER_EDGE_X[next], POINTER_EDGE_Y[next], clear, POINTER_RIM_X[next], POINTER_RIM_Y[next], ink);
+		}
+
+		chevron(x, y, dirX, dirY, size, 0.0F, POINTER_RIM_X, POINTER_RIM_Y);
+		fillChevron(buffer, POINTER_RIM_X, POINTER_RIM_Y, color);
+	}
+
+	private static void chevron(float x, float y, float dirX, float dirY, float size, float grow, float[] outX, float[] outY) {
+		for (int i = 0; i < 4; i++) {
+			float along = POINTER_X[i] * size + MITER_X[i] * grow;
+			float across = POINTER_Y[i] * size + MITER_Y[i] * grow;
+			outX[i] = x + dirX * along - dirY * across;
+			outY[i] = y + dirY * along + dirX * across;
+		}
+	}
+
+	private static void fillChevron(BufferBuilder buffer, float[] x, float[] y, int color) {
+		triangle(buffer, x[0], y[0], color, x[1], y[1], color, x[2], y[2], color);
+		triangle(buffer, x[0], y[0], color, x[2], y[2], color, x[3], y[3], color);
 	}
 
 	public static void gradient(int x, int y, int width, int height, int topLeft, int topRight, int bottomLeft, int bottomRight) {
