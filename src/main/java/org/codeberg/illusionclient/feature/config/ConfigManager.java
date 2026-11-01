@@ -193,7 +193,7 @@ public final class ConfigManager {
 
 	private static Object read(JsonElement value, Option option) {
 		if (option.info instanceof Check) return readBoolean(value);
-		if (option.info instanceof ColorPicker) return new Color(value.getAsInt());
+		if (option.info instanceof ColorPicker picker) return new Color(value.getAsInt(), picker.alpha());
 
 		if (option.info instanceof Slider slider) {
 			float number = value.getAsFloat();

@@ -1,5 +1,6 @@
 package org.codeberg.illusionclient.feature.ui.component;
 
+import org.codeberg.illusionclient.feature.config.api.ColorPicker;
 import org.codeberg.illusionclient.feature.config.api.Option;
 import org.codeberg.illusionclient.feature.ui.Draw;
 
@@ -18,12 +19,16 @@ public class ColorComponent extends OptionComponent {
 	}
 
 	private final float[] hsb;
-	private boolean open, draggingBox, draggingHue;
+	private final boolean hasAlpha;
+	private float alpha;
+	private boolean open, draggingBox, draggingHue, draggingAlpha;
 
 	public ColorComponent(Option option) {
 		super(option);
 		Color color = option.get();
 		this.hsb = Color.RGBtoHSB(color.getRed(), color.getGreen(), color.getBlue(), null);
+		this.hasAlpha = ((ColorPicker) option.info).alpha();
+		this.alpha = color.getAlpha() / 255.0F;
 	}
 
 	private static void cursor(int centerX, int centerY, int color) {
@@ -37,7 +42,8 @@ public class ColorComponent extends OptionComponent {
 
 	@Override
 	public int height() {
-		return open ? HEIGHT + BOX_HEIGHT + PADDING + HUE_HEIGHT + PADDING : HEIGHT;
+		if (!open) return HEIGHT;
+		return HEIGHT + BOX_HEIGHT + PADDING + HUE_HEIGHT + PADDING + (hasAlpha ? HUE_HEIGHT + PADDING : 0);
 	}
 
 	@Override
@@ -46,14 +52,20 @@ public class ColorComponent extends OptionComponent {
 		int boxY = y + HEIGHT;
 		int boxWidth = right() - left();
 		int hueY = boxY + BOX_HEIGHT + PADDING;
+		int alphaY = hueY + HUE_HEIGHT + PADDING;
 
 		if (draggingBox) {
 			hsb[1] = fraction(mouseX - boxX - BOX_RADIUS, boxWidth - BOX_RADIUS * 2);
 			hsb[2] = 1.0F - fraction(mouseY - boxY - BOX_RADIUS, BOX_HEIGHT - BOX_RADIUS * 2);
 		} else if (draggingHue) {
 			hsb[0] = fraction(mouseX - boxX - HUE_RADIUS, boxWidth - HUE_RADIUS * 2);
+		} else if (draggingAlpha) {
+			alpha = fraction(mouseX - boxX - HUE_RADIUS, boxWidth - HUE_RADIUS * 2);
 		}
-		if (draggingBox || draggingHue) option.set(new Color(Color.HSBtoRGB(hsb[0], hsb[1], hsb[2])));
+		if (draggingBox || draggingHue || draggingAlpha) {
+			int rgb = Color.HSBtoRGB(hsb[0], hsb[1], hsb[2]) & 0xFFFFFF;
+			option.set(new Color(hasAlpha ? Math.round(alpha * 255.0F) << 24 | rgb : rgb, hasAlpha));
+		}
 
 		row(option.name, mouseX, mouseY);
 		Draw.rounded(right() - 12, y + 6, 12, 12, 3.0F, option.<Color>get().getRGB());
@@ -77,6 +89,14 @@ public class ColorComponent extends OptionComponent {
 			Draw.gradient(left, hueY, right - left, HUE_HEIGHT, from, to, from, to);
 		}
 		cursor(hueX + (int) (hsb[0] * hueWidth), hueY + HUE_RADIUS, hue);
+		if (!hasAlpha) return;
+
+		int opaque = option.<Color>get().getRGB() | 0xFF000000;
+		int clear = opaque & 0xFFFFFF;
+		Draw.rounded(boxX, alphaY, HUE_HEIGHT, HUE_HEIGHT, HUE_RADIUS, clear);
+		Draw.rounded(boxX + hueWidth, alphaY, HUE_HEIGHT, HUE_HEIGHT, HUE_RADIUS, opaque);
+		Draw.gradient(hueX, alphaY, hueWidth, HUE_HEIGHT, clear, opaque, clear, opaque);
+		cursor(hueX + (int) (alpha * hueWidth), alphaY + HUE_RADIUS, option.<Color>get().getRGB());
 	}
 
 	@Override
@@ -87,6 +107,8 @@ public class ColorComponent extends OptionComponent {
 			int offsetY = mouseY - y - HEIGHT;
 			draggingBox = offsetY >= 0 && offsetY < BOX_HEIGHT;
 			draggingHue = offsetY >= BOX_HEIGHT + PADDING && offsetY < BOX_HEIGHT + PADDING + HUE_HEIGHT;
+			int alphaOffset = BOX_HEIGHT + PADDING + HUE_HEIGHT + PADDING;
+			draggingAlpha = hasAlpha && offsetY >= alphaOffset && offsetY < alphaOffset + HUE_HEIGHT;
 		}
 	}
 
@@ -94,5 +116,6 @@ public class ColorComponent extends OptionComponent {
 	public void mouseReleased() {
 		draggingBox = false;
 		draggingHue = false;
+		draggingAlpha = false;
 	}
 }

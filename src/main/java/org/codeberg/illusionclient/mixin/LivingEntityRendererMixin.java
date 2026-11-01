@@ -9,6 +9,7 @@ import net.minecraft.client.render.entity.EntityRenderDispatcher;
 import net.minecraft.entity.living.LivingEntity;
 import net.minecraft.entity.living.player.PlayerEntity;
 import org.codeberg.illusionclient.IllusionClient;
+import org.codeberg.illusionclient.feature.module.visual.Chams;
 import org.codeberg.illusionclient.feature.module.visual.Nametags;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -36,5 +37,18 @@ public abstract class LivingEntityRendererMixin extends EntityRenderer<LivingEnt
 	private void illusion$restoreRotationModel(LivingEntity entity, double x, double y, double z, float yaw, float tickDelta,
 		CallbackInfo ci, @Share("swapped") LocalBooleanRef swapped) {
 		if (swapped.get()) IllusionClient.ROTATION.restoreModelRotation(entity);
+	}
+
+	@Inject(method = "renderModel(Lnet/minecraft/entity/living/LivingEntity;FFFFFF)V", at = @At("HEAD"))
+	private void illusion$chamsColor(LivingEntity entity, float walkAnimationProgress, float walkAnimationSpeed, float bob,
+		float yaw, float pitch, float scale, CallbackInfo ci, @Share("chams") LocalBooleanRef colored) {
+		colored.set(Chams.colorsModel());
+		if (colored.get()) Chams.beginColor();
+	}
+
+	@Inject(method = "renderModel(Lnet/minecraft/entity/living/LivingEntity;FFFFFF)V", at = @At("RETURN"))
+	private void illusion$restoreChamsColor(LivingEntity entity, float walkAnimationProgress, float walkAnimationSpeed, float bob,
+		float yaw, float pitch, float scale, CallbackInfo ci, @Share("chams") LocalBooleanRef colored) {
+		if (colored.get()) Chams.endColor();
 	}
 }

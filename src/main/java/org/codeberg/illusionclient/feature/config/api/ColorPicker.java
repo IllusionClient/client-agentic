@@ -9,4 +9,6 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface ColorPicker {
 	String value();
+
+	boolean alpha() default false;
 }
