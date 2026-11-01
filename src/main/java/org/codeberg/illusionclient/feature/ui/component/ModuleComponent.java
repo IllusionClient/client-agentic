@@ -6,6 +6,7 @@ import org.codeberg.illusionclient.feature.config.api.*;
 import org.codeberg.illusionclient.feature.module.api.Module;
 import org.codeberg.illusionclient.feature.module.api.ObsHidden;
 import org.codeberg.illusionclient.feature.module.client.ClickGuiModule;
+import org.codeberg.illusionclient.feature.module.client.ObsProof;
 import org.codeberg.illusionclient.feature.config.ConfigManager;
 import org.codeberg.illusionclient.feature.module.profiles.ProfileModule;
 import org.codeberg.illusionclient.feature.ui.Draw;
@@ -67,7 +68,7 @@ public class ModuleComponent extends Group {
 	}
 
 	public static int obsMarkerSpace(Module module, int gap) {
-		return module.obsHidden == null || !SwapHook.SUPPORTED ? 0 : keyWidth(OBS) + gap;
+		return module.obsHidden == null || !SwapHook.SUPPORTED || !IllusionClient.MODULES.get(ObsProof.class).isEnabled() ? 0 : keyWidth(OBS) + gap;
 	}
 
 	public static int drawObsMarker(Module module, int right, int y, int mouseX, int mouseY, int gap) {
