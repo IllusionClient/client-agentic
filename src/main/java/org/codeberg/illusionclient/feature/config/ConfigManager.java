@@ -47,7 +47,8 @@ public final class ConfigManager {
 		ConfigManager::keyByFieldName,
 		ConfigManager::keyByClassName,
 		ConfigManager::weaponsAsSelections,
-		ConfigManager::forkWithoutProfile
+		ConfigManager::forkWithoutProfile,
+		ConfigManager::autoSoupAsAutoHeal
 	);
 	private static final int VERSION = MIGRATIONS.size();
 
@@ -103,6 +104,20 @@ public final class ConfigManager {
 
 	private static void forkWithoutProfile(JsonObject root) {
 		if (!root.has(PROFILE_KEY)) root.addProperty(FORK_KEY, true);
+	}
+
+	private static void autoSoupAsAutoHeal(JsonObject root) {
+		if (root.get(STATS_KEY) instanceof JsonObject stats && stats.get("toggles") instanceof JsonObject toggles && toggles.has("AutoSoup")) {
+			toggles.add("AutoHeal", toggles.remove("AutoSoup"));
+		}
+
+		if (!(root.remove("AutoSoup") instanceof JsonObject entry)) return;
+		root.add("AutoHeal", entry);
+		if (entry.get("settings") instanceof JsonObject settings && settings.remove("item") instanceof JsonPrimitive item) {
+			JsonArray items = new JsonArray();
+			items.add(item);
+			settings.add("items", items);
+		}
 	}
 
 	private static JsonArray selected(JsonObject settings, Map<String, String> checks) {
@@ -401,7 +416,9 @@ public final class ConfigManager {
 			if (!profiles().contains(name)) return;
 
 			try (Reader reader = Files.newBufferedReader(profiles.resolve(name + ".json"), StandardCharsets.UTF_8)) {
-				loadModules(JsonParser.parseReader(reader).getAsJsonObject(), keep);
+				JsonObject settings = JsonParser.parseReader(reader).getAsJsonObject();
+				autoSoupAsAutoHeal(settings);
+				loadModules(settings, keep);
 			} catch (IOException | RuntimeException e) {
 				LOGGER.error("Failed to load profile {}", name, e);
 				return;

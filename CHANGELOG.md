@@ -22,7 +22,7 @@
 - Added Fast Mine, which mines blocks faster and shortens the pause after breaking one. It can also count that pause down while you aren't mining, which looks the same as vanilla.
 - Added Tags, which lets you tag players with `.tag <player> <tags>` in chat, or toggle "friend" by middle-clicking them. Combat modules skip players with a chosen tag when picking targets.
 - Added Fake Block, which shows your sword as blocking without actually blocking. Only you can see it.
-- Added Auto Soup, which eats soup (or golden heads) from your hotbar when your health drops low, uses two in a row after a big hit, and can drop the empty bowls.
+- Added Auto Heal, which eats soup and golden heads from your hotbar when your health drops low, uses two in a row after a big hit, and can drop the empty bowls.
 - Added Indicators, which shows arrows around your crosshair pointing at incoming arrows, ender pearls and fireballs, with their distance.
 - Added Instant Stop, which stops you as soon as you let go of your movement keys by briefly tapping the opposite keys. An option keeps it from tapping the key opposite the one you released.
 - Added No Slow, which reduces the slowdown from blocking, eating, drinking and drawing bows. Each has its own speed, and sword blocking has NCP and Switch bypass modes.

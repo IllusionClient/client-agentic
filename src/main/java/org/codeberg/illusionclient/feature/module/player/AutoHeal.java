@@ -10,7 +10,7 @@ import org.codeberg.illusionclient.IllusionClient;
 import org.codeberg.illusionclient.event.api.Listen;
 import org.codeberg.illusionclient.event.player.PlayerTickEvent;
 import org.codeberg.illusionclient.feature.config.api.Check;
-import org.codeberg.illusionclient.feature.config.api.Combo;
+import org.codeberg.illusionclient.feature.config.api.MultiSelect;
 import org.codeberg.illusionclient.feature.config.api.Section;
 import org.codeberg.illusionclient.feature.config.api.Slider;
 import org.codeberg.illusionclient.feature.module.api.Category;
@@ -18,19 +18,20 @@ import org.codeberg.illusionclient.feature.module.api.Description;
 import org.codeberg.illusionclient.feature.module.api.Module;
 import org.codeberg.illusionclient.feature.module.api.ModuleInfo;
 
+import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
-@ModuleInfo(name = "Auto Soup", category = Category.PLAYER)
-@Description("Eats soup from your hotbar when your health gets low.")
-public class AutoSoup extends Module {
+@ModuleInfo(name = "Auto Heal", category = Category.PLAYER)
+@Description("Eats soup or golden heads from your hotbar when your health gets low.")
+public class AutoHeal extends Module {
 	private final Minecraft minecraft = Minecraft.getInstance();
 
 	@Section("Maximum Health")
-	@Description("Uses one soup when your health is at or below this many hearts.")
+	@Description("Heals once when your health is at or below this many hearts.")
 	@Slider(value = "Single Use", min = 0.5F, max = 10.0F, step = 0.5F)
 	public float singleUse = 6.0F;
 
-	@Description("Uses two soups in a row when a big hit drops you to or below this many hearts.")
+	@Description("Heals twice in a row when a big hit drops you to or below this many hearts.")
 	@Slider(value = "Double Use", min = 0.0F, max = 10.0F, step = 0.5F)
 	public float doubleUse = 3.0F;
 
@@ -39,15 +40,15 @@ public class AutoSoup extends Module {
 	@Slider(value = "Randomization (%)", min = 0.0F, max = 100.0F)
 	public float randomization = 20.0F;
 
-	@Description("Time to wait after your health gets low before switching to a soup.")
+	@Description("Time to wait after your health gets low before switching to a healing item.")
 	@Slider(value = "Before Switching (ms)", min = 0.0F, max = 500.0F)
 	public float beforeSwitching = 50.0F;
 
-	@Description("Time between switching, using and dropping the bowl.")
+	@Description("Time between switching, eating and dropping the bowl.")
 	@Slider(value = "Between Actions (ms)", min = 0.0F, max = 500.0F)
 	public float betweenActions = 50.0F;
 
-	@Description("Time to wait after souping before souping again. Raise it if a second soup gets used before the first one registers.")
+	@Description("Time to wait after healing before healing again. Raise it if a second item gets used before the first one registers.")
 	@Slider(value = "Cooldown (ms)", min = 0.0F, max = 1000.0F)
 	public float cooldown = 250.0F;
 
@@ -56,9 +57,9 @@ public class AutoSoup extends Module {
 	@Check("Drop Bowls")
 	public boolean dropBowls = true;
 
-	@Description("The item to eat. Skull eats golden heads in UHC modes.")
-	@Combo(value = "Item", options = {"Soup", "Skull"})
-	public String item = "Soup";
+	@Description("The items to eat. Skull eats golden heads in UHC modes.")
+	@MultiSelect(value = "Items", options = {"Soup", "Skull"})
+	public Set<String> items = Set.of("Soup");
 
 	private long nextAt;
 	private long triggerAt;
@@ -70,7 +71,7 @@ public class AutoSoup extends Module {
 
 	@Override
 	public String details() {
-		return item;
+		return String.join(", ", items);
 	}
 
 	@Override
@@ -115,7 +116,7 @@ public class AutoSoup extends Module {
 		PlayerInventory inventory = player.inventory;
 		if (used) {
 			used = false;
-			if (dropBowls && item.equals("Soup") && inventory.getSelectedItem() != null && inventory.getSelectedItem().getItem() == Items.BOWL) {
+			if (dropBowls && inventory.getSelectedItem() != null && inventory.getSelectedItem().getItem() == Items.BOWL) {
 				player.dropItem(false);
 				return;
 			}
@@ -147,8 +148,9 @@ public class AutoSoup extends Module {
 	}
 
 	private boolean matches(ItemStack stack) {
-		Item wanted = item.equals("Skull") ? Items.SKULL : Items.MUSHROOM_STEW;
-		return stack != null && stack.getItem() == wanted;
+		if (stack == null) return false;
+		Item item = stack.getItem();
+		return item == Items.MUSHROOM_STEW && items.contains("Soup") || item == Items.SKULL && items.contains("Skull");
 	}
 
 	private long delay(float ms) {
