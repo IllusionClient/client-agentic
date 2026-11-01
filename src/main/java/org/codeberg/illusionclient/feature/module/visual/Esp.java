@@ -189,7 +189,7 @@ public class Esp extends Module {
 		return !firstPerson || player.distanceTo(minecraft.player) >= 1.0F;
 	}
 
-	private static int teamColor(PlayerEntity player, int fallback) {
+	static int teamColor(PlayerEntity player, int fallback) {
 		Formatting color = PlayerUtils.nametagColor(player);
 		if (color == null) return fallback;
 
