@@ -51,6 +51,11 @@ public final class EspRenderer<T> {
 	}
 
 	public static void box(int left, int top, int right, int bottom, int color) {
+		if (instanced()) {
+			InstancedBoxes.rect(left, top, right, bottom, color);
+			return;
+		}
+
 		outline(left, top, right, bottom, 3.0F, OUTLINE);
 		outline(left + 1, top + 1, right - 1, bottom - 1, 1.0F, color);
 	}
@@ -127,6 +132,15 @@ public final class EspRenderer<T> {
 			painter.paint(targets.get(i), Math.round(bounds[i * 4]), Math.round(bounds[i * 4 + 1]), Math.round(bounds[i * 4 + 2]), Math.round(bounds[i * 4 + 3]));
 		}
 		Draw.flush();
+		if (InstancedBoxes.hasRects()) {
+			GlStateManager.disableTexture();
+			GlStateManager.enableBlend();
+			GlStateManager.disableAlphaTest();
+			GlStateManager.blendFuncSeparate(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA, GL11.GL_ONE, GL11.GL_ZERO);
+			InstancedBoxes.drawRects();
+			GlStateManager.enableAlphaTest();
+			GlStateManager.enableTexture();
+		}
 
 		GlStateManager.popMatrix();
 		GlStateManager.depthMask(true);
@@ -137,6 +151,14 @@ public final class EspRenderer<T> {
 	public void box3D(Box box, int color) {
 		if (!frustum.isVisible(box)) return;
 
+		int fill = color & 0xFFFFFF | FILL_ALPHA << 24;
+		if (instanced()) {
+			drawing3D = true;
+			InstancedBoxes.cube((float) (box.minX - cameraX), (float) (box.minY - cameraY), (float) (box.minZ - cameraZ),
+				(float) (box.maxX - cameraX), (float) (box.maxY - cameraY), (float) (box.maxZ - cameraZ), fill);
+			return;
+		}
+
 		if (drawing3D && (FACES.getVertexCount() + BOX_VERTICES) * FACES.getFormat().getVertexSize() > FACES.getBuffer().capacity()) end3D();
 		if (!drawing3D) {
 			drawing3D = true;
@@ -145,7 +167,6 @@ public final class EspRenderer<T> {
 
 		double minX = box.minX - cameraX, minY = box.minY - cameraY, minZ = box.minZ - cameraZ;
 		double maxX = box.maxX - cameraX, maxY = box.maxY - cameraY, maxZ = box.maxZ - cameraZ;
-		int fill = color & 0xFFFFFF | FILL_ALPHA << 24;
 
 		face(minX, minY, minZ, maxX, minY, minZ, maxX, minY, maxZ, minX, minY, maxZ, fill);
 		face(minX, maxY, minZ, minX, maxY, maxZ, maxX, maxY, maxZ, maxX, maxY, minZ, fill);
@@ -158,7 +179,16 @@ public final class EspRenderer<T> {
 	public void end3D() {
 		if (!drawing3D) return;
 		drawing3D = false;
-		draw(FACES);
+
+		if (instanced()) {
+			boolean fog = prepare();
+			HiddenLayer.begin();
+			InstancedBoxes.drawCubes();
+			HiddenLayer.end();
+			restore(fog);
+		} else {
+			draw(FACES);
+		}
 	}
 
 	public void outline3D(Box box, int color, float width) {
@@ -183,7 +213,20 @@ public final class EspRenderer<T> {
 		GL11.glLineWidth(1.0F);
 	}
 
+	private static boolean instanced() {
+		return InstancedBoxes.available();
+	}
+
 	private static void draw(BufferBuilder buffer) {
+		boolean fog = prepare();
+		HiddenLayer.begin();
+		buffer.end();
+		UPLOADER.end(buffer);
+		HiddenLayer.end();
+		restore(fog);
+	}
+
+	private static boolean prepare() {
 		boolean fog = GL11.glIsEnabled(GL11.GL_FOG);
 		GlStateManager.disableFog();
 		GlStateManager.disableTexture();
@@ -192,12 +235,10 @@ public final class EspRenderer<T> {
 		GlStateManager.depthMask(false);
 		GlStateManager.enableBlend();
 		GlStateManager.blendFuncSeparate(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA, GL11.GL_ONE, GL11.GL_ZERO);
+		return fog;
+	}
 
-		HiddenLayer.begin();
-		buffer.end();
-		UPLOADER.end(buffer);
-		HiddenLayer.end();
-
+	private static void restore(boolean fog) {
 		GlStateManager.disableBlend();
 		GlStateManager.depthMask(true);
 		GlStateManager.enableDepthTest();
