@@ -4,7 +4,6 @@ import org.codeberg.illusionclient.event.api.Listen;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.Reference2ObjectMap;
 import it.unimi.dsi.fastutil.objects.Reference2ObjectOpenHashMap;
-import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
 import org.codeberg.illusionclient.IllusionClient;
 import org.codeberg.illusionclient.event.input.KeyPressEvent;
@@ -14,7 +13,6 @@ import org.codeberg.illusionclient.feature.module.client.ClickGuiModule;
 import org.codeberg.illusionclient.feature.module.client.ObsProof;
 import org.codeberg.illusionclient.feature.module.client.Tags;
 import org.codeberg.illusionclient.feature.module.client.Teams;
-import org.codeberg.illusionclient.feature.module.client.TestModule;
 import org.codeberg.illusionclient.feature.module.combat.AimAssist;
 import org.codeberg.illusionclient.feature.module.combat.AutoArmor;
 import org.codeberg.illusionclient.feature.module.combat.AutoBlock;
@@ -54,6 +52,7 @@ import org.codeberg.illusionclient.feature.module.player.Refill;
 import org.codeberg.illusionclient.feature.module.profiles.CreateProfile;
 import org.codeberg.illusionclient.feature.module.visual.AntiDebuff;
 import org.codeberg.illusionclient.feature.module.visual.Bedplates;
+import org.codeberg.illusionclient.feature.module.visual.Chams;
 import org.codeberg.illusionclient.feature.module.visual.ChestEsp;
 import org.codeberg.illusionclient.feature.module.visual.Esp;
 import org.codeberg.illusionclient.feature.module.visual.FakeBlock;
@@ -76,7 +75,6 @@ public final class ModuleManager {
 
 	public ModuleManager() {
 		if (SwapHook.SUPPORTED) modules.add(new ObsProof());
-		if (FabricLoader.getInstance().isDevelopmentEnvironment()) modules.add(new TestModule());
 		for (Module module : modules) byType.put(module.getClass(), module);
 		IllusionClient.BUS.subscribe(this);
 	}
@@ -125,6 +123,7 @@ public final class ModuleManager {
 			new Refill(),
 			new AntiDebuff(),
 			new Bedplates(),
+			new Chams(),
 			new ChestEsp(),
 			new Esp(),
 			new FakeBlock(),
