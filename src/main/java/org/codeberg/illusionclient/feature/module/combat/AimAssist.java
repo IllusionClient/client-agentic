@@ -95,6 +95,10 @@ public class AimAssist extends Module {
 	@Check("Sprinting")
 	public boolean sprinting = false;
 
+	@Description("Only aims while holding a weapon.")
+	@Check("Weapons Only")
+	public boolean weaponsOnly = true;
+
 	@Description("Only aims while you are clicking.")
 	@Check("Mouse Pressed")
 	public boolean mousePressed = true;
@@ -267,7 +271,7 @@ public class AimAssist extends Module {
 		if (sprinting && !player.isSprinting()) return false;
 		if (mousePressed && System.currentTimeMillis() - lastClick > clickWindow) return false;
 		if (breakingBlocks && minecraft.interactionManager.isMiningBlock()) return false;
-		return Weapons.isHolding(player);
+		return !weaponsOnly || Weapons.isHolding(player);
 	}
 
 	private boolean valid(PlayerEntity player, float yaw, float pitch, boolean anyFov) {

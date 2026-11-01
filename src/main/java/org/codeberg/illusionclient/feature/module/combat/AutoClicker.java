@@ -82,6 +82,10 @@ public class AutoClicker extends Module {
 	@Check("Randomize Inventory")
 	public boolean randomizeInventorySpeed = true;
 
+	@Description("Only clicks while holding a weapon.")
+	@Check("Weapons Only")
+	public boolean weaponsOnly = true;
+
 	@Description("Pauses while you use an item.")
 	@Check("Not Using Item")
 	public boolean notUsingItem = false;
@@ -213,12 +217,12 @@ public class AutoClicker extends Module {
 	private boolean fighting() {
 		LocalClientPlayerEntity player = minecraft.player;
 		return player != null && player.isAlive() && minecraft.screen == null
-			&& Weapons.isHolding(player) && !PlayerUtils.aimingAtBlock();
+			&& (!weaponsOnly || Weapons.isHolding(player)) && !PlayerUtils.aimingAtBlock();
 	}
 
 	private boolean activeInGame(LocalClientPlayerEntity player) {
 		if (!IllusionClient.INPUT.held(minecraft.options.attackKey) || !player.isAlive()) return false;
-		if (!Weapons.isHolding(player)) return false;
+		if (weaponsOnly && !Weapons.isHolding(player)) return false;
 		if (notUsingItem && player.getItemInUse() != null) return false;
 		return !allowBreakingBlocks || !PlayerUtils.aimingAtBlock();
 	}
