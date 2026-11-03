@@ -8,12 +8,17 @@ import org.codeberg.illusionclient.feature.module.api.ObsHidden;
 import org.codeberg.illusionclient.feature.module.client.ClickGuiModule;
 import org.codeberg.illusionclient.feature.module.client.ObsProof;
 import org.codeberg.illusionclient.feature.config.ConfigManager;
+import org.codeberg.illusionclient.feature.module.profiles.CreateProfile;
+import org.codeberg.illusionclient.feature.module.profiles.GenerateProfile;
 import org.codeberg.illusionclient.feature.module.profiles.ProfileModule;
 import org.codeberg.illusionclient.feature.ui.Draw;
 import org.codeberg.illusionclient.feature.ui.Tooltip;
 import org.codeberg.illusionclient.util.SwapHook;
 import org.lwjgl.input.Keyboard;
 
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 public class ModuleComponent extends Group {
@@ -21,6 +26,7 @@ public class ModuleComponent extends Group {
 	public static final String HOLD = "Hold";
 	private static final String OBS = "OBS";
 	private static final int OBS_HIDDEN = 0xFF2E7D4F, OBS_PARTIAL = 0xFFB58B1E, OBS_VISIBLE = 0xFFB3453C;
+	private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("d MMM yyyy, HH:mm").withZone(ZoneId.systemDefault());
 
 	final Module module;
 	private int keyLeft, keyRight, holdLeft, holdRight;
@@ -93,6 +99,10 @@ public class ModuleComponent extends Group {
 		return left - gap;
 	}
 
+	private static String date(long millis) {
+		return millis == 0 ? "Unknown" : DATE.format(Instant.ofEpochMilli(millis));
+	}
+
 	public static List<Component> options(Module module) {
 		List<Component> components = new ObjectArrayList<>();
 		SectionComponent section = null;
@@ -115,7 +125,20 @@ public class ModuleComponent extends Group {
 		if (module instanceof ClickGuiModule gui) {
 			components.add(new ButtonComponent("Positions", "Reset", gui::resetPositions));
 		}
+		if (module instanceof CreateProfile) {
+			TextInputComponent name = new TextInputComponent("Name", "Optional", IllusionClient.CONFIG::createNamedProfile);
+			components.add(name);
+			components.add(new ButtonComponent("Profile", "Create", name::submit));
+		}
+		if (module instanceof GenerateProfile generator) {
+			TextInputComponent name = new TextInputComponent("Name", "Optional", generator::generate);
+			components.add(name);
+			components.add(new ButtonComponent("Profile", "Generate", name::submit));
+		}
 		if (module instanceof ProfileModule profile && !profile.profile.equals(ConfigManager.DEFAULT_PROFILE)) {
+			components.add(new TextInputComponent("Rename", profile.profile, name -> IllusionClient.CONFIG.renameProfile(profile.profile, name)));
+			components.add(new InfoComponent("Created", () -> date(profile.created)));
+			components.add(new InfoComponent("Updated", () -> date(profile.updated)));
 			components.add(new ButtonComponent("Current Settings", "Save", () -> IllusionClient.CONFIG.saveProfile(profile.profile)));
 			components.add(new ButtonComponent("Profile", "Delete", () -> IllusionClient.CONFIG.deleteProfile(profile.profile)));
 		}

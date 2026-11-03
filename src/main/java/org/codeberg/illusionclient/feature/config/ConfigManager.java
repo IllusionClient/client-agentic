@@ -7,6 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.codeberg.illusionclient.IllusionClient;
 import org.codeberg.illusionclient.feature.config.api.*;
+import org.codeberg.illusionclient.feature.module.api.Category;
 import org.codeberg.illusionclient.feature.module.api.Module;
 import org.codeberg.illusionclient.feature.module.profiles.ProfileModule;
 import org.codeberg.illusionclient.feature.module.tags.TagModule;
@@ -43,6 +44,7 @@ public final class ConfigManager {
 	private static final String FORK_KEY = "forkProfile";
 	private static final String PROFILES_KEY = "profiles";
 	public static final String DEFAULT_PROFILE = "Default";
+	private static final String RESERVED_CHARACTERS = "\\/:*?\"<>|";
 	private static final Map<String, String> RENAMED_LABELS = Map.of("Randomize Inventory", "Randomize Inventory Speed");
 	private static final List<Consumer<JsonObject>> MIGRATIONS = List.of(
 		ConfigManager::keyByFieldName,
@@ -305,7 +307,7 @@ public final class ConfigManager {
 			tag.save();
 			return;
 		}
-		if (profile == null && !loading && !(source instanceof ProfileModule)) createProfile();
+		if (profile == null && !loading && !(source instanceof Module module && module.category == Category.PROFILES)) createProfile();
 	}
 
 	private void syncProfiles() {
@@ -323,7 +325,10 @@ public final class ConfigManager {
 				ProfileModule module = existing.get(name);
 				if (module == null) {
 					module = new ProfileModule(name);
-					if (profileSettings.get(name) instanceof JsonObject entry) load(module, entry);
+					JsonObject entry = profileSettings.get(name) instanceof JsonObject settings ? settings : new JsonObject();
+					load(module, entry);
+					module.created = date(entry, "created", name);
+					module.updated = date(entry, "updated", name);
 				}
 				modules.add(module);
 			}
@@ -336,11 +341,26 @@ public final class ConfigManager {
 		}
 	}
 
-	private Set<String> kept(String name) {
-		for (Module module : IllusionClient.MODULES.modules) {
-			if (module instanceof ProfileModule entry && entry.profile.equals(name)) return entry.keep;
+	private long date(JsonObject entry, String key, String name) {
+		if (entry.get(key) instanceof JsonPrimitive value && value.isNumber()) return value.getAsLong();
+		if (name.equals(DEFAULT_PROFILE)) return 0;
+		try {
+			return Files.getLastModifiedTime(profiles.resolve(name + ".json")).toMillis();
+		} catch (IOException _) {
+			return 0;
 		}
-		return Set.of();
+	}
+
+	private ProfileModule module(String name) {
+		for (Module module : IllusionClient.MODULES.modules) {
+			if (module instanceof ProfileModule entry && entry.profile.equals(name)) return entry;
+		}
+		return null;
+	}
+
+	private Set<String> kept(String name) {
+		ProfileModule module = module(name);
+		return module == null ? Set.of() : module.keep;
 	}
 
 	public synchronized void save() {
@@ -355,6 +375,8 @@ public final class ConfigManager {
 
 			JsonObject settings = write(entry);
 			settings.remove("enabled");
+			if (entry.created > 0) settings.addProperty("created", entry.created);
+			if (entry.updated > 0) settings.addProperty("updated", entry.updated);
 			profileSettings.add(entry.profile, settings);
 		}
 		root.add(PROFILES_KEY, profileSettings);
@@ -408,17 +430,77 @@ public final class ConfigManager {
 	}
 
 	public synchronized void createProfile(String prefix) {
+		saveProfile(freeName(prefix));
+	}
+
+	public synchronized boolean createNamedProfile(String name) {
+		if (name.isEmpty()) createProfile();
+		else if (usable(name)) saveProfile(name);
+		else return false;
+		return true;
+	}
+
+	public synchronized boolean generateProfile(String name, String tag, JsonObject modules) {
+		if (name.isEmpty()) name = freeName(tag);
+		else if (!usable(name)) return false;
+
+		if (!write(profiles.resolve(name + ".json"), modules)) return false;
+		syncProfiles();
+		module(name).tag = tag;
+		loadProfile(name);
+		return true;
+	}
+
+	public synchronized boolean renameProfile(String from, String to) {
+		if (to.equals(from)) return true;
+		if (from.equals(DEFAULT_PROFILE) || !usable(to)) return false;
+
+		save();
+		try {
+			Files.move(profiles.resolve(from + ".json"), profiles.resolve(to + ".json"));
+		} catch (IOException e) {
+			LOGGER.error("Failed to rename profile {} to {}", from, to, e);
+			return false;
+		}
+		if (profileSettings.remove(from) instanceof JsonObject entry) profileSettings.add(to, entry);
+		if (from.equals(profile)) profile = to;
+		syncProfiles();
+		save();
+		return true;
+	}
+
+	private String freeName(String prefix) {
 		List<String> existing = profiles();
 		int number = 1;
 		while (existing.contains(prefix + " " + number)) number++;
-		saveProfile(prefix + " " + number);
+		return prefix + " " + number;
+	}
+
+	private boolean usable(String name) {
+		String problem;
+		if (name.isBlank() || !name.equals(name.strip())) problem = "Profile names can't be blank or start or end with a space";
+		else if (name.equalsIgnoreCase(DEFAULT_PROFILE) || name.endsWith(".") || name.chars().anyMatch(chr -> RESERVED_CHARACTERS.indexOf(chr) >= 0)) problem = "Profile names can't be Default, end with a dot or contain " + RESERVED_CHARACTERS;
+		else if (profiles().stream().anyMatch(name::equalsIgnoreCase)) problem = "A profile called " + name + " already exists";
+		else return true;
+
+		Notifications.post(problem);
+		return false;
 	}
 
 	public synchronized void saveProfile(String name) {
 		if (!write(profiles.resolve(name + ".json"), writeModules())) return;
 		profile = name;
-		save();
 		syncProfiles();
+		module(name).updated = System.currentTimeMillis();
+		save();
+	}
+
+	public JsonObject defaults() {
+		return defaults.deepCopy();
+	}
+
+	public JsonObject snapshot() {
+		return writeModules();
 	}
 
 	public synchronized void loadProfile(String name) {

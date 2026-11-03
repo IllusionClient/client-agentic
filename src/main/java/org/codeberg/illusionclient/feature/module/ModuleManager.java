@@ -53,6 +53,7 @@ import org.codeberg.illusionclient.feature.module.player.InventoryCleaner;
 import org.codeberg.illusionclient.feature.module.player.LiquidSteal;
 import org.codeberg.illusionclient.feature.module.player.Refill;
 import org.codeberg.illusionclient.feature.module.profiles.CreateProfile;
+import org.codeberg.illusionclient.feature.module.profiles.GenerateProfile;
 import org.codeberg.illusionclient.feature.module.visual.AntiDebuff;
 import org.codeberg.illusionclient.feature.module.visual.Bedplates;
 import org.codeberg.illusionclient.feature.module.visual.Chams;
@@ -141,6 +142,7 @@ public final class ModuleManager {
 			new NoHurtCam(),
 			new Pointers(),
 			new CreateProfile(),
+			new GenerateProfile(),
 			new Notifications()
 		));
 	}

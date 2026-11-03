@@ -12,6 +12,7 @@ import org.codeberg.illusionclient.IllusionClient;
 import org.codeberg.illusionclient.feature.module.api.Module;
 import org.codeberg.illusionclient.feature.module.client.ClickGuiModule;
 import org.codeberg.illusionclient.feature.ui.component.KeybindComponent;
+import org.codeberg.illusionclient.feature.ui.component.TextInputComponent;
 import org.codeberg.illusionclient.util.HiddenLayer;
 import org.codeberg.illusionclient.util.KeyboardUtils;
 import org.codeberg.illusionclient.util.MouseUtils;
@@ -38,6 +39,7 @@ public abstract class ClickGui {
 
 		current = null;
 		Keyboard.enableRepeatEvents(repeatEvents);
+		TextInputComponent.blur();
 		gui.removed();
 		if (gui.minecraft.screen instanceof Host) gui.minecraft.openScreen(null);
 	}
@@ -135,15 +137,17 @@ public abstract class ClickGui {
 		int mouseX = Mouse.getEventX() * width / minecraft.width;
 		int mouseY = height - Mouse.getEventY() * height / minecraft.height - 1;
 		int button = Mouse.getEventButton();
-		if (Mouse.getEventButtonState()) mouseClicked(mouseX, mouseY, button);
-		else if (button != -1) mouseReleased(mouseX, mouseY, button);
+		if (Mouse.getEventButtonState()) {
+			TextInputComponent.blur();
+			mouseClicked(mouseX, mouseY, button);
+		} else if (button != -1) mouseReleased(mouseX, mouseY, button);
 
 		int wheel = Mouse.getEventDWheel();
 		if (wheel != 0) scrolled(mouseX, Integer.signum(wheel));
 	}
 
 	private void keyboardEvent() {
-		if (Keyboard.getEventKeyState()) {
+		if (Keyboard.getEventKeyState() && !TextInputComponent.typed(Keyboard.getEventCharacter(), Keyboard.getEventKey())) {
 			int key = Keyboard.getEventKey();
 			if (key == IllusionClient.MODULES.get(ClickGuiModule.class).getBind() && !Keyboard.isRepeatEvent() && !KeybindComponent.isListening() && !capturesBind()) close();
 			else keyPressed(Keyboard.getEventCharacter(), key);
