@@ -84,6 +84,7 @@ public class AutoBlock extends Module {
 	public boolean damaged = false;
 
 	private boolean blocking;
+	private boolean useHeld;
 	private long blockedAt;
 	private long lagEndsAt;
 
@@ -120,6 +121,14 @@ public class AutoBlock extends Module {
 		}
 
 		long now = System.currentTimeMillis();
+		boolean held = IllusionClient.INPUT.held(minecraft.options.useKey);
+		if (held != useHeld) {
+			useHeld = held;
+			restore();
+			blocking = held && rightMousePressed;
+			if (blocking) blockedAt = now;
+		}
+
 		if (lagEndsAt != 0L && (now >= lagEndsAt || preventDelayingAttacks && IllusionClient.INPUT.held(minecraft.options.attackKey))) {
 			lag.release();
 			lagEndsAt = 0L;
@@ -134,11 +143,10 @@ public class AutoBlock extends Module {
 	}
 
 	private boolean shouldBlock(LocalClientPlayerEntity player) {
-		if (!player.isAlive() || IllusionClient.INPUT.held(minecraft.options.useKey) && !blocking) return false;
+		if (!player.isAlive() || (rightMousePressed ? !useHeld : useHeld)) return false;
 		ItemStack stack = player.getItemInHand();
 		if (stack == null || !(stack.getItem() instanceof SwordItem)) return false;
 		if (leftMousePressed && !IllusionClient.INPUT.held(minecraft.options.attackKey)) return false;
-		if (rightMousePressed && !IllusionClient.INPUT.held(minecraft.options.useKey) && !blocking) return false;
 		if (damaged && player.damagedTimer == 0) return false;
 
 		float untilHittable = Math.max(0, player.invulnerableTimer - player.invulnerableTicks / 2) * MS_PER_TICK;
@@ -163,8 +171,17 @@ public class AutoBlock extends Module {
 		if (pressed) blockedAt = now;
 	}
 
+	private void restore() {
+		KeyBinding key = minecraft.options.useKey;
+		int code = key.getKeyCode();
+		if (code < 0) MouseUtils.resync(code + 100);
+		else KeyboardUtils.set(key, IllusionClient.INPUT.held(key));
+	}
+
 	private void reset() {
-		if (blocking) block(false, 0L);
+		if (blocking != useHeld) restore();
+		blocking = false;
+		useHeld = false;
 		lag.release();
 		lagEndsAt = 0L;
 		blockedAt = 0L;
