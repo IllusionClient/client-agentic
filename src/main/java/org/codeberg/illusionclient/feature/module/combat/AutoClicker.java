@@ -279,7 +279,7 @@ public class AutoClicker extends Module {
 		if (!IllusionClient.INPUT.held(minecraft.options.attackKey) || !player.isAlive()) return false;
 		if (weaponsOnly && !Weapons.isHolding(player)) return false;
 		if (notUsingItem && player.getItemInUse() != null) return false;
-		return !allowBreakingBlocks || !PlayerUtils.aimingAtBlock();
+		return !allowBreakingBlocks || !PlayerUtils.canBreakAimedBlock();
 	}
 
 	private boolean pacedInventory() {
