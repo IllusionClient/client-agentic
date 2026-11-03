@@ -2,8 +2,10 @@ package org.codeberg.illusionclient.util;
 
 import net.minecraft.block.Block;
 import net.minecraft.block.Blocks;
+import net.minecraft.entity.living.player.PlayerEntity;
 import net.minecraft.entity.living.player.PlayerInventory;
 import net.minecraft.item.BlockItem;
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 
 public final class ItemUtils {
@@ -36,5 +38,18 @@ public final class ItemUtils {
 			}
 		}
 		return best;
+	}
+
+	public static boolean holding(PlayerEntity player, Item item) {
+		ItemStack held = player.inventory.getSelectedItem();
+		return held != null && held.getItem() == item;
+	}
+
+	public static int hotbarSlot(PlayerInventory inventory, Item item) {
+		for (int slot = 0; slot < PlayerInventory.getHotbarSize(); slot++) {
+			ItemStack stack = inventory.items[slot];
+			if (stack != null && stack.getItem() == item) return slot;
+		}
+		return -1;
 	}
 }

@@ -6,9 +6,6 @@ import net.minecraft.block.state.BlockState;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.living.player.LocalClientPlayerEntity;
 import net.minecraft.entity.living.player.PlayerEntity;
-import net.minecraft.entity.living.player.PlayerInventory;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
@@ -27,6 +24,7 @@ import org.codeberg.illusionclient.feature.module.api.Module;
 import org.codeberg.illusionclient.feature.module.api.ModuleInfo;
 import org.codeberg.illusionclient.feature.module.client.Weapons;
 import org.codeberg.illusionclient.util.CombatUtils;
+import org.codeberg.illusionclient.util.ItemUtils;
 import org.codeberg.illusionclient.util.RotationUtils;
 import org.codeberg.illusionclient.util.rotation.RotationManager;
 
@@ -91,7 +89,7 @@ public class AutoLava extends Module {
 				else start(player);
 			}
 			case PLACE -> {
-				if (!holding(player, Items.LAVA_BUCKET)) {
+				if (!ItemUtils.holding(player, Items.LAVA_BUCKET)) {
 					finish();
 					return;
 				}
@@ -106,7 +104,7 @@ public class AutoLava extends Module {
 				if (!lavaSource(cell) || !aim(player, new Vec3d(cell.getX() + 0.5D, cell.getY() + 0.4D, cell.getZ() + 0.5D))) finish();
 			}
 			case PICKUP -> {
-				if (!lavaSource(cell) || !holding(player, Items.BUCKET) || ++timer > MAX_PICKUP_TRIES) {
+				if (!lavaSource(cell) || !ItemUtils.holding(player, Items.BUCKET) || ++timer > MAX_PICKUP_TRIES) {
 					finish();
 					return;
 				}
@@ -121,7 +119,7 @@ public class AutoLava extends Module {
 		if (weaponsOnly && !Weapons.isHolding(player)) return;
 		if (waitForCritical && (player.onGround || player.velocityY >= 0.0D)) return;
 
-		int slot = slot(player.inventory, Items.LAVA_BUCKET);
+		int slot = ItemUtils.hotbarSlot(player.inventory, Items.LAVA_BUCKET);
 		if (slot == -1) return;
 
 		PlayerEntity target = CombatUtils.best(other -> other.isAlive() && other.onGround && CombatUtils.isTarget(other)
@@ -187,18 +185,5 @@ public class AutoLava extends Module {
 	private boolean lavaSource(BlockPos pos) {
 		BlockState state = minecraft.world.getBlockState(pos);
 		return state.getBlock().getMaterial() == Material.LAVA && state.get(LiquidBlock.LEVEL) == 0;
-	}
-
-	private static boolean holding(LocalClientPlayerEntity player, Item item) {
-		ItemStack held = player.inventory.getSelectedItem();
-		return held != null && held.getItem() == item;
-	}
-
-	private static int slot(PlayerInventory inventory, Item item) {
-		for (int slot = 0; slot < PlayerInventory.getHotbarSize(); slot++) {
-			ItemStack stack = inventory.items[slot];
-			if (stack != null && stack.getItem() == item) return slot;
-		}
-		return -1;
 	}
 }
