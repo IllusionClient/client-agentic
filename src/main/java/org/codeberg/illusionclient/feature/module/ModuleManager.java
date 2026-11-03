@@ -38,6 +38,7 @@ import org.codeberg.illusionclient.feature.module.movement.NoSlow;
 import org.codeberg.illusionclient.feature.module.movement.NullMove;
 import org.codeberg.illusionclient.feature.module.movement.Sprint;
 import org.codeberg.illusionclient.feature.module.movement.Timer;
+import org.codeberg.illusionclient.feature.module.player.AutoExtinguish;
 import org.codeberg.illusionclient.feature.module.player.AutoHeal;
 import org.codeberg.illusionclient.feature.module.player.AutoTool;
 import org.codeberg.illusionclient.feature.module.player.BedWars;
@@ -49,6 +50,7 @@ import org.codeberg.illusionclient.feature.module.player.Clutch;
 import org.codeberg.illusionclient.feature.module.player.FastMine;
 import org.codeberg.illusionclient.feature.module.player.FastPlace;
 import org.codeberg.illusionclient.feature.module.player.InventoryCleaner;
+import org.codeberg.illusionclient.feature.module.player.LiquidSteal;
 import org.codeberg.illusionclient.feature.module.player.Refill;
 import org.codeberg.illusionclient.feature.module.profiles.CreateProfile;
 import org.codeberg.illusionclient.feature.module.visual.AntiDebuff;
@@ -112,6 +114,7 @@ public final class ModuleManager {
 			new NullMove(),
 			new Sprint(),
 			new Timer(),
+			new AutoExtinguish(),
 			new AutoHeal(),
 			new AutoTool(),
 			new BedWars(),
@@ -123,6 +126,7 @@ public final class ModuleManager {
 			new FastMine(),
 			new FastPlace(),
 			new InventoryCleaner(),
+			new LiquidSteal(),
 			new Refill(),
 			new AntiDebuff(),
 			new Bedplates(),
