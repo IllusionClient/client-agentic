@@ -10,6 +10,7 @@
 - Added Clutch, which turns and places blocks under you when you fall off an edge or get knocked into the void. It looks ahead to where you will be, builds off blocks up to a few placements away, and turns back to wherever you move your mouse in the meantime.
 - Added Block In, which surrounds you with blocks starting on the side facing your opponent. Toggle mode turns itself off when done, and Auto mode blocks you in when an opponent gets close while you stand still. It aims without moving your camera, and its Rotation Strafe option (Silent, Strict or Off) picks how your movement follows that aim.
 - Added Timer, which speeds up or slows down the whole game.
+- Added Criticals, which makes more of your hits land as critical hits. Lag mode holds your packets while you fall after a hit, so the server sees you falling for longer, and Tick mode skips ahead to the moment you start falling, like Timer Range.
 - Added Auto Armor, which puts on the armor set that protects you the most, from your inventory or straight from your hotbar.
 - Added Inventory Cleaner, which drops junk and worse gear, merges stacks and sorts your hotbar. It keeps exactly the armor Auto Armor would wear.
 - Added Chest Stealer. It skips items Inventory Cleaner would drop, puts items straight into their hotbar slot, and can pause and miss-click like a real player.
