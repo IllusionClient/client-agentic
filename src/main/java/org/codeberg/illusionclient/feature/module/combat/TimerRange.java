@@ -29,6 +29,7 @@ import org.codeberg.illusionclient.mixin.RemoteClientPlayerEntityAccessor;
 import org.codeberg.illusionclient.util.CombatUtils;
 import org.codeberg.illusionclient.util.RotationUtils;
 import org.codeberg.illusionclient.util.SimulatedPlayer;
+import org.codeberg.illusionclient.util.TickShifter;
 import org.codeberg.illusionclient.util.lag.LagManager;
 
 @ModuleInfo(name = "Timer Range", category = Category.COMBAT)
@@ -39,6 +40,7 @@ public class TimerRange extends Module {
 	private static final double TARGET_FOV = 70.0D;
 	private final Minecraft minecraft = Minecraft.getInstance();
 	private final LagManager.Lag lag = IllusionClient.LAG.createOutbound();
+	private final TickShifter shifter = new TickShifter();
 
 	@Description("Regular skips then pauses, Legit pauses then skips like a lag spike.")
 	@Combo(value = "Mode", options = {"Regular", "Legit"})
@@ -81,13 +83,10 @@ public class TimerRange extends Module {
 
 	private PlayerEntity target;
 	private boolean eligible;
-	private int remaining;
 	private int pending;
 	private int debt;
-	private int frozenTicks;
 	private boolean hit;
 	private boolean attacking;
-	private float heldPartialTick;
 	private long readyAt;
 
 	@Override
@@ -114,9 +113,8 @@ public class TimerRange extends Module {
 
 	@Listen
 	public void onTimer(TimerEvent event) {
-		if (eligible && frozenTicks == 0 && remaining == 0 && System.currentTimeMillis() >= readyAt) trigger(event);
-		if (frozenTicks > 0) freeze(event);
-		heldPartialTick = event.partialTick;
+		if (eligible && shifter.available() && System.currentTimeMillis() >= readyAt) trigger(event);
+		if (shifter.onTimer(event)) thaw(event);
 	}
 
 	@Listen
@@ -128,7 +126,7 @@ public class TimerRange extends Module {
 			return;
 		}
 
-		if (remaining > 0) {
+		if (shifter.bursting()) {
 			burst(player);
 			return;
 		}
@@ -145,42 +143,33 @@ public class TimerRange extends Module {
 		hit = false;
 		if (legit()) {
 			pending = ticks;
-			frozenTicks = ticks;
+			shifter.freeze(ticks);
 			lag.hold(Long.MAX_VALUE);
 		} else {
-			debt = ticks - event.ticks;
-			remaining = ticks;
-			event.ticks = ticks;
+			debt = shifter.skip(event, ticks);
 		}
 	}
 
-	private void freeze(TimerEvent event) {
-		int swallowed = Math.min(event.ticks, frozenTicks);
-		frozenTicks -= swallowed;
-		event.ticks -= swallowed;
-		if (frozenTicks > 0 || event.ticks == 0) event.partialTick = heldPartialTick;
-		if (frozenTicks > 0) return;
-
+	private void thaw(TimerEvent event) {
 		readyAt = secondsFromNow(cooldown);
 		if (pending == 0) return;
 
 		lag.release();
-		remaining = pending;
-		event.ticks += pending;
+		shifter.skip(event, event.ticks + pending);
 		pending = 0;
 	}
 
 	private void burst(LocalClientPlayerEntity player) {
-		remaining--;
+		boolean last = shifter.step();
 		HitResult crosshair = minecraft.crosshairTarget;
 		if (!hit && player.getItemInUse() == null && crosshair != null && crosshair.entity == target) {
 			attacking = true;
 			KeyBinding.click(minecraft.options.attackKey.getKeyCode());
 			hit = true;
 		}
-		if (remaining > 0 || legit()) return;
+		if (!last || legit()) return;
 
-		frozenTicks = debt;
+		shifter.freeze(debt);
 		ItemStack stack = player.getItemInHand();
 		if (blockWhileFrozen && stack != null && stack.getItem() instanceof SwordItem && player.getItemInUse() == null) {
 			KeyBinding.click(minecraft.options.useKey.getKeyCode());
@@ -269,7 +258,8 @@ public class TimerRange extends Module {
 	private void reset() {
 		target = null;
 		eligible = false;
-		remaining = pending = frozenTicks = 0;
+		pending = 0;
+		shifter.reset();
 		lag.release();
 	}
 }
