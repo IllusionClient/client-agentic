@@ -18,6 +18,7 @@
 - Inventory modules share one open inventory and take turns instead of reopening it. Their cursor travel time follows Fitts's law.
 - Added Notifications, which shows a popup in the corner when a module is toggled or a profile is loaded. Each kind of popup can be turned off.
 - Added Knockback Delay, which delays the knockback you take when hit, with distance, chance, maximum delay and condition options.
+- Added Knockback Displace, which turns for one tick before you hit so your target's knockback lands at an angle.
 - Added Chams, which draws players through walls, skipping teammates and bots. It can draw them in a flat color with an opacity slider or at full brightness, and the same options can apply to your first-person hand. It works with Argentum's entity instancing and entity culling.
 - Added Item ESP, which draws boxes around dropped items like iron, gold, diamonds, emeralds, golden apples and ender pearls. It can show stack counts and highlight everything else in one color.
 - Added Fast Mine, which mines blocks faster and shortens the pause after breaking one. It can also count that pause down while you aren't mining, which looks the same as vanilla.

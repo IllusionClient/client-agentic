@@ -72,7 +72,7 @@ public final class CombatUtils {
 			(entity.z - entity.prevZ) * lead - (self.z - self.prevZ) * back);
 	}
 
-	public static Vec3d predictKnockback(Entity target, LivingEntity attacker) {
+	public static Vec3d predictKnockback(Entity target, LivingEntity attacker, float yaw) {
 		double vx = (target.x - target.prevX) / 2.0D;
 		double vy = (target.onGround ? -0.0784D : target.y - target.prevY) / 2.0D;
 		double vz = (target.z - target.prevZ) / 2.0D;
@@ -87,10 +87,10 @@ public final class CombatUtils {
 
 		int bonus = EnchantmentHelper.getKnockbackLevel(attacker) + (attacker.isSprinting() ? 1 : 0);
 		if (bonus > 0) {
-			double yaw = Math.toRadians(attacker.yaw);
-			vx -= Math.sin(yaw) * bonus * 0.5D;
+			double radians = Math.toRadians(yaw);
+			vx -= Math.sin(radians) * bonus * 0.5D;
 			vy += 0.1D;
-			vz += Math.cos(yaw) * bonus * 0.5D;
+			vz += Math.cos(radians) * bonus * 0.5D;
 		}
 		return new Vec3d(vx, vy, vz);
 	}
