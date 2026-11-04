@@ -63,7 +63,7 @@ public class ChestStealer extends Module {
 	@Section("Timing")
 	@Description("Time between taking two items.")
 	@RangeSlider(value = "Delay (ms)", min = 0.0F, max = 500.0F)
-	public float[] delay = {80.0F, 120.0F};
+	public float[] delay = {0.0F, 10.0F};
 
 	@Description("Time to wait after the chest opens before taking the first item.")
 	@RangeSlider(value = "Start Delay (ms)", min = 0.0F, max = 1000.0F)
@@ -71,7 +71,7 @@ public class ChestStealer extends Module {
 
 	@Description("Extra time to move the cursor to a far slot. Grows slower the farther it goes, like a real mouse.")
 	@Slider(value = "Travel Delay (ms)", min = 0.0F, max = 200.0F, step = 1.0F)
-	public float travelDelay = 25.0F;
+	public float travelDelay = 130.0F;
 
 	@Description("Chance after each item to stop for a moment.")
 	@Slider(value = "Short Stop Chance (%)", min = 0.0F, max = 100.0F, step = 1.0F)
@@ -84,7 +84,7 @@ public class ChestStealer extends Module {
 	@Section("Mistakes")
 	@Description("Chance to click an empty slot next to the item first, then pause.")
 	@Slider(value = "Miss Click Chance (%)", min = 0.0F, max = 100.0F, step = 1.0F)
-	public float missClickChance = 0.0F;
+	public float missClickChance = 1.0F;
 
 	@Description("Raises the miss click chance for items that are farther away.")
 	@Check("Scale With Distance")
@@ -92,7 +92,7 @@ public class ChestStealer extends Module {
 
 	@Description("How long to pause after a miss click.")
 	@RangeSlider(value = "Miss Click Pause (ms)", min = 0.0F, max = 1000.0F)
-	public float[] missClickPause = {350.0F, 650.0F};
+	public float[] missClickPause = {200.0F, 300.0F};
 
 	@Section("Closing")
 	@Description("Closes the chest once there is nothing left to take or your inventory is full.")
@@ -102,7 +102,7 @@ public class ChestStealer extends Module {
 	@Description("Time to wait before closing the chest.")
 	@Requires("autoClose")
 	@RangeSlider(value = "Close Delay (ms)", min = 0.0F, max = 1000.0F)
-	public float[] closeDelay = {100.0F, 200.0F};
+	public float[] closeDelay = {60.0F, 90.0F};
 
 	private int loadedMenu = -1;
 	private int menu = -1;
