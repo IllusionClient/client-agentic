@@ -59,17 +59,17 @@ public class SprintReset extends Module {
 
 	@Description("W-Tap lets go of forward, S-Tap holds forward and back together, Sneak sneaks, No Stop only drops sprint, Dynamic picks for you.")
 	@Combo(value = "Mode", options = {"W-Tap", "S-Tap", "Sneak", "No Stop", "Dynamic"})
-	public String mode = "W-Tap";
+	public String mode = "No Stop";
 
 	@Description("How long to wait after a hit before resetting.")
 	@Requires(value = "mode", is = {"W-Tap", "S-Tap", "Sneak", "No Stop"})
 	@Slider(value = "Delay After Attack (ms)", min = 0.0F, max = 500.0F)
-	public float delayAfterAttack = 250.0F;
+	public float delayAfterAttack = 100.0F;
 
 	@Description("How long to stop sprinting for.")
 	@Requires(value = "mode", is = {"W-Tap", "S-Tap", "Sneak", "No Stop"})
 	@Slider(value = "Stop Duration (ms)", min = 50.0F, max = 500.0F)
-	public float stopDuration = 100.0F;
+	public float stopDuration = 50.0F;
 
 	@Description("How long Dynamic usually stops sprinting for when you're the one pressing the attack.")
 	@Requires(value = "mode", is = "Dynamic")
