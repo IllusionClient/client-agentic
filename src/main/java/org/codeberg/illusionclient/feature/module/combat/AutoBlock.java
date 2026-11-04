@@ -17,7 +17,7 @@ import org.codeberg.illusionclient.feature.module.api.Category;
 import org.codeberg.illusionclient.feature.module.api.Description;
 import org.codeberg.illusionclient.feature.module.api.Module;
 import org.codeberg.illusionclient.feature.module.api.ModuleInfo;
-import org.codeberg.illusionclient.feature.module.visual.FakeBlock;
+import org.codeberg.illusionclient.util.CombatUtils;
 import org.codeberg.illusionclient.util.KeyboardUtils;
 import org.codeberg.illusionclient.util.MouseUtils;
 import org.codeberg.illusionclient.util.lag.LagManager;
@@ -43,7 +43,7 @@ public class AutoBlock extends Module {
 	@Slider(value = "Maximum Hold Duration (ms)", min = 50.0F, max = 450.0F)
 	public float maximumHoldDuration = 100.0F;
 
-	@Description("Keeps your sword looking blocked. Only you see it, other players still see you unblock.")
+	@Description("Keeps your sword looking blocked, with block hits if an old animations mod adds them. Only you see it, other players still see you unblock.")
 	@Check("Force Block Animation")
 	public boolean forceBlockAnimation = false;
 
@@ -99,7 +99,7 @@ public class AutoBlock extends Module {
 	}
 
 	public boolean forcesBlockAnimation() {
-		return isEnabled() && forceBlockAnimation && (!animationOnlyWithTarget || FakeBlock.targetInRange(range));
+		return isEnabled() && forceBlockAnimation && holdingSword(minecraft.player) && (!animationOnlyWithTarget || targetInRange());
 	}
 
 	@Listen
@@ -144,14 +144,23 @@ public class AutoBlock extends Module {
 
 	private boolean shouldBlock(LocalClientPlayerEntity player) {
 		if (!player.isAlive() || (rightMousePressed ? !useHeld : useHeld)) return false;
-		ItemStack stack = player.getItemInHand();
-		if (stack == null || !(stack.getItem() instanceof SwordItem)) return false;
+		if (!holdingSword(player)) return false;
 		if (leftMousePressed && !IllusionClient.INPUT.held(minecraft.options.attackKey)) return false;
 		if (damaged && player.damagedTimer == 0) return false;
 
 		float untilHittable = Math.max(0, player.invulnerableTimer - player.invulnerableTicks / 2) * MS_PER_TICK;
 		if (untilHittable > maximumHurtTime) return false;
-		return FakeBlock.targetInRange(range);
+		return targetInRange();
+	}
+
+	private boolean holdingSword(LocalClientPlayerEntity player) {
+		ItemStack stack = player.getItemInHand();
+		return stack != null && stack.getItem() instanceof SwordItem;
+	}
+
+	private boolean targetInRange() {
+		return CombatUtils.best(other -> other.isAlive() && CombatUtils.isTarget(other) && CombatUtils.distanceTo(other) <= range,
+			CombatUtils::distanceTo) != null;
 	}
 
 	private void unblock(long now) {

@@ -59,7 +59,6 @@ import org.codeberg.illusionclient.feature.module.visual.Bedplates;
 import org.codeberg.illusionclient.feature.module.visual.Chams;
 import org.codeberg.illusionclient.feature.module.visual.ChestEsp;
 import org.codeberg.illusionclient.feature.module.visual.Esp;
-import org.codeberg.illusionclient.feature.module.visual.FakeBlock;
 import org.codeberg.illusionclient.feature.module.visual.Indicators;
 import org.codeberg.illusionclient.feature.module.visual.ItemEsp;
 import org.codeberg.illusionclient.feature.module.visual.ModOverlay;
@@ -134,7 +133,6 @@ public final class ModuleManager {
 			new Chams(),
 			new ChestEsp(),
 			new Esp(),
-			new FakeBlock(),
 			new Indicators(),
 			new ItemEsp(),
 			new ModOverlay(),
