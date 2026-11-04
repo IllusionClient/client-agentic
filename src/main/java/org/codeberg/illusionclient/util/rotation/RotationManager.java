@@ -5,10 +5,17 @@ import net.minecraft.client.entity.living.player.Input;
 import net.minecraft.client.entity.living.player.LocalClientPlayerEntity;
 import net.minecraft.entity.living.LivingEntity;
 import net.minecraft.util.math.MathHelper;
+import org.codeberg.illusionclient.util.MoveUtils;
 import org.codeberg.illusionclient.util.RotationUtils;
+import org.codeberg.illusionclient.util.SimulatedPlayer;
 
 public final class RotationManager {
 	public enum Strafe { SILENT, STRICT, OFF }
+
+	private static final double MAX_DRIFT = 0.5D;
+	private static final double DRIFT_TOLERANCE = 0.03D;
+	private static final double PROGRESS_WEIGHT = 0.001D;
+	private static final double MIN_PROGRESS = 0.4D;
 
 	private final Minecraft minecraft = Minecraft.getInstance();
 	private boolean active;
@@ -21,6 +28,10 @@ public final class RotationManager {
 	private boolean model;
 	private final float[] modelRotation = new float[6];
 	private final float[] savedRotation = new float[6];
+	private boolean steering;
+	private double drift;
+	private double lastX;
+	private double lastZ;
 
 	public void rotate(float yaw, float pitch, Strafe strafe) {
 		float gcd = RotationUtils.mouseScale() * 0.15F;
@@ -32,6 +43,14 @@ public final class RotationManager {
 
 	public boolean active() {
 		return active;
+	}
+
+	public float sentYaw() {
+		return sentYaw;
+	}
+
+	public float sentPitch() {
+		return sentPitch;
 	}
 
 	public float yaw(float yaw) {
@@ -47,18 +66,52 @@ public final class RotationManager {
 	}
 
 	public void correctInput(Input input) {
-		if (!active || strafe != Strafe.SILENT) return;
+		LocalClientPlayerEntity player = minecraft.player;
+		float magnitude = Math.max(Math.abs(input.movementForward), Math.abs(input.movementSideways));
+		if (!active || strafe != Strafe.SILENT || magnitude == 0.0F) {
+			steering = false;
+			drift = 0.0D;
+			return;
+		}
 
-		float forward = input.movementForward;
-		float sideways = input.movementSideways;
-		float magnitude = Math.max(Math.abs(forward), Math.abs(sideways));
-		if (magnitude == 0.0F) return;
+		double[] heading = MoveUtils.inputDirection(player.yaw, input.movementForward, input.movementSideways);
+		double length = Math.hypot(heading[0], heading[1]);
+		double headingX = heading[0] / length;
+		double headingZ = heading[1] / length;
+		if (steering) drift = Math.clamp(drift + sideways(player.x - lastX, player.z - lastZ, headingX, headingZ), -MAX_DRIFT, MAX_DRIFT);
+		steering = true;
+		lastX = player.x;
+		lastZ = player.z;
 
-		double radians = Math.toRadians(minecraft.player.yaw - yaw);
-		double cos = Math.cos(radians);
-		double sin = Math.sin(radians);
-		input.movementForward = Math.round((forward * cos + sideways * sin) / magnitude) * magnitude;
-		input.movementSideways = Math.round((sideways * cos - forward * sin) / magnitude) * magnitude;
+		float bestForward = 0.0F;
+		float bestSideways = 0.0F;
+		double bestCost = Double.MAX_VALUE;
+		for (int forward = -1; forward <= 1; forward++) {
+			for (int sideways = -1; sideways <= 1; sideways++) {
+				double[] motion = MoveUtils.inputDirection(yaw, forward, sideways);
+				double progress = (motion[0] * headingX + motion[1] * headingZ) / Math.max(1.0D, Math.hypot(forward, sideways));
+				if (progress < MIN_PROGRESS) continue;
+
+				SimulatedPlayer simulated = SimulatedPlayer.of(player);
+				simulated.yaw = yaw;
+				simulated.forward = forward * magnitude;
+				simulated.sideways = sideways * magnitude;
+				simulated.tick();
+				double error = Math.abs(drift + sideways(simulated.x() - player.x, simulated.z() - player.z, headingX, headingZ));
+				double cost = Math.max(error, DRIFT_TOLERANCE) - progress * PROGRESS_WEIGHT;
+				if (cost < bestCost) {
+					bestCost = cost;
+					bestForward = forward * magnitude;
+					bestSideways = sideways * magnitude;
+				}
+			}
+		}
+		input.movementForward = bestForward;
+		input.movementSideways = bestSideways;
+	}
+
+	private static double sideways(double x, double z, double headingX, double headingZ) {
+		return x * headingZ - z * headingX;
 	}
 
 	public void sent(float yaw, float pitch) {

@@ -4,9 +4,7 @@ import org.codeberg.illusionclient.event.api.Listen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.living.player.LocalClientPlayerEntity;
 import net.minecraft.entity.living.player.PlayerEntity;
-import net.minecraft.util.math.Box;
 import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
 import org.codeberg.illusionclient.IllusionClient;
 import org.codeberg.illusionclient.event.render.Render3DEvent;
 import org.codeberg.illusionclient.event.world.WorldLoadEvent;
@@ -21,7 +19,6 @@ import org.codeberg.illusionclient.feature.module.api.Module;
 import org.codeberg.illusionclient.feature.module.api.ModuleInfo;
 import org.codeberg.illusionclient.feature.module.client.Weapons;
 import org.codeberg.illusionclient.util.CombatUtils;
-import org.codeberg.illusionclient.util.NoiseUtils;
 import org.codeberg.illusionclient.util.RotationUtils;
 
 @ModuleInfo(name = "Aim Assist", category = Category.COMBAT)
@@ -31,10 +28,7 @@ public class AimAssist extends Module {
 	private static final float RESIST_LIMIT = 15.0F;
 	private static final float RESIST_DECAY = 30.0F;
 	private static final long RESIST_COOLDOWN = 1000L;
-	private static final double CLOSE_RANGE = 3.5D;
-	private static final double NOISE_PER_DEGREE = 0.03D;
 	private static final double TARGETING_MARGIN = 0.1D;
-	private static final double EDGE_INSET = 0.05D;
 	private final Minecraft minecraft = Minecraft.getInstance();
 
 	@Description("Regular eases in, Linear is steady, Lock-on snaps.")
@@ -147,17 +141,6 @@ public class AimAssist extends Module {
 		return Integer.signum(counts) * Math.min(Math.abs(counts), Math.abs(mouse));
 	}
 
-	private static float step(float diff, float speed, float delta, String mode) {
-		return switch (mode) {
-			case "Lock-on" -> diff;
-			case "Linear" -> {
-				float limit = speed * 6.0F * delta * Math.min(1.0F, 0.4F + Math.abs(diff) / 15.0F);
-				yield Math.clamp(diff, -limit, limit);
-			}
-			default -> diff * (1.0F - (float) Math.pow(1.0F - Math.min(1.0F, speed / 100.0F), delta * 20.0F));
-		};
-	}
-
 	@Override
 	public String details() {
 		return mode;
@@ -189,7 +172,9 @@ public class AimAssist extends Module {
 		}
 		if (target != previous) resist = 0.0F;
 
-		float[] goal = RotationUtils.rotationTo(aimPoint(event.partialTicks()));
+		float[] goal = RotationUtils.rotationTo(RotationUtils.aimPoint(target,
+			CombatUtils.predictedShape(target, event.partialTicks(), predict / 100.0F * PREDICT_TICKS),
+			horizontalMultipoint, verticalMultipoint, randomization, noiseSeed));
 		float yawDiff = MathHelper.wrapDegrees(goal[0] - player.yaw);
 		float pitchDiff = goal[1] - player.pitch;
 
@@ -209,18 +194,17 @@ public class AimAssist extends Module {
 		if (yawDiff == 0.0F && pitchDiff == 0.0F) return;
 
 		boolean lockOn = mode.equals("Lock-on");
-		if (!lockOn) pitchDiff *= Math.max(0.0F, 1.0F - Math.abs(yawDiff) / NoiseUtils.wander(40.0F, 120.0F, 5.0F, 0));
+		if (!lockOn) pitchDiff = RotationUtils.easePitch(pitchDiff, yawDiff);
 
-		float drift = NoiseUtils.wander(0.95F, 1.05F, 60.0F, 1);
-		float yawStep = step(yawDiff, horizontalSpeed * drift * NoiseUtils.wander(0.9F, 1.1F, 1.0F, 2), delta, mode) * yield;
-		float pitchStep = step(pitchDiff, verticalSpeed * drift * NoiseUtils.wander(0.9F, 1.1F, 1.0F, 3), delta, mode) * yield;
+		float[] steps = RotationUtils.aimSteps(yawDiff, pitchDiff, horizontalSpeed, verticalSpeed, delta, mode);
+		float pitchStep = steps[1] * yield;
 
-		float yawTotal = yawStep + yawRemainder;
+		float yawTotal = steps[0] * yield + yawRemainder;
 		yawRemainder = yawTotal % gcd;
 		int yawCounts = RotationUtils.mouseCounts(yawTotal, yawDiff, gcd);
 		if (mouseMoved) yawCounts = follow(yawCounts, mouseX);
 
-		if (!lockOn && yawCounts != 0) pitchStep += Math.abs(yawCounts) * gcd * NoiseUtils.wander(-0.1F, 0.1F, 1.0F, 4);
+		if (!lockOn && yawCounts != 0) pitchStep += RotationUtils.pitchWobble(Math.abs(yawCounts) * gcd);
 		float pitchTotal = pitchStep + pitchRemainder;
 		pitchRemainder = pitchTotal % gcd;
 		int pitchCounts = RotationUtils.mouseCounts(pitchTotal, pitchDiff, gcd);
@@ -228,7 +212,7 @@ public class AimAssist extends Module {
 		if (yawCounts == 0 && pitchCounts == 0) return;
 
 		player.updateLocalPlayerCamera(yawCounts * scale, -pitchCounts * scale);
-		noiseSeed += (Math.abs(yawCounts) + Math.abs(pitchCounts)) * gcd * NOISE_PER_DEGREE;
+		noiseSeed += (Math.abs(yawCounts) + Math.abs(pitchCounts)) * gcd * RotationUtils.NOISE_PER_DEGREE;
 	}
 
 	private boolean resisted(float mouseYaw, float mousePitch, float yawDiff, float pitchDiff, float delta) {
@@ -256,7 +240,7 @@ public class AimAssist extends Module {
 		if (next == null) {
 			if (!holding && target != null && target.isAlive() && millis - lastSeen < retargetDelay) return null;
 			String sort = single ? "Aim angle" : sortBy;
-			next = CombatUtils.best(player -> valid(player, yaw, pitch, false), player -> score(player, sort, yaw, pitch));
+			next = CombatUtils.best(player -> valid(player, yaw, pitch, false), player -> CombatUtils.score(player, sort, yaw, pitch));
 		}
 		if (next != null) {
 			target = next;
@@ -282,35 +266,5 @@ public class AimAssist extends Module {
 		if (distance < range[0] || distance > range[1]) return false;
 		if (!anyFov && RotationUtils.angleTo(player, yaw, pitch) * 2.0D > fov[1]) return false;
 		return !notBehindBlocks || minecraft.player.canSee(player);
-	}
-
-	private double score(PlayerEntity player, String sort, float yaw, float pitch) {
-		return switch (sort) {
-			case "Health" -> player.getHealth();
-			case "Hurt time" -> player.damagedTimer;
-			case "Aim angle" -> RotationUtils.angleTo(player, yaw, pitch);
-			default -> CombatUtils.distanceTo(player);
-		};
-	}
-
-	private Vec3d aimPoint(float tickDelta) {
-		Box box = CombatUtils.predictedShape(target, tickDelta, predict / 100.0F * PREDICT_TICKS);
-		Vec3d eye = minecraft.player.getEyePosition(1.0F);
-		float near = (float) Math.min(1.0D, CombatUtils.distanceTo(box) / CLOSE_RANGE);
-		float spread = randomization / 100.0F * (0.1F + 0.9F * near);
-		float multipoint = horizontalMultipoint * near;
-		double x = axis(eye.x, (box.minX + box.maxX) / 2.0D, box.minX, box.maxX, multipoint, spread * 0.4F, NoiseUtils.noise(noiseSeed));
-		double y = axis(eye.y, box.minY + target.getEyeHeight(), box.minY, box.maxY, verticalMultipoint, spread * 0.3F, NoiseUtils.noise(noiseSeed + 10000.0D));
-		double z = axis(eye.z, (box.minZ + box.maxZ) / 2.0D, box.minZ, box.maxZ, multipoint, spread * 0.4F, NoiseUtils.noise(noiseSeed + 20000.0D));
-		return new Vec3d(x, y, z);
-	}
-
-	private static double axis(double eye, double center, double min, double max, float multipoint, float spread, float noise) {
-		double size = max - min;
-		double inset = Math.min(EDGE_INSET, size / 2.0D);
-		double reach = Math.min(size * spread, size / 2.0D - inset);
-		double closest = Math.clamp(eye, min + inset + reach, max - inset - reach);
-		double point = center + (closest - center) * multipoint / 100.0F + reach * noise;
-		return Math.clamp(point, min + inset, max - inset);
 	}
 }

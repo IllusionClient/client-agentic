@@ -26,6 +26,7 @@ import org.codeberg.illusionclient.feature.module.combat.Backtrack;
 import org.codeberg.illusionclient.feature.module.combat.CombatJump;
 import org.codeberg.illusionclient.feature.module.combat.Criticals;
 import org.codeberg.illusionclient.feature.module.combat.HitSelect;
+import org.codeberg.illusionclient.feature.module.combat.KillAura;
 import org.codeberg.illusionclient.feature.module.combat.KnockbackDelay;
 import org.codeberg.illusionclient.feature.module.combat.KnockbackDisplace;
 import org.codeberg.illusionclient.feature.module.combat.LagRange;
@@ -104,6 +105,7 @@ public final class ModuleManager {
 			new CombatJump(),
 			new Criticals(),
 			new HitSelect(),
+			new KillAura(),
 			new KnockbackDelay(),
 			new KnockbackDisplace(),
 			new LagRange(),

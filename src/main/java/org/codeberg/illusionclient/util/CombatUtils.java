@@ -54,12 +54,24 @@ public final class CombatUtils {
 		return best;
 	}
 
+	public static double score(PlayerEntity player, String sort, float yaw, float pitch) {
+		return switch (sort) {
+			case "Health" -> player.getHealth();
+			case "Hurt time" -> player.damagedTimer;
+			case "Aim angle" -> RotationUtils.angleTo(player, yaw, pitch);
+			default -> distanceTo(player);
+		};
+	}
+
 	public static boolean isHovered(Entity entity, double reach, double margin) {
-		LocalClientPlayerEntity self = Minecraft.getInstance().player;
-		Vec3d eye = self.getEyePosition(1.0F);
-		Vec3d look = self.getRotationVector(1.0F);
+		return isHovered(entity, Minecraft.getInstance().player.getRotationVector(1.0F), reach, margin);
+	}
+
+	public static boolean isHovered(Entity entity, Vec3d look, double reach, double margin) {
+		Vec3d eye = Minecraft.getInstance().player.getEyePosition(1.0F);
 		Vec3d end = eye.add(look.x * reach, look.y * reach, look.z * reach);
-		return entity.getShape().grown(margin, margin, margin).clip(eye, end) != null;
+		Box box = entity.getShape().grown(margin, margin, margin);
+		return box.contains(eye) || box.clip(eye, end) != null;
 	}
 
 	public static Box predictedShape(Entity entity, float tickDelta, float leadTicks) {
