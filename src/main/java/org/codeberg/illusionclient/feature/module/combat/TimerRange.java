@@ -53,7 +53,7 @@ public class TimerRange extends Module {
 	@Description("Most time to skip. Longer reaches farther but looks laggier.")
 	@Requires(value = "mode", is = "Regular")
 	@Slider(value = "Duration (ms)", min = 50.0F, max = 500.0F)
-	public float duration = 150.0F;
+	public float duration = 50.0F;
 
 	@Description("Most time to skip. Longer reaches farther but looks laggier.")
 	@Requires(value = "mode", is = "Legit")
@@ -62,7 +62,7 @@ public class TimerRange extends Module {
 
 	@Description("Cooldown before skipping again.")
 	@Slider(value = "Cooldown (s)", min = 0.1F, max = 5.0F)
-	public float cooldown = 2.0F;
+	public float cooldown = 0.8F;
 
 	@Description("Blocks with your sword while frozen to take less damage.")
 	@Requires(value = "mode", is = "Regular")
@@ -75,7 +75,7 @@ public class TimerRange extends Module {
 
 	@Description("Only activates while holding a weapon.")
 	@Check("Weapons Only")
-	public boolean weaponsOnly = true;
+	public boolean weaponsOnly = false;
 
 	@Description("Pauses while you use an item.")
 	@Check("Not Using Item")

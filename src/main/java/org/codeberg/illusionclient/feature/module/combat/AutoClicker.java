@@ -56,7 +56,7 @@ public class AutoClicker extends Module {
 	@Description("How many clicks per second to aim for.")
 	@Requires(value = "clickPattern", is = {"Jitter", "Butterfly"})
 	@Slider(value = "Target CPS", min = 1.0F, max = 25.0F)
-	public float targetCps = 12.0F;
+	public float targetCps = 13.2F;
 
 	@Description("Varies click timing to avoid a fixed rhythm.")
 	@Requires(value = "clickPattern", is = {"Jitter", "Butterfly"})

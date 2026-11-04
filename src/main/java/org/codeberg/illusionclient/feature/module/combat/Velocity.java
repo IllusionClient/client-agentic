@@ -34,7 +34,7 @@ public class Velocity extends Module {
 
 	@Description("Regular reduces motion, Ignore prevents knockback entirely, Jump automatically jumps after knockback.")
 	@Combo(value = "Mode", options = {"Regular", "Ignore", "Jump"})
-	public String mode = "Regular";
+	public String mode = "Jump";
 
 	@Description("How much horizontal knockback to keep.")
 	@Requires(value = "mode", is = "Regular")
@@ -49,11 +49,11 @@ public class Velocity extends Module {
 	@Description("How often the jump lands on the right tick. Missed jumps come 1 to 3 ticks late.")
 	@Requires(value = "mode", is = "Jump")
 	@Slider(value = "Accuracy (%)", min = 0.0F, max = 100.0F)
-	public float accuracy = 100.0F;
+	public float accuracy = 80.0F;
 
 	@Description("Chance to activate.")
 	@Slider(value = "Chance (%)", min = 0.0F, max = 100.0F)
-	public float chance = 100.0F;
+	public float chance = 80.0F;
 
 	@Description("Only activates while looking at a player.")
 	@Check("Looking At Player")

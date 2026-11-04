@@ -47,11 +47,11 @@ public class AimAssist extends Module {
 
 	@Description("Vertical turn speed.")
 	@Slider(value = "Vertical Speed", min = 0.0F, max = 100.0F)
-	public float verticalSpeed = 15.0F;
+	public float verticalSpeed = 0.0F;
 
 	@Description("Pulls horizontal aim toward your crosshair. 0 is center.")
 	@Slider(value = "Horizontal Multipoint", min = 0.0F, max = 100.0F)
-	public float horizontalMultipoint = 0.0F;
+	public float horizontalMultipoint = 25.0F;
 
 	@Description("Pulls vertical aim toward your crosshair. 0 is eye height.")
 	@Slider(value = "Vertical Multipoint", min = 0.0F, max = 100.0F)
@@ -59,7 +59,7 @@ public class AimAssist extends Module {
 
 	@Description("Aims ahead of moving targets.")
 	@Slider(value = "Predict", min = 0.0F, max = 100.0F)
-	public float predict = 0.0F;
+	public float predict = 15.0F;
 
 	@Description("Wanders the aim point around the hitbox.")
 	@Slider(value = "Randomization", min = 0.0F, max = 100.0F)
@@ -85,11 +85,11 @@ public class AimAssist extends Module {
 
 	@Description("Only aims at players within this distance.")
 	@RangeSlider(value = "Range", min = 0.0F, max = 8.0F)
-	public float[] range = {0.0F, 4.5F};
+	public float[] range = {0.0F, 8.0F};
 
 	@Description("Aims within the max angle, stops inside the min angle.")
 	@RangeSlider(value = "FOV", min = 0.0F, max = 360.0F)
-	public float[] fov = {0.0F, 90.0F};
+	public float[] fov = {0.0F, 140.0F};
 
 	@Description("Only aims while you are sprinting.")
 	@Check("Sprinting")
@@ -97,7 +97,7 @@ public class AimAssist extends Module {
 
 	@Description("Only aims while holding a weapon.")
 	@Check("Weapons Only")
-	public boolean weaponsOnly = true;
+	public boolean weaponsOnly = false;
 
 	@Description("Only aims while you are clicking.")
 	@Check("Mouse Pressed")
@@ -106,15 +106,15 @@ public class AimAssist extends Module {
 	@Description("Keeps aiming this long after you let go. 0 stops right away.")
 	@Requires("mousePressed")
 	@Slider(value = "Click Window (ms)", min = 0.0F, max = 500.0F)
-	public float clickWindow = 300.0F;
+	public float clickWindow = 500.0F;
 
 	@Description("Only aims while you move your mouse, and never further than you do.")
 	@Check("Mouse Moved")
-	public boolean mouseMoved = false;
+	public boolean mouseMoved = true;
 
 	@Description("Drops the target briefly when you aim away.")
 	@Check("Stop When Resisting")
-	public boolean resisting = false;
+	public boolean resisting = true;
 
 	@Description("Stops aiming while you are mining a block.")
 	@Check("Disable While Breaking Blocks")
