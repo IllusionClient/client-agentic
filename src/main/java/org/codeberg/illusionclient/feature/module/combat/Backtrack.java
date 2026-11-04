@@ -35,11 +35,11 @@ public class Backtrack extends Module {
 
 	@Description("Only lags players within this distance.")
 	@RangeSlider(value = "Target Distance", min = 0.0F, max = 8.0F)
-	public float[] targetDistance = {1.0F, 4.0F};
+	public float[] targetDistance = {2.0F, 3.2F};
 
 	@Description("The longest the target is held back.")
 	@Slider(value = "Maximum Delay (ms)", min = 0.0F, max = 500.0F)
-	public float maximumDelay = 200.0F;
+	public float maximumDelay = 50.0F;
 
 	@Description("Only lags players hit within this time. 500 is unlimited.")
 	@Slider(value = "Maximum Hurt Time (ms)", min = 0.0F, max = 500.0F)
@@ -47,11 +47,11 @@ public class Backtrack extends Module {
 
 	@Description("Cooldown before lagging again.")
 	@Slider(value = "Cooldown (s)", min = 0.0F, max = 5.0F)
-	public float cooldown = 0.0F;
+	public float cooldown = 0.4F;
 
 	@Description("Stops lagging as soon as you take knockback.")
 	@Check("Disable On Hit")
-	public boolean disableOnHit = true;
+	public boolean disableOnHit = false;
 
 	@Description("Shows the target's real server position.")
 	@Check("Show Ghost")
