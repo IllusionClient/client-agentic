@@ -65,11 +65,11 @@ public class BridgeAssist extends Module {
 	@Section("General")
 	@Description("How far past the edge before sneaking.")
 	@Slider(value = "Edge Offset", min = 0.0F, max = 0.3F, step = 0.01F)
-	public float edgeOffset = 0.2F;
+	public float edgeOffset = 0.24F;
 
 	@Description("Sneak time after you're back on the block.")
 	@Slider(value = "Unsneak Delay", min = 0.0F, max = 300.0F)
-	public float unsneakDelay = 150.0F;
+	public float unsneakDelay = 85.0F;
 
 	@Description("Varies the edge offset and unsneak delay.")
 	@Check("Randomize")
@@ -86,20 +86,20 @@ public class BridgeAssist extends Module {
 
 	@Description("Sneaks as you turn to bridge near an edge, until edge sneaking takes over.")
 	@Check("Pre-Sneak")
-	public boolean preSneak = false;
+	public boolean preSneak = true;
 
 	@Description("How close to an open edge you need to be for pre-sneak.")
 	@Requires("preSneak")
 	@Slider(value = "Pre-Sneak Distance", min = 0.0F, max = 0.5F)
-	public float preSneakDistance = 0.5F;
+	public float preSneakDistance = 0.3F;
 
 	@Description("Strafes you onto the block diagonal when bridging diagonally backwards.")
 	@Check("Strafe Align")
-	public boolean strafeAlign = false;
+	public boolean strafeAlign = true;
 
 	@Description("Blocks placements that would leave you at the edge and need a second sneak.")
 	@Check("Avoid Double-Sneaking")
-	public boolean avoidDoubleSneaking = false;
+	public boolean avoidDoubleSneaking = true;
 
 	@Description("Blocks placements until you've backed up to the edge on every axis you're moving along.")
 	@Check("Wait For Edge")
@@ -112,12 +112,12 @@ public class BridgeAssist extends Module {
 	@Section("Sneak On Jump")
 	@Description("Also sneaks at edges while rising from a jump, and on the way down below the jump sneak height.")
 	@Check("Sneak On Jump")
-	public boolean sneakOnJump = false;
+	public boolean sneakOnJump = true;
 
 	@Description("How high above your takeoff point to start sneaking on the way down.")
 	@Requires("sneakOnJump")
 	@Slider(value = "Jump Sneak Height", min = 0.0F, max = MAX_JUMP_HEIGHT, step = 0.01F)
-	public float jumpSneakHeight = 0.8F;
+	public float jumpSneakHeight = 0.0F;
 
 	@Description("Only sneaks in the air while you hold a movement key.")
 	@Requires("sneakOnJump")
@@ -131,15 +131,15 @@ public class BridgeAssist extends Module {
 
 	@Description("Only works while you hold blocks.")
 	@Check("Holding Blocks")
-	public boolean holdingBlocks = false;
+	public boolean holdingBlocks = true;
 
 	@Description("Only works while you look down.")
 	@Check("Looking Down")
-	public boolean lookingDown = false;
+	public boolean lookingDown = true;
 
 	@Description("Only works when not pressing forward.")
 	@Check("Not Moving Forward")
-	public boolean notMovingForward = false;
+	public boolean notMovingForward = true;
 
 	private boolean sneaking;
 	private boolean armed;
