@@ -4,10 +4,12 @@ import org.codeberg.illusionclient.event.api.Listen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.handler.PacketHandler;
 import net.minecraft.network.packet.Packet;
+import net.minecraft.network.packet.c2s.play.KeepAliveC2SPacket;
 import org.codeberg.illusionclient.IllusionClient;
 import org.codeberg.illusionclient.event.network.PacketReceiveEvent;
 import org.codeberg.illusionclient.event.network.PacketSendEvent;
 import org.codeberg.illusionclient.event.player.PlayerTickEvent;
+import org.codeberg.illusionclient.feature.module.client.PingFix;
 
 import java.util.ArrayDeque;
 import java.util.List;
@@ -39,10 +41,7 @@ public final class LagManager {
 	}
 
 	public boolean holdsKeepAlives() {
-		for (Lag lag : lags) {
-			if (lag.active && !lag.outbound && lag.holdKeepAlives) return true;
-		}
-		return false;
+		return wanted(false) && !pingFix();
 	}
 
 	public boolean isHeld(Packet<?> packet) {
@@ -65,6 +64,7 @@ public final class LagManager {
 	@Listen
 	public void onPacketSend(PacketSendEvent event) {
 		if (event.cancelled || outbound.isEmpty() && !wanted(true)) return;
+		if (event.packet() instanceof KeepAliveC2SPacket && pingFix()) return;
 
 		event.cancelled = true;
 		outbound.add(new Held(event.packet(), true, () -> event.connection().send(event.packet()), System.currentTimeMillis()));
@@ -73,6 +73,10 @@ public final class LagManager {
 	@Listen
 	public void onPlayerTick(PlayerTickEvent event) {
 		flush();
+	}
+
+	private static boolean pingFix() {
+		return IllusionClient.MODULES.get(PingFix.class).isEnabled();
 	}
 
 	private boolean wanted(boolean outbound) {
@@ -118,15 +122,10 @@ public final class LagManager {
 	public final class Lag {
 		private final boolean outbound;
 		private volatile boolean active;
-		private volatile boolean holdKeepAlives = true;
 		private long delay;
 
 		private Lag(boolean outbound) {
 			this.outbound = outbound;
-		}
-
-		public void holdKeepAlives(boolean hold) {
-			holdKeepAlives = hold;
 		}
 
 		public void hold(long delay) {

@@ -35,6 +35,7 @@
 - Added Auto Lava, which places lava from a bucket under opponents to burn and slow them, then picks it back up. It can wait for a critical so it pairs with Combat Jump.
 - Added Auto Extinguish, which places water under you when you're on fire and picks it back up once the fire is out.
 - Added Liquid Steal, which picks up water and lava your opponents place near you with an empty bucket from your hotbar. Water and lava can be turned off separately.
+- Added Ping Fix, which replies to the server instantly while any module holds packets, so your ping stays low. It replaces Backtrack's Ping Fix option, and your setting carries over.
 - Added config profiles under the new Profiles category. Each profile shows up there like a module: click it to switch, bind a key to it, and pick which categories (Client and Visual by default) keep your current settings when you switch. Create Profile saves your current settings as a new one. The Default profile always keeps the default settings, so changing anything on it makes a new profile for you.
 - Profiles can be tagged Closet, Semi or Blatant, renamed, and show when they were created and last saved. Create Profile asks for a name, or numbers the profile for you if you leave it empty.
 - Added Generate Profile, which makes a new profile from a Blatancy slider. Low values keep the combat modules close to their defaults, and higher ones push their settings further and turn on riskier modules. The new profile gets a matching tag.

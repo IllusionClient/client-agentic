@@ -52,7 +52,8 @@ public final class ConfigManager {
 		ConfigManager::weaponsAsSelections,
 		ConfigManager::forkWithoutProfile,
 		ConfigManager::autoSoupAsAutoHeal,
-		ConfigManager::noSlowOldNcp
+		ConfigManager::noSlowOldNcp,
+		ConfigManager::pingFixAsModule
 	);
 	private static final int VERSION = MIGRATIONS.size();
 
@@ -114,6 +115,15 @@ public final class ConfigManager {
 		if (root.get("NoSlow") instanceof JsonObject entry && entry.get("settings") instanceof JsonObject settings
 			&& settings.get("mode") instanceof JsonPrimitive mode && mode.getAsString().equals("NCP")) {
 			settings.addProperty("mode", "Old NCP");
+		}
+	}
+
+	private static void pingFixAsModule(JsonObject root) {
+		if (root.get("Backtrack") instanceof JsonObject entry && entry.get("settings") instanceof JsonObject settings
+			&& settings.remove("pingFix") instanceof JsonPrimitive pingFix && pingFix.getAsBoolean()) {
+			JsonObject module = new JsonObject();
+			module.addProperty("enabled", true);
+			root.add("PingFix", module);
 		}
 	}
 

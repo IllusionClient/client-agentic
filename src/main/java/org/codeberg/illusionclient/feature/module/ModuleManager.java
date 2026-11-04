@@ -11,6 +11,7 @@ import org.codeberg.illusionclient.feature.module.api.Module;
 import org.codeberg.illusionclient.feature.module.client.AntiBot;
 import org.codeberg.illusionclient.feature.module.client.ClickGuiModule;
 import org.codeberg.illusionclient.feature.module.client.ObsProof;
+import org.codeberg.illusionclient.feature.module.client.PingFix;
 import org.codeberg.illusionclient.feature.module.client.Tags;
 import org.codeberg.illusionclient.feature.module.client.Teams;
 import org.codeberg.illusionclient.feature.module.combat.AimAssist;
@@ -87,6 +88,7 @@ public final class ModuleManager {
 		return new ObjectArrayList<>(Arrays.asList(
 			new AntiBot(),
 			new ClickGuiModule(),
+			new PingFix(),
 			new Tags(),
 			new Teams(),
 			new AimAssist(),

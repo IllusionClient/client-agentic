@@ -53,10 +53,6 @@ public class Backtrack extends Module {
 	@Check("Disable On Hit")
 	public boolean disableOnHit = true;
 
-	@Description("Replies to the server instantly so ping stays low.")
-	@Check("Ping Fix")
-	public boolean pingFix = false;
-
 	@Description("Shows the target's real server position.")
 	@Check("Show Ghost")
 	public boolean showGhost = true;
@@ -119,7 +115,6 @@ public class Backtrack extends Module {
 
 		if (lagging && ghost != null && shouldLag(target)) {
 			ghost.tick();
-			lag.holdKeepAlives(!pingFix);
 			lag.hold((long) maximumDelay);
 			return;
 		}
