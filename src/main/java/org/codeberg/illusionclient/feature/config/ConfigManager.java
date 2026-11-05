@@ -53,7 +53,8 @@ public final class ConfigManager {
 		ConfigManager::forkWithoutProfile,
 		ConfigManager::autoSoupAsAutoHeal,
 		ConfigManager::noSlowOldNcp,
-		ConfigManager::pingFixAsModule
+		ConfigManager::pingFixAsModule,
+		ConfigManager::pauseDurationAsAttackDelay
 	);
 	private static final int VERSION = MIGRATIONS.size();
 
@@ -125,6 +126,17 @@ public final class ConfigManager {
 			module.addProperty("enabled", true);
 			root.add("PingFix", module);
 		}
+	}
+
+	private static void pauseDurationAsAttackDelay(JsonObject root) {
+		if (!(root.get("HitSelect") instanceof JsonObject hitSelect) || !(hitSelect.get("settings") instanceof JsonObject settings)
+			|| !(settings.remove("pauseDuration") instanceof JsonPrimitive delay)) return;
+
+		JsonObject attackDelay = new JsonObject();
+		JsonObject attackSettings = new JsonObject();
+		attackSettings.add("delay", delay);
+		attackDelay.add("settings", attackSettings);
+		root.add("AttackDelay", attackDelay);
 	}
 
 	private static void autoSoupAsAutoHeal(JsonObject root) {

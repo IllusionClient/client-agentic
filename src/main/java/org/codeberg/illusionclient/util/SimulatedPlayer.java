@@ -200,8 +200,8 @@ public final class SimulatedPlayer {
 		friction = friction();
 
 		if (isClimbing()) {
-			velocityX = MathHelper.clamp(velocityX, -0.15F, 0.15F);
-			velocityZ = MathHelper.clamp(velocityZ, -0.15F, 0.15F);
+			velocityX = Math.clamp(velocityX, -0.15F, 0.15F);
+			velocityZ = Math.clamp(velocityZ, -0.15F, 0.15F);
 			if (velocityY < -0.15D) velocityY = -0.15D;
 			if (sneaking && velocityY < 0.0D) velocityY = 0.0D;
 		}

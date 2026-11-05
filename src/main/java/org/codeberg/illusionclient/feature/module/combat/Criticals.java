@@ -23,6 +23,7 @@ import org.codeberg.illusionclient.feature.module.api.Category;
 import org.codeberg.illusionclient.feature.module.api.Description;
 import org.codeberg.illusionclient.feature.module.api.Module;
 import org.codeberg.illusionclient.feature.module.api.ModuleInfo;
+import org.codeberg.illusionclient.feature.module.client.AttackDelay;
 import org.codeberg.illusionclient.feature.module.client.Weapons;
 import org.codeberg.illusionclient.util.CombatUtils;
 import org.codeberg.illusionclient.util.SimulatedPlayer;
@@ -34,7 +35,6 @@ import java.util.Random;
 @ModuleInfo(name = "Criticals", category = Category.COMBAT)
 @Description("Makes more of your hits land as critical hits.")
 public class Criticals extends Module {
-	private static final long ATTACK_WINDOW = 500L;
 	private final Minecraft minecraft = Minecraft.getInstance();
 	private final Random random = new Random();
 	private final TickShifter shifter = new TickShifter();
@@ -55,11 +55,6 @@ public class Criticals extends Module {
 	@Requires(value = "mode", is = "Tick")
 	@Slider(value = "Maximum Duration (ms)", min = 50.0F, max = 500.0F)
 	public float maximumDuration = 300.0F;
-
-	@Description("Cooldown before skipping again.")
-	@Requires(value = "mode", is = "Tick")
-	@Slider(value = "Cooldown (s)", min = 0.1F, max = 5.0F)
-	public float cooldown = 1.0F;
 
 	@Description("Chance to activate. Lower is less obvious but lands fewer critical hits.")
 	@Slider(value = "Chance (%)", min = 0.0F, max = 100.0F)
@@ -105,7 +100,7 @@ public class Criticals extends Module {
 		if (minecraft.world == null || player == null) return;
 		if (player.onGround) lucky = random.nextFloat() * 100.0F < chance;
 
-		if (mode.equals("Lag") && falling(player) && System.currentTimeMillis() - attackedAt < ATTACK_WINDOW && active(player)) {
+		if (mode.equals("Lag") && falling(player) && System.currentTimeMillis() - attackedAt < AttackDelay.ms() && active(player)) {
 			delay = Math.min(delay + maximumDelay / 5.0F, maximumDelay);
 			fallLag.hold((long) delay);
 		} else {
@@ -170,7 +165,7 @@ public class Criticals extends Module {
 	}
 
 	private void thaw(TimerEvent event) {
-		readyAt = secondsFromNow(cooldown);
+		readyAt = System.currentTimeMillis() + (long) AttackDelay.ms();
 		freezeLag.release();
 		shifter.skip(event, event.ticks + pending);
 		pending = 0;
