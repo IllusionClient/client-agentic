@@ -150,6 +150,7 @@ public final class Draw {
 		if (!TEXTURES_PENDING.isEmpty()) {
 			GlStateManager.enableBlend();
 			GlStateManager.blendFuncSeparate(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA, GL11.GL_ONE, GL11.GL_ZERO);
+			GlStateManager.shadeModel(GL11.GL_SMOOTH);
 			for (Batch batch : TEXTURES_PENDING) {
 				batch.pending = false;
 				Minecraft.getInstance().getTextureManager().bind(batch.texture);
@@ -157,6 +158,7 @@ public final class Draw {
 				UPLOADER.end(batch.buffer);
 			}
 			TEXTURES_PENDING.clear();
+			GlStateManager.shadeModel(GL11.GL_FLAT);
 			GlStateManager.disableBlend();
 		}
 
@@ -408,8 +410,55 @@ public final class Draw {
 		textured(buffer, x + width, y, 1.0F, 0.0F, color);
 	}
 
+	public static void roundedTexture(Identifier texture, int x, int y, int size, float radius, float u0, float v0, float u1, float v1, int color) {
+		Batch batch = TEXTURED.get(texture);
+		if (batch == null) TEXTURED.put(texture, batch = new Batch(texture));
+		BufferBuilder buffer = batch.buffer;
+		if (batch.pending && full(buffer, OUTLINE_POINTS * 8)) flush();
+		if (!batch.pending) {
+			batch.pending = true;
+			TEXTURES_PENDING.add(batch);
+			buffer.begin(GL11.GL_QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
+		}
+
+		radius = Math.min(radius, size / 2.0F);
+		float feather = feather();
+		featheredArc(0, x + size - radius, y + radius, radius, feather);
+		featheredArc(1, x + radius, y + radius, radius, feather);
+		featheredArc(2, x + radius, y + size - radius, radius, feather);
+		featheredArc(3, x + size - radius, y + size - radius, radius, feather);
+
+		float centerX = x + size / 2.0F, centerY = y + size / 2.0F;
+		int clear = color & 0xFFFFFF;
+		for (int i = 0; i < OUTLINE_POINTS; i++) {
+			int to = (i + 1) % OUTLINE_POINTS;
+			texturedAt(buffer, centerX, centerY, x, y, size, u0, v0, u1, v1, color);
+			texturedAt(buffer, EDGE_X[i], EDGE_Y[i], x, y, size, u0, v0, u1, v1, color);
+			texturedAt(buffer, EDGE_X[to], EDGE_Y[to], x, y, size, u0, v0, u1, v1, color);
+			texturedAt(buffer, EDGE_X[to], EDGE_Y[to], x, y, size, u0, v0, u1, v1, color);
+
+			texturedAt(buffer, EDGE_X[i], EDGE_Y[i], x, y, size, u0, v0, u1, v1, color);
+			texturedAt(buffer, FRINGE_X[i], FRINGE_Y[i], x, y, size, u0, v0, u1, v1, clear);
+			texturedAt(buffer, FRINGE_X[to], FRINGE_Y[to], x, y, size, u0, v0, u1, v1, clear);
+			texturedAt(buffer, EDGE_X[to], EDGE_Y[to], x, y, size, u0, v0, u1, v1, color);
+		}
+	}
+
+	private static void texturedAt(BufferBuilder buffer, float px, float py, int x, int y, int size, float u0, float v0, float u1, float v1, int color) {
+		textured(buffer, px, py, u0 + (u1 - u0) * Math.clamp((px - x) / size, 0.0F, 1.0F), v0 + (v1 - v0) * Math.clamp((py - y) / size, 0.0F, 1.0F), color);
+	}
+
 	public static void text(String text, float x, float y, int color) {
 		text(text, x, y, color, Weight.MEDIUM);
+	}
+
+	public static void text(String text, float x, float y, int color, float size) {
+		if (smooth()) Weight.MEDIUM.font.draw(text, x, y, size, opaque(color));
+		else text(text, x, y, color);
+	}
+
+	public static int width(String text, float size) {
+		return smooth() ? (int) Math.ceil(Weight.MEDIUM.font.width(text, size)) : width(text);
 	}
 
 	public static void text(String text, float x, float y, int color, Weight weight) {
@@ -604,6 +653,18 @@ public final class Draw {
 		for (int i = 0; i < ARC_POINTS; i++) {
 			int point = quadrant * ARC_POINTS + i;
 			float spread = i == 0 || i == ARC_SEGMENTS ? 0.0F : Math.min(feather, radius);
+
+			EDGE_X[point] = centerX + COS[point] * (radius - spread);
+			EDGE_Y[point] = centerY - SIN[point] * (radius - spread);
+			FRINGE_X[point] = centerX + COS[point] * (radius + spread);
+			FRINGE_Y[point] = centerY - SIN[point] * (radius + spread);
+		}
+	}
+
+	private static void featheredArc(int quadrant, float centerX, float centerY, float radius, float feather) {
+		float spread = Math.min(feather, radius);
+		for (int i = 0; i < ARC_POINTS; i++) {
+			int point = quadrant * ARC_POINTS + i;
 
 			EDGE_X[point] = centerX + COS[point] * (radius - spread);
 			EDGE_Y[point] = centerY - SIN[point] * (radius - spread);

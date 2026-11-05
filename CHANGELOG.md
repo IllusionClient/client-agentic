@@ -28,6 +28,7 @@
 - Added Auto Heal, which eats soup and golden heads from your hotbar when your health drops low, uses two in a row after a big hit, and can drop the empty bowls.
 - Added Indicators, which shows arrows around your crosshair pointing at incoming arrows, ender pearls and fireballs, with their distance.
 - Added Pointers, which shows arrows around your crosshair pointing at other players, even ones outside your view. Pointers can be flat or tilted, colored by distance, name tag color or by hand, and pushed further out for faraway players.
+- Added Target HUD, which shows the head, name and health of the player you're fighting. Place it anywhere on screen, or have it float above the target in the world.
 - ClickGUI search now also finds modules by the names other clients use, like Arraylist for Mod Overlay.
 - Added Instant Stop, which stops you as soon as you let go of your movement keys by briefly tapping the opposite keys. An option keeps it from tapping the key opposite the one you released.
 - Added No Slow, which reduces the slowdown from blocking, eating, drinking and drawing bows. Each has its own speed, and sword blocking has NCP and Switch bypass modes.

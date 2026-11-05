@@ -69,6 +69,7 @@ import org.codeberg.illusionclient.feature.module.visual.Nametags;
 import org.codeberg.illusionclient.feature.module.visual.NoHurtCam;
 import org.codeberg.illusionclient.feature.module.visual.Notifications;
 import org.codeberg.illusionclient.feature.module.visual.Pointers;
+import org.codeberg.illusionclient.feature.module.visual.TargetHud;
 import org.codeberg.illusionclient.util.SwapHook;
 
 import java.util.Arrays;
@@ -145,6 +146,7 @@ public final class ModuleManager {
 			new Nametags(),
 			new NoHurtCam(),
 			new Pointers(),
+			new TargetHud(),
 			new CreateProfile(),
 			new GenerateProfile(),
 			new Notifications()

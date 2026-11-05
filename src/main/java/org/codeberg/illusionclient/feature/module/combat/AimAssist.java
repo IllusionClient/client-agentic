@@ -146,6 +146,10 @@ public class AimAssist extends Module {
 		return mode;
 	}
 
+	public PlayerEntity target() {
+		return target;
+	}
+
 	@Override
 	public void onDisable() {
 		target = null;

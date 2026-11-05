@@ -131,6 +131,10 @@ public class KillAura extends Module {
 	private long lastFrame;
 	private double noiseSeed;
 
+	public PlayerEntity target() {
+		return target;
+	}
+
 	@Override
 	public String details() {
 		return targetMode + " " + number(attackRange);
