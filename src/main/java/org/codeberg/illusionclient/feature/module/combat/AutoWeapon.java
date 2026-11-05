@@ -18,7 +18,7 @@ import org.codeberg.illusionclient.feature.module.api.ModuleInfo;
 import org.codeberg.illusionclient.feature.module.client.Weapons;
 import org.codeberg.illusionclient.util.CombatUtils;
 
-@ModuleInfo(name = "Auto Weapon", category = Category.COMBAT)
+@ModuleInfo(name = "Auto Weapon", category = Category.COMBAT, aliases = {"AutoSword"})
 @Description("Selects your weapon for you when aiming on a player.")
 public class AutoWeapon extends Module {
 	private final Minecraft minecraft = Minecraft.getInstance();

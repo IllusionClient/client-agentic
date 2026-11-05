@@ -12,6 +12,8 @@ public @interface ModuleInfo {
 
 	Category category();
 
+	String[] aliases() default {};
+
 	int bind() default 0;
 
 	boolean bindable() default true;

@@ -29,7 +29,7 @@ import org.codeberg.illusionclient.util.rotation.RotationManager;
 
 import java.util.Locale;
 
-@ModuleInfo(name = "Kill Aura", category = Category.COMBAT)
+@ModuleInfo(name = "Kill Aura", category = Category.COMBAT, aliases = {"SilentAura", "MultiAura"})
 @Description("Aims at nearby players without moving your camera and attacks them.")
 public class KillAura extends Module {
 	private static final float MAX_FRAME_MS = 100.0F;

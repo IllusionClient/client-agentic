@@ -662,7 +662,7 @@ public class PanelGui extends ClickGui {
 		matchedVersion = IllusionClient.MODULES.version;
 		String needle = normalize(matchedQuery);
 		matched = IllusionClient.MODULES.modules.stream()
-			.filter(entry -> rank(entry, needle) < 3)
+			.filter(entry -> rank(entry, needle) < 4)
 			.sorted(Comparator.comparingInt(entry -> rank(entry, needle)))
 			.toList();
 		return matched;
@@ -672,8 +672,9 @@ public class PanelGui extends ClickGui {
 		String name = normalize(entry.name);
 		if (name.startsWith(needle)) return 0;
 		if (name.contains(needle)) return 1;
-		if (entry.description != null && normalize(entry.description.value()).contains(needle)) return 2;
-		return 3;
+		if (entry.aliases.stream().anyMatch(alias -> normalize(alias).contains(needle))) return 2;
+		if (entry.description != null && normalize(entry.description.value()).contains(needle)) return 3;
+		return 4;
 	}
 
 	private List<Component> options(Module module) {

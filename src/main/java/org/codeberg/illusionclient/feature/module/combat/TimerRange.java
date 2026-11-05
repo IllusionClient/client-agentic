@@ -32,7 +32,7 @@ import org.codeberg.illusionclient.util.SimulatedPlayer;
 import org.codeberg.illusionclient.util.TickShifter;
 import org.codeberg.illusionclient.util.lag.LagManager;
 
-@ModuleInfo(name = "Timer Range", category = Category.COMBAT)
+@ModuleInfo(name = "Timer Range", category = Category.COMBAT, aliases = {"TickBase", "TimeManipulation"})
 @Description("Skips and pauses ticks to land the first hit in a trade.")
 public class TimerRange extends Module {
 	private static final double REACH = 3.0D;

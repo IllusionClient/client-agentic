@@ -15,6 +15,7 @@ public abstract class Module {
 	public final String name;
 	public final String key;
 	public final Category category;
+	public final List<String> aliases;
 	public final boolean bindable;
 	public final boolean toggleable;
 	public final Description description;
@@ -39,6 +40,7 @@ public abstract class Module {
 		this.name = name == null ? info.name() : name;
 		this.key = key == null ? getClass().getSimpleName() : key;
 		this.category = info.category();
+		this.aliases = List.of(info.aliases());
 		this.description = getClass().getAnnotation(Description.class);
 		this.bindable = info.bindable();
 		this.toggleable = info.toggleable();

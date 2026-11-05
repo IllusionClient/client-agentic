@@ -21,7 +21,7 @@ import org.codeberg.illusionclient.feature.module.api.ModuleInfo;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
-@ModuleInfo(name = "Auto Heal", category = Category.PLAYER)
+@ModuleInfo(name = "Auto Heal", category = Category.PLAYER, aliases = {"AutoSoup", "AutoGapple", "AutoHead"})
 @Description("Eats soup or golden heads from your hotbar when your health gets low.")
 public class AutoHeal extends Module {
 	private final Minecraft minecraft = Minecraft.getInstance();

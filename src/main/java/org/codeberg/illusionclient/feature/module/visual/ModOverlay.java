@@ -24,7 +24,7 @@ import java.awt.*;
 import java.util.List;
 import java.util.Locale;
 
-@ModuleInfo(name = "Mod Overlay", category = Category.VISUAL)
+@ModuleInfo(name = "Mod Overlay", category = Category.VISUAL, aliases = {"Arraylist"})
 @Description("Lists enabled modules in the corner.")
 @ObsHidden
 public class ModOverlay extends Module {

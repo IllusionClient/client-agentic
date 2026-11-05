@@ -31,7 +31,7 @@ import org.codeberg.illusionclient.util.input.InputState;
 
 import java.util.Random;
 
-@ModuleInfo(name = "Bridge Assist", category = Category.PLAYER)
+@ModuleInfo(name = "Bridge Assist", category = Category.PLAYER, aliases = {"Legit Scaffold", "Eagle"})
 @Description("Sneaks for you at block edges.")
 public class BridgeAssist extends Module {
 	private static final float LOOKING_DOWN_PITCH = 65.0F;
