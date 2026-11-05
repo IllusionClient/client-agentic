@@ -10,12 +10,14 @@ import net.minecraft.entity.living.LivingEntity;
 import net.minecraft.entity.living.player.PlayerEntity;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.HitResult;
 import org.codeberg.illusionclient.feature.module.client.AntiBot;
 import org.codeberg.illusionclient.feature.module.client.Tags;
 import org.codeberg.illusionclient.feature.module.client.Teams;
 
 public final class CombatUtils {
 	public static final byte HURT = 2;
+	private static final double[] SIGHT_HEIGHTS = {0.1D, 0.5D, 0.9D};
 
 	public static boolean isTarget(Entity entity) {
 		if (!(entity instanceof PlayerEntity player)) return false;
@@ -54,12 +56,12 @@ public final class CombatUtils {
 		return best;
 	}
 
-	public static double score(PlayerEntity player, String sort, float yaw, float pitch) {
+	public static double score(LivingEntity entity, String sort, float yaw, float pitch) {
 		return switch (sort) {
-			case "Health" -> player.getHealth();
-			case "Hurt time" -> player.damagedTimer;
-			case "Aim angle" -> RotationUtils.angleTo(player, yaw, pitch);
-			default -> distanceTo(player);
+			case "Health" -> entity.getHealth();
+			case "Hurt time" -> entity.damagedTimer;
+			case "Aim angle" -> RotationUtils.angleTo(entity, yaw, pitch);
+			default -> distanceTo(entity);
 		};
 	}
 
@@ -72,6 +74,28 @@ public final class CombatUtils {
 		Vec3d end = eye.add(look.x * reach, look.y * reach, look.z * reach);
 		Box box = entity.getShape().grown(margin, margin, margin);
 		return box.contains(eye) || box.clip(eye, end) != null;
+	}
+
+	public static boolean isBlocked(Entity entity, Vec3d look, double reach, double margin) {
+		Minecraft minecraft = Minecraft.getInstance();
+		Vec3d eye = minecraft.player.getEyePosition(1.0F);
+		HitResult hit = entity.getShape().grown(margin, margin, margin).clip(eye, eye.add(look.x * reach, look.y * reach, look.z * reach));
+		return hit != null && minecraft.world.rayTrace(eye, hit.facePos) != null;
+	}
+
+	public static boolean isVisible(Entity entity) {
+		Minecraft minecraft = Minecraft.getInstance();
+		Vec3d eye = minecraft.player.getEyePosition(1.0F);
+		Box box = entity.getShape();
+		Vec3d closest = new Vec3d(Math.clamp(eye.x, box.minX, box.maxX), Math.clamp(eye.y, box.minY, box.maxY), Math.clamp(eye.z, box.minZ, box.maxZ));
+		if (minecraft.world.rayTrace(eye, closest) == null) return true;
+
+		double x = (box.minX + box.maxX) / 2.0D;
+		double z = (box.minZ + box.maxZ) / 2.0D;
+		for (double height : SIGHT_HEIGHTS) {
+			if (minecraft.world.rayTrace(eye, new Vec3d(x, box.minY + (box.maxY - box.minY) * height, z)) == null) return true;
+		}
+		return false;
 	}
 
 	public static Box predictedShape(Entity entity, float tickDelta, float leadTicks) {
