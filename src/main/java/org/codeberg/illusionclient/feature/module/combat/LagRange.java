@@ -43,6 +43,7 @@ public class LagRange extends Module {
 	private static final double TARGET_RANGE = 8.0D;
 	private static final int USE_ITEM_FACE = 255;
 	private static final long POTION_PAUSE_MS = 250L;
+	private static final double SMOOTHING = 20.0D;
 	private final Minecraft minecraft = Minecraft.getInstance();
 	private final LagManager.Lag lag = IllusionClient.LAG.createOutbound();
 	private final EspRenderer<Void> renderer = new EspRenderer<>();
@@ -89,6 +90,11 @@ public class LagRange extends Module {
 
 	private boolean sprintReset;
 	private long pausedUntil;
+	private double drawX;
+	private double drawY;
+	private double drawZ;
+	private long lastFrame;
+	private boolean drawing;
 
 	@Override
 	public String details() {
@@ -140,13 +146,33 @@ public class LagRange extends Module {
 	@Listen
 	public void onRender3D(Render3DEvent event) {
 		LocalClientPlayerEntity player = minecraft.player;
-		if (!indicator || player == null || minecraft.options.perspective == 0) return;
+		if (!indicator || player == null || minecraft.options.perspective == 0) {
+			drawing = false;
+			return;
+		}
 
 		trim();
 		Sent real = sent.peekFirst();
-		if (real == null || sent.size() == 1) return;
+		if (real == null || sent.size() == 1) {
+			drawing = false;
+			return;
+		}
 
-		Box box = player.getShape().moved(real.x - player.x, real.y - player.y, real.z - player.z);
+		long now = System.nanoTime();
+		if (drawing) {
+			double alpha = 1.0D - Math.exp(-SMOOTHING * (now - lastFrame) / 1.0E9D);
+			drawX += (real.x - drawX) * alpha;
+			drawY += (real.y - drawY) * alpha;
+			drawZ += (real.z - drawZ) * alpha;
+		} else {
+			drawX = real.x;
+			drawY = real.y;
+			drawZ = real.z;
+			drawing = true;
+		}
+		lastFrame = now;
+
+		Box box = player.getShape().moved(drawX - player.x, drawY - player.y, drawZ - player.z);
 		renderer.begin();
 		if (filled) renderer.box3D(box, color.getRGB());
 		renderer.end3D();
