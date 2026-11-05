@@ -23,6 +23,7 @@ import org.codeberg.illusionclient.feature.module.api.Category;
 import org.codeberg.illusionclient.feature.module.api.Description;
 import org.codeberg.illusionclient.feature.module.api.Module;
 import org.codeberg.illusionclient.feature.module.api.ModuleInfo;
+import org.codeberg.illusionclient.feature.module.client.AttackDelay;
 import org.codeberg.illusionclient.feature.module.client.Weapons;
 import org.codeberg.illusionclient.mixin.LivingEntityAccessor;
 
@@ -37,10 +38,6 @@ public class HitSelect extends Module {
 	private final Minecraft minecraft = Minecraft.getInstance();
 	private final Random random = new Random();
 	private final BlockPos.Mutable cursor = new BlockPos.Mutable();
-
-	@Description("The longest clicks are held back after a hit.")
-	@Slider(value = "Pause Duration (ms)", min = 0.0F, max = 1000.0F)
-	public float pauseDuration = 500.0F;
 
 	@Description("Burst clicks only when the target can take damage, Criticals also waits until you fall.")
 	@Combo(value = "Mode", options = {"Burst", "Criticals"})
@@ -191,7 +188,7 @@ public class HitSelect extends Module {
 		if (crosshair.type != HitResult.Type.ENTITY || crosshair.entity == null) return false;
 
 		if (!useServerAttackTime) clock = Math.clamp(IllusionClient.COMBAT.hurtTime(crosshair.entity) - 1L, 0, NO_PAUSE);
-		int pause = roundRandomly(pauseDuration / MS_PER_TICK);
+		int pause = roundRandomly(AttackDelay.ms() / MS_PER_TICK);
 
 		if (mode.equals("Criticals")) {
 			boolean closer = (!player.onGround || player.velocityY > 0.0D) && closing;

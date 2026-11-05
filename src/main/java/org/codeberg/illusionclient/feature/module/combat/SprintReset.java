@@ -24,6 +24,7 @@ import org.codeberg.illusionclient.feature.module.api.Category;
 import org.codeberg.illusionclient.feature.module.api.Description;
 import org.codeberg.illusionclient.feature.module.api.Module;
 import org.codeberg.illusionclient.feature.module.api.ModuleInfo;
+import org.codeberg.illusionclient.feature.module.client.AttackDelay;
 import org.codeberg.illusionclient.feature.module.client.Weapons;
 import org.codeberg.illusionclient.util.CombatUtils;
 import org.codeberg.illusionclient.util.MoveUtils;
@@ -246,8 +247,8 @@ public class SprintReset extends Module {
 			case "No Stop" -> Tap.SPRINT;
 			default -> Tap.FORWARD;
 		};
-		int delay = ticks(delayAfterAttack);
 		int duration = Math.max(1, ticks(stopDuration));
+		int delay = Math.clamp(ticks(delayAfterAttack), 0, Math.max(0, ticks(AttackDelay.ms()) - duration));
 		plan(tap, jitter(delay), jitter(duration), 0, 0.0D);
 	}
 

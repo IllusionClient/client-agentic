@@ -17,6 +17,7 @@
 - Auto Clicker can play back recorded click profiles, and its click timing is more human.
 - Rewrote Bridge Assist with better edge detection and a new Skip Sneak option. It can also record you bridging and save the result as a profile.
 - Weapons now uses two multi-select settings, Items and Enchantments. Existing settings carry over.
+- Added Attack Delay, a client module that sets the time between attacks for Hit Select, Criticals and Sprint Reset. It replaces Hit Select's Pause Duration, and your setting carries over.
 - Fast Place's Smart mode falls back to regular fast place while bridging, and a new Bed Defense Guard option places at normal speed on your own bed defense.
 - AxolotlClient's Freelook now works on every server.
 - Backtrack can now show the target's real position with an ESP hitbox, which stays hidden from OBS.

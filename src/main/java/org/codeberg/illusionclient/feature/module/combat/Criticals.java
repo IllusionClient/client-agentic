@@ -23,6 +23,7 @@ import org.codeberg.illusionclient.feature.module.api.Category;
 import org.codeberg.illusionclient.feature.module.api.Description;
 import org.codeberg.illusionclient.feature.module.api.Module;
 import org.codeberg.illusionclient.feature.module.api.ModuleInfo;
+import org.codeberg.illusionclient.feature.module.client.AttackDelay;
 import org.codeberg.illusionclient.feature.module.client.Weapons;
 import org.codeberg.illusionclient.util.CombatUtils;
 import org.codeberg.illusionclient.util.SimulatedPlayer;
@@ -34,7 +35,6 @@ import java.util.Random;
 @ModuleInfo(name = "Criticals", category = Category.COMBAT)
 @Description("Makes more of your hits land as critical hits.")
 public class Criticals extends Module {
-	private static final long ATTACK_WINDOW = 500L;
 	private final Minecraft minecraft = Minecraft.getInstance();
 	private final Random random = new Random();
 	private final TickShifter shifter = new TickShifter();
@@ -105,7 +105,7 @@ public class Criticals extends Module {
 		if (minecraft.world == null || player == null) return;
 		if (player.onGround) lucky = random.nextFloat() * 100.0F < chance;
 
-		if (mode.equals("Lag") && falling(player) && System.currentTimeMillis() - attackedAt < ATTACK_WINDOW && active(player)) {
+		if (mode.equals("Lag") && falling(player) && System.currentTimeMillis() - attackedAt < AttackDelay.ms() && active(player)) {
 			delay = Math.min(delay + maximumDelay / 5.0F, maximumDelay);
 			fallLag.hold((long) delay);
 		} else {
