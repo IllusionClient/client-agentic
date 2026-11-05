@@ -7,6 +7,10 @@ import net.minecraft.entity.living.effect.StatusEffect;
 import net.minecraft.world.World;
 import org.codeberg.illusionclient.IllusionClient;
 import org.codeberg.illusionclient.event.render.EffectVisualEvent;
+import org.codeberg.illusionclient.event.player.MoveInputEvent;
+import org.codeberg.illusionclient.event.player.RotationSentEvent;
+import org.codeberg.illusionclient.event.player.ServerPitchEvent;
+import org.codeberg.illusionclient.event.player.ServerYawEvent;
 import org.codeberg.illusionclient.event.player.UpdateSprintEvent;
 import org.objectweb.asm.Opcodes;
 import org.spongepowered.asm.mixin.Mixin;
@@ -48,12 +52,19 @@ public abstract class LocalClientPlayerEntityMixin extends Entity {
 		return event.visible;
 	}
 
+	@Inject(method = "serverTickAi", at = @At("TAIL"))
+	private void illusion$correctStrafe(CallbackInfo ci) {
+		IllusionClient.BUS.publish(MoveInputEvent.INSTANCE);
+	}
+
 	@ModifyExpressionValue(
 		method = "sendMovementToServer",
 		at = @At(value = "FIELD", target = "Lnet/minecraft/client/entity/living/player/LocalClientPlayerEntity;yaw:F", opcode = Opcodes.GETFIELD)
 	)
 	private float illusion$serverYaw(float yaw) {
-		return IllusionClient.ROTATION.yaw(yaw);
+		ServerYawEvent event = ServerYawEvent.of(yaw);
+		IllusionClient.BUS.publish(event);
+		return event.yaw;
 	}
 
 	@ModifyExpressionValue(
@@ -61,11 +72,13 @@ public abstract class LocalClientPlayerEntityMixin extends Entity {
 		at = @At(value = "FIELD", target = "Lnet/minecraft/client/entity/living/player/LocalClientPlayerEntity;pitch:F", opcode = Opcodes.GETFIELD)
 	)
 	private float illusion$serverPitch(float pitch) {
-		return IllusionClient.ROTATION.pitch(pitch);
+		ServerPitchEvent event = ServerPitchEvent.of(pitch);
+		IllusionClient.BUS.publish(event);
+		return event.pitch;
 	}
 
 	@Inject(method = "sendMovementToServer", at = @At("RETURN"))
 	private void illusion$rotationSent(CallbackInfo ci) {
-		IllusionClient.ROTATION.sent(sentYaw, sentPitch);
+		IllusionClient.BUS.publish(RotationSentEvent.of(sentYaw, sentPitch));
 	}
 }

@@ -1,10 +1,20 @@
 package org.codeberg.illusionclient.util.rotation;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.entity.living.player.Input;
 import net.minecraft.client.entity.living.player.LocalClientPlayerEntity;
 import net.minecraft.entity.living.LivingEntity;
 import net.minecraft.util.math.MathHelper;
+import org.codeberg.illusionclient.IllusionClient;
+import org.codeberg.illusionclient.event.api.Listen;
+import org.codeberg.illusionclient.event.player.JumpYawEvent;
+import org.codeberg.illusionclient.event.player.MoveInputEvent;
+import org.codeberg.illusionclient.event.player.RotationSentEvent;
+import org.codeberg.illusionclient.event.player.ServerPitchEvent;
+import org.codeberg.illusionclient.event.player.ServerYawEvent;
+import org.codeberg.illusionclient.event.player.StrafeYawEvent;
+import org.codeberg.illusionclient.event.player.UpdateSprintEvent;
+import org.codeberg.illusionclient.event.render.ModelRotationEvent;
+import org.codeberg.illusionclient.feature.module.movement.Sprint;
 import org.codeberg.illusionclient.util.MoveUtils;
 import org.codeberg.illusionclient.util.RotationUtils;
 import org.codeberg.illusionclient.util.SimulatedPlayer;
@@ -29,9 +39,15 @@ public final class RotationManager {
 	private final float[] modelRotation = new float[6];
 	private final float[] savedRotation = new float[6];
 	private boolean steering;
-	private double drift;
+	private boolean keepForward;
+	private double driftX;
+	private double driftZ;
 	private double lastX;
 	private double lastZ;
+
+	public RotationManager() {
+		IllusionClient.BUS.subscribe(this);
+	}
 
 	public void rotate(float yaw, float pitch, Strafe strafe) {
 		float gcd = RotationUtils.mouseScale() * 0.15F;
@@ -61,24 +77,71 @@ public final class RotationManager {
 		return active ? this.pitch : pitch;
 	}
 
-	public float moveYaw(float yaw) {
+	private float moveYaw(float yaw) {
 		return active && strafe != Strafe.OFF ? this.yaw : yaw;
 	}
 
-	public void correctInput(Input input) {
+	@Listen
+	public void onStrafeYaw(StrafeYawEvent event) {
+		event.yaw = moveYaw(event.yaw);
+	}
+
+	@Listen(priority = 1)
+	public void onJumpYaw(JumpYawEvent event) {
+		event.yaw = moveYaw(event.yaw);
+	}
+
+	@Listen
+	public void onServerYaw(ServerYawEvent event) {
+		event.yaw = yaw(event.yaw);
+	}
+
+	@Listen
+	public void onServerPitch(ServerPitchEvent event) {
+		event.pitch = pitch(event.pitch);
+	}
+
+	@Listen(priority = -1)
+	public void onUpdateSprint(UpdateSprintEvent event) {
+		if (event.sprinting && !allowsSprint()) event.sprinting = false;
+	}
+
+	private boolean allowsSprint() {
+		Sprint sprint = IllusionClient.MODULES.get(Sprint.class);
+		boolean enabled = sprint.isEnabled();
+		boolean backwards = enabled && sprint.backwards;
+		boolean sideways = enabled && sprint.sideways;
+		keepForward = false;
+		if (!active || strafe != Strafe.SILENT) return true;
+
+		keepForward = !backwards && !sideways;
 		LocalClientPlayerEntity player = minecraft.player;
-		float magnitude = Math.max(Math.abs(input.movementForward), Math.abs(input.movementSideways));
+		float forward = Math.signum(player.input.movementForward);
+		float strafing = Math.signum(player.input.movementSideways);
+		double difference = Math.toRadians(player.yaw - yaw);
+		long serverForward = Math.round(forward * Math.cos(difference) + strafing * Math.sin(difference));
+		if (serverForward > 0) return true;
+		return serverForward < 0 ? backwards : sideways;
+	}
+
+	@Listen
+	public void onMoveInput(MoveInputEvent event) {
+		LocalClientPlayerEntity player = minecraft.player;
+		float magnitude = Math.max(Math.abs(player.forwardSpeed), Math.abs(player.sidewaysSpeed));
 		if (!active || strafe != Strafe.SILENT || magnitude == 0.0F) {
 			steering = false;
-			drift = 0.0D;
+			driftX = 0.0D;
+			driftZ = 0.0D;
 			return;
 		}
 
-		double[] heading = MoveUtils.inputDirection(player.yaw, input.movementForward, input.movementSideways);
+		double[] heading = MoveUtils.inputDirection(player.yaw, player.forwardSpeed, player.sidewaysSpeed);
 		double length = Math.hypot(heading[0], heading[1]);
 		double headingX = heading[0] / length;
 		double headingZ = heading[1] / length;
-		if (steering) drift = Math.clamp(drift + sideways(player.x - lastX, player.z - lastZ, headingX, headingZ), -MAX_DRIFT, MAX_DRIFT);
+		double drift = steering ? Math.clamp(sideways(driftX + player.x - lastX, driftZ + player.z - lastZ, headingX, headingZ), -MAX_DRIFT, MAX_DRIFT) : 0.0D;
+		driftX = drift * headingZ;
+		driftZ = -drift * headingX;
 		steering = true;
 		lastX = player.x;
 		lastZ = player.z;
@@ -88,12 +151,15 @@ public final class RotationManager {
 		double bestCost = Double.MAX_VALUE;
 		for (int forward = -1; forward <= 1; forward++) {
 			for (int sideways = -1; sideways <= 1; sideways++) {
+				if (keepForward && player.isSprinting() && forward <= 0) continue;
+
 				double[] motion = MoveUtils.inputDirection(yaw, forward, sideways);
 				double progress = (motion[0] * headingX + motion[1] * headingZ) / Math.max(1.0D, Math.hypot(forward, sideways));
 				if (progress < MIN_PROGRESS) continue;
 
 				SimulatedPlayer simulated = SimulatedPlayer.of(player);
 				simulated.yaw = yaw;
+				simulated.holdSprint = true;
 				simulated.forward = forward * magnitude;
 				simulated.sideways = sideways * magnitude;
 				simulated.tick();
@@ -106,31 +172,38 @@ public final class RotationManager {
 				}
 			}
 		}
-		input.movementForward = bestForward;
-		input.movementSideways = bestSideways;
+		player.forwardSpeed = bestForward;
+		player.sidewaysSpeed = bestSideways;
 	}
 
 	private static double sideways(double x, double z, double headingX, double headingZ) {
 		return x * headingZ - z * headingX;
 	}
 
-	public void sent(float yaw, float pitch) {
-		sentYaw = yaw;
-		sentPitch = pitch;
+	@Listen
+	public void onRotationSent(RotationSentEvent event) {
+		sentYaw = event.yaw;
+		sentPitch = event.pitch;
 		LocalClientPlayerEntity player = minecraft.player;
 		model = active || lastActive;
 		lastActive = active;
 		modelRotation[0] = modelRotation[1];
-		modelRotation[1] = yaw;
+		modelRotation[1] = sentYaw;
 		modelRotation[2] = modelRotation[3];
-		modelRotation[3] = yaw + Math.clamp(MathHelper.wrapDegrees(player.bodyYaw - yaw), -75.0F, 75.0F);
+		modelRotation[3] = sentYaw + Math.clamp(MathHelper.wrapDegrees(player.bodyYaw - sentYaw), -75.0F, 75.0F);
 		modelRotation[4] = modelRotation[5];
-		modelRotation[5] = pitch;
+		modelRotation[5] = sentPitch;
 		if (active) align(player);
 		active = false;
 	}
 
-	public boolean swapModelRotation(LivingEntity entity) {
+	@Listen
+	public void onModelRotation(ModelRotationEvent event) {
+		if (event.pre) event.swapped = swapModelRotation(event.entity);
+		else setModelRotation(event.entity, savedRotation);
+	}
+
+	private boolean swapModelRotation(LivingEntity entity) {
 		if (!model || entity != minecraft.player) return false;
 
 		savedRotation[0] = entity.lastHeadYaw;
@@ -141,10 +214,6 @@ public final class RotationManager {
 		savedRotation[5] = entity.pitch;
 		setModelRotation(entity, modelRotation);
 		return true;
-	}
-
-	public void restoreModelRotation(LivingEntity entity) {
-		setModelRotation(entity, savedRotation);
 	}
 
 	private static void setModelRotation(LivingEntity entity, float[] rotation) {

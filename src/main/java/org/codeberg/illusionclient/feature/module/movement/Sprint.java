@@ -52,8 +52,8 @@ public class Sprint extends Module {
 
 	@Listen
 	public void onJumpYaw(JumpYawEvent event) {
-		float forward = minecraft.player.input.movementForward;
-		float strafe = minecraft.player.input.movementSideways;
+		float forward = minecraft.player.forwardSpeed;
+		float strafe = minecraft.player.sidewaysSpeed;
 		if (forward < 0.0F ? !backwards : forward > 0.0F || strafe == 0.0F || !sideways) return;
 
 		event.yaw -= (float) Math.toDegrees(Math.atan2(strafe, forward));

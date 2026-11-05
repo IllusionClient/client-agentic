@@ -11,7 +11,6 @@
 - Added config profiles in a new Profiles category. Switch, bind, tag (Closet, Semi, Blatant) and rename them, or use Generate Profile to make one from a Blatancy slider.
 - Added multi-select settings and collapsible setting sections.
 - ClickGUI now opens as an overlay on any screen, and search finds modules by other clients' names.
-- Silent Rotation Strafe now keeps you on a straight line.
 - Auto Clicker can play back recorded click profiles, and its click timing is more human.
 - Rewrote Bridge Assist with better edge detection and a new Skip Sneak option. It can also record you bridging and save the result as a profile.
 - Weapons now uses two multi-select settings, Items and Enchantments. Existing settings carry over.

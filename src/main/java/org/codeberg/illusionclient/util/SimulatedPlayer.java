@@ -48,6 +48,7 @@ public final class SimulatedPlayer {
 	public boolean jumping;
 	public boolean sneaking;
 	public boolean sprinting;
+	public boolean holdSprint;
 	public boolean onGround;
 	public boolean collidingHorizontally;
 	public boolean collidingVertically;
@@ -116,8 +117,10 @@ public final class SimulatedPlayer {
 		ticks++;
 		inWater = world.containsMaterial(shape.grown(0.0D, -0.4F, 0.0D).contract(0.001D, 0.001D, 0.001D), Material.WATER);
 
-		if (!sprinting && forward >= SPRINT_FORWARD && canSprint && sprintKey) sprinting = true;
-		if (sprinting && (forward < SPRINT_FORWARD || collidingHorizontally || !canSprint)) sprinting = false;
+		if (!holdSprint) {
+			if (!sprinting && forward >= SPRINT_FORWARD && canSprint && sprintKey) sprinting = true;
+			if (sprinting && (forward < SPRINT_FORWARD || collidingHorizontally || !canSprint)) sprinting = false;
+		}
 
 		if (jumpingCooldown > 0) jumpingCooldown--;
 		if (Math.abs(velocityX) < 0.005D) velocityX = 0.0D;

@@ -9,6 +9,7 @@ import net.minecraft.client.render.entity.EntityRenderDispatcher;
 import net.minecraft.entity.living.LivingEntity;
 import net.minecraft.entity.living.player.PlayerEntity;
 import org.codeberg.illusionclient.IllusionClient;
+import org.codeberg.illusionclient.event.render.ModelRotationEvent;
 import org.codeberg.illusionclient.feature.module.visual.Chams;
 import org.codeberg.illusionclient.feature.module.visual.Nametags;
 import org.spongepowered.asm.mixin.Mixin;
@@ -30,13 +31,17 @@ public abstract class LivingEntityRendererMixin extends EntityRenderer<LivingEnt
 	@Inject(method = "render(Lnet/minecraft/entity/living/LivingEntity;DDDFF)V", at = @At("HEAD"))
 	private void illusion$serverRotationModel(LivingEntity entity, double x, double y, double z, float yaw, float tickDelta,
 		CallbackInfo ci, @Share("swapped") LocalBooleanRef swapped) {
-		swapped.set(dispatcher.shouldRenderShadow() && IllusionClient.ROTATION.swapModelRotation(entity));
+		if (!dispatcher.shouldRenderShadow()) return;
+
+		ModelRotationEvent event = ModelRotationEvent.of(entity, true);
+		IllusionClient.BUS.publish(event);
+		swapped.set(event.swapped);
 	}
 
 	@Inject(method = "render(Lnet/minecraft/entity/living/LivingEntity;DDDFF)V", at = @At("RETURN"))
 	private void illusion$restoreRotationModel(LivingEntity entity, double x, double y, double z, float yaw, float tickDelta,
 		CallbackInfo ci, @Share("swapped") LocalBooleanRef swapped) {
-		if (swapped.get()) IllusionClient.ROTATION.restoreModelRotation(entity);
+		if (swapped.get()) IllusionClient.BUS.publish(ModelRotationEvent.of(entity, false));
 	}
 
 	@Inject(method = "renderModel(Lnet/minecraft/entity/living/LivingEntity;FFFFFF)V", at = @At("HEAD"))
