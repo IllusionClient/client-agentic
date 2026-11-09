@@ -11,24 +11,7 @@
 <style>
 :root {
 	color-scheme: dark;
-	--seed: #29E38F;
-	--seed-wash: rgba(41, 227, 143, 0.38);
-	--surface: #0E1510;
-	--surface-low: #151D18;
-	--container: #18221C;
-	--container-high: #1F2D24;
-	--container-highest: #28382E;
-	--primary: #42E092;
-	--secondary-container: #234F36;
-	--on-secondary-container: #BDEECF;
-	--tertiary-container: #004F59;
-	--on-tertiary-container: #9BF0FF;
-	--on-accent: #002D17;
-	--divider: rgba(51, 76, 61, 0.56);
-	--text: #D3E7DA;
-	--muted: #B0CEBA;
-	--faint: #7B9785;
-{{icons}}}
+{{colors}}{{icons}}}
 
 * {
 	box-sizing: border-box;
@@ -360,6 +343,8 @@ main {
 .settings {
 	display: flex;
 	flex-direction: column;
+	overflow: hidden;
+	border-radius: 0 0 6px 6px;
 }
 
 .setting {
@@ -391,11 +376,7 @@ main {
 	font-weight: 500;
 }
 
-.setting:last-child {
-	border-radius: 0 0 6px 6px;
-}
-
-.setting h4 {
+.setting :is(h4, h5) {
 	margin: 0;
 	font-size: 14px;
 	font-weight: 500;
@@ -433,9 +414,29 @@ main {
 		height: auto;
 	}
 
-	.toc,
 	.search kbd {
 		display: none;
+	}
+
+	.toc {
+		display: flex;
+		gap: 6px;
+		padding: 0 16px 16px;
+		overflow-x: auto;
+		scrollbar-width: none;
+	}
+
+	.group {
+		display: contents;
+	}
+
+	.toc .entry:not(.category) {
+		display: none;
+	}
+
+	.entry.category {
+		flex: none;
+		background: var(--container);
 	}
 
 	.tools {
@@ -492,7 +493,7 @@ main {
 <main>
 <div class="page-head">
 <h1>Modules</h1>
-<span id="count">{{count}} modules</span>
+<span id="count" role="status">{{count}} modules</span>
 </div>
 <p class="lede">Every module in Illusion {{version}} and what its settings do.</p>
 <p class="empty" id="empty" hidden></p>
@@ -551,9 +552,13 @@ document.addEventListener("keydown", event => {
 const observer = new IntersectionObserver(observed => {
 	for (const entry of observed) {
 		if (!entry.isIntersecting) continue;
-		for (const link of entries.values()) link.classList.remove("current", "selected");
+		for (const link of entries.values()) {
+			link.classList.remove("current", "selected");
+			link.removeAttribute("aria-current");
+		}
 		const link = entries.get(entry.target.id);
 		link?.classList.add("current");
+		link?.setAttribute("aria-current", "location");
 		entries.get(entry.target.closest(".category").id)?.classList.add("selected");
 		link?.scrollIntoView({block: "nearest"});
 	}

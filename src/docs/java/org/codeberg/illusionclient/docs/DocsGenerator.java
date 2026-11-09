@@ -3,12 +3,12 @@ package org.codeberg.illusionclient.docs;
 import org.codeberg.illusionclient.IllusionClient;
 import org.codeberg.illusionclient.feature.config.api.MultiSelect;
 import org.codeberg.illusionclient.feature.config.api.Option;
-import org.codeberg.illusionclient.feature.config.api.Requires;
 import org.codeberg.illusionclient.feature.config.api.Slider;
 import org.codeberg.illusionclient.feature.module.ModuleManager;
 import org.codeberg.illusionclient.feature.module.api.Category;
 import org.codeberg.illusionclient.feature.module.api.Description;
 import org.codeberg.illusionclient.feature.module.api.Module;
+import org.codeberg.illusionclient.feature.ui.Draw;
 import org.codeberg.illusionclient.util.lag.LagManager;
 
 import java.io.IOException;
@@ -64,11 +64,12 @@ public final class DocsGenerator {
 		int count = byCategory.values().stream().mapToInt(List::size).sum();
 
 		String page = template()
+			.replace("{{colors}}", colors())
 			.replace("{{icons}}", icons)
 			.replace("{{count}}", String.valueOf(count))
 			.replace("{{version}}", escape(version))
-			.replace("{{stable}}", channel.equals("stable") ? " class=\"active\"" : "")
-			.replace("{{nightly}}", channel.equals("nightly") ? " class=\"active\"" : "")
+			.replace("{{stable}}", channel.equals("stable") ? " class=\"active\" aria-current=\"page\"" : "")
+			.replace("{{nightly}}", channel.equals("nightly") ? " class=\"active\" aria-current=\"page\"" : "")
 			.replace("{{nav}}", nav)
 			.replace("{{body}}", body);
 		Files.createDirectories(output.toAbsolutePath().getParent());
@@ -92,10 +93,10 @@ public final class DocsGenerator {
 				section = option.section();
 				out.append("<h4 class=\"section\">").append(escape(section)).append("</h4>\n");
 			}
-			Requires requires = requires(module, option);
+			String heading = section == null ? "h4" : "h5";
 			out.append("<div class=\"setting\" data-search=\"").append(escape((option.name + " " + text(option.description)).toLowerCase(Locale.ROOT))).append("\">\n")
-				.append("<h4>").append(escape(option.name)).append("</h4>").append(description(option.description));
-			if (requires != null) out.append("<p class=\"requires\">").append(requirement(module, requires)).append("</p>");
+				.append("<").append(heading).append(">").append(escape(option.name)).append("</").append(heading).append(">").append(description(option.description));
+			if (!option.requirements().isEmpty()) out.append("<p class=\"requires\">").append(requirements(option)).append("</p>");
 			out.append("\n</div>\n");
 		}
 		out.append("</div>\n</article>\n");
@@ -119,19 +120,40 @@ public final class DocsGenerator {
 		return description == null ? "" : description.value();
 	}
 
-	private static Requires requires(Module module, Option option) {
-		try {
-			return module.getClass().getDeclaredField(option.key).getAnnotation(Requires.class);
-		} catch (NoSuchFieldException e) {
-			throw new IllegalStateException(e);
+	private static String requirements(Option option) {
+		StringBuilder out = new StringBuilder("Shown when ");
+		List<Option.Requirement> requirements = option.requirements();
+		for (int i = 0; i < requirements.size(); i++) {
+			if (i > 0) out.append(" and ");
+			Option required = requirements.get(i).option();
+			List<String> values = requirements.get(i).values();
+			out.append("<strong>").append(escape(required.name)).append("</strong>");
+			if (values.isEmpty()) out.append(required.info instanceof Slider ? " is above 0" : " is on");
+			else out.append(required.info instanceof MultiSelect ? " includes " : " is ").append(list(values.toArray(String[]::new)));
 		}
+		return out.append(".").toString();
 	}
 
-	private static String requirement(Module module, Requires requires) {
-		Option required = module.options.stream().filter(option -> option.key.equals(requires.value())).findFirst().orElseThrow();
-		String name = "<strong>" + escape(required.name) + "</strong>";
-		if (requires.is().length == 0) return "Shown when " + name + (required.info instanceof Slider ? " is above 0." : " is on.");
-		return "Shown when " + name + (required.info instanceof MultiSelect ? " includes " : " is ") + list(requires.is()) + ".";
+	private static String colors() {
+		int seed = 0xFF29E38F;
+		Object[][] roles = {
+			{"seed", seed}, {"seed-wash", seed & 0xFFFFFF | 0x60 << 24},
+			{"surface", Draw.SURFACE}, {"surface-low", Draw.SURFACE_LOW}, {"container", Draw.CONTAINER},
+			{"container-high", Draw.CONTAINER_HIGH}, {"container-highest", Draw.CONTAINER_HIGHEST},
+			{"primary", Draw.PRIMARY}, {"secondary-container", Draw.SECONDARY_CONTAINER}, {"on-secondary-container", Draw.ON_SECONDARY_CONTAINER},
+			{"tertiary-container", Draw.TERTIARY_CONTAINER}, {"on-tertiary-container", Draw.ON_TERTIARY_CONTAINER}, {"on-accent", Draw.ON_ACCENT},
+			{"divider", Draw.DIVIDER}, {"text", Draw.TEXT}, {"muted", Draw.MUTED}, {"faint", Draw.FAINT}
+		};
+		StringBuilder out = new StringBuilder();
+		for (Object[] role : roles) {
+			int color = (int) role[1];
+			int alpha = color >>> 24;
+			out.append("\t--").append(role[0]).append(": ");
+			if (alpha == 0xFF) out.append(String.format("#%06X", color & 0xFFFFFF));
+			else out.append(String.format(Locale.ROOT, "rgb(%d %d %d / %.2f)", color >> 16 & 0xFF, color >> 8 & 0xFF, color & 0xFF, alpha / 255.0F));
+			out.append(";\n");
+		}
+		return out.toString();
 	}
 
 	private static String escape(String text) {

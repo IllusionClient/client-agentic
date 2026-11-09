@@ -106,6 +106,10 @@ public final class Option {
 		return depth;
 	}
 
+	public List<Requirement> requirements() {
+		return requirements;
+	}
+
 	public boolean visible() {
 		for (Requirement requirement : requirements) {
 			if (!requirement.met()) return false;
@@ -169,7 +173,7 @@ public final class Option {
 		if (owner instanceof Module module) module.detailsChanged();
 	}
 
-	private record Requirement(Option option, List<String> values) {
+	public record Requirement(Option option, List<String> values) {
 		private boolean met() {
 			if (!option.visible()) return false;
 			if (option.info instanceof MultiSelect) return values.stream().anyMatch(option.<Set<String>>get()::contains);
