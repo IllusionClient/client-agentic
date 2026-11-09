@@ -20,11 +20,11 @@ import java.awt.*;
 public class ClickGuiModule extends Module {
 	@Description("Panel shows one window with a sidebar, Frames shows a draggable window per category.")
 	@Combo(value = "Style", options = {"Panel", "Frames"})
-	public String style = "Frames";
+	public String style = "Panel";
 
 	@Description("The font used by this menu and the HUD.")
 	@Combo(value = "Font", options = {"Minecraft", "Inter"})
-	public String font = "Minecraft";
+	public String font = "Inter";
 
 	@Description("This menu's own GUI scale. Game follows Minecraft's setting; a smaller scale fits more on small screens.")
 	@Combo(value = "Scale", options = {"Game", "1x", "2x", "3x", "4x"})
