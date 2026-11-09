@@ -58,6 +58,9 @@ public class PanelGui extends ClickGui {
 	private String matchedQuery;
 	private List<Module> matched = List.of();
 	private int matchedVersion;
+	private Category listedCategory;
+	private List<Module> listed = List.of();
+	private int listedVersion;
 	private final TextField search = new TextField(MAX_QUERY);
 	private int x = Integer.MIN_VALUE, y, panelWidth, panelHeight;
 	private int dragX, dragY;
@@ -651,8 +654,13 @@ public class PanelGui extends ClickGui {
 		return count;
 	}
 
-	private static List<Module> modules(Category category) {
-		return IllusionClient.MODULES.modules.stream().filter(module -> module.category == category).toList();
+	private List<Module> modules(Category category) {
+		if (category != listedCategory || listedVersion != IllusionClient.MODULES.version) {
+			listedCategory = category;
+			listedVersion = IllusionClient.MODULES.version;
+			listed = IllusionClient.MODULES.modules.stream().filter(module -> module.category == category).toList();
+		}
+		return listed;
 	}
 
 	private List<Module> matches() {
