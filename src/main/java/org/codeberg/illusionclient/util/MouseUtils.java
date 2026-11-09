@@ -22,7 +22,14 @@ public final class MouseUtils {
 
 	public static boolean next(boolean hasEvent) {
 		synthetic = false;
-		if (hasEvent) return true;
+		if (hasEvent) {
+			int real = Mouse.getEventButton();
+			if (real >= 0 && real < BUTTONS) {
+				pendingEvents[real] = 0;
+				flipped[real] = false;
+			}
+			return true;
+		}
 		boolean screen = Minecraft.getInstance().screen != null;
 		for (int i = 0; i < BUTTONS; i++) {
 			boolean down = Mouse.isButtonDown(i);
