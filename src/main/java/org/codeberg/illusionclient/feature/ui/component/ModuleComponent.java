@@ -26,6 +26,7 @@ public class ModuleComponent extends Group {
 	public static final String HOLD = "Hold";
 	private static final String OBS = "OBS";
 	private static final int OBS_HIDDEN = 0xFF2E7D4F, OBS_PARTIAL = 0xFFB58B1E, OBS_VISIBLE = 0xFFB3453C;
+	private static final int OBS_TEXT = 0xFFFFFFFF, OBS_PARTIAL_TEXT = 0xFF2B1D00;
 	private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("d MMM yyyy, HH:mm").withZone(ZoneId.systemDefault());
 
 	final Module module;
@@ -88,7 +89,7 @@ public class ModuleComponent extends Group {
 			case PARTIAL -> OBS_PARTIAL;
 			case NO -> OBS_VISIBLE;
 		});
-		Draw.text(OBS, left + 5, Draw.textY(y, KEY_HEIGHT), 0xFFFFFFFF);
+		Draw.text(OBS, left + 5, Draw.textY(y, KEY_HEIGHT), info.value() == ObsHidden.Level.PARTIAL ? OBS_PARTIAL_TEXT : OBS_TEXT);
 		if (mouseX >= left && mouseX < right && mouseY >= y && mouseY < y + KEY_HEIGHT) {
 			Tooltip.pin(switch (info.value()) {
 				case YES -> "Hidden from OBS while OBS Proof is on.";

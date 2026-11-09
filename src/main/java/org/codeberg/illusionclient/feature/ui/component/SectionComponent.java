@@ -22,7 +22,7 @@ public class SectionComponent extends Group {
 	protected void renderHeader(int mouseX, int mouseY) {
 		Draw.rounded(x, y, width, HEIGHT, 0.0F, headerRadius(), hovered(mouseX, mouseY) ? Draw.CONTAINER_HIGH : Draw.CONTAINER);
 		Draw.rect(left(), y, right() - left(), 2, Draw.DIVIDER);
-		Draw.text(name, left(), Draw.textY(y, HEIGHT), Draw.accent().getRGB(), Draw.Weight.MEDIUM);
+		Draw.text(name, left(), Draw.textY(y, HEIGHT), Draw.PRIMARY, Draw.Weight.MEDIUM);
 		if (!open) value("+");
 	}
 

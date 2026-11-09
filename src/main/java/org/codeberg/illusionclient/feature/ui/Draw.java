@@ -117,7 +117,7 @@ public final class Draw {
 		ON_SECONDARY_CONTAINER = Tones.of(hue, secondary, 90, 0xFF);
 		TERTIARY_CONTAINER = Tones.of(tertiary, third, 30, 0xFF);
 		ON_TERTIARY_CONTAINER = Tones.of(tertiary, third, 90, 0xFF);
-		ON_ACCENT = Tones.of(hue, primary, seed[0] > 60.0D ? 15 : 95, 0xFF);
+		ON_ACCENT = Tones.of(hue, primary, seed[0] > 52.0D ? 15 : 95, 0xFF);
 
 		TOOLTIP_INK = Tones.of(hue, neutral, 4, 0xF2);
 		SCRIM = Tones.of(hue, neutral, 2, 0x80);
