@@ -77,7 +77,6 @@ public final class RotationUtils {
 
 	private static float step(float diff, float speed, float delta, String mode) {
 		return switch (mode) {
-			case "Lock-on" -> diff;
 			case "Linear" -> {
 				float limit = speed * 6.0F * delta * Math.min(1.0F, 0.4F + Math.abs(diff) / 15.0F);
 				yield Math.clamp(diff, -limit, limit);

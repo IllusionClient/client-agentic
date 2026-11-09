@@ -9,6 +9,9 @@
 - Added visual modules: Chams, Item ESP, Name Tags, Indicators, Pointers, Target HUD, Notifications and No Hurt Cam.
 - Added Tags. Tag players with `.tag <player> <tags>` or middle-click to toggle "friend". Combat modules skip tagged players.
 - Added config profiles in a new Profiles category. Switch, bind, tag (Closet, Semi, Blatant) and rename them, or use Generate Profile to make one from a Blatancy slider.
+- Aim Assist can now rotate silently, Kill Aura can now turn your camera, and Clutch, Block In, Auto Rod, Auto Lava, Auto Extinguish and Liquid Steal gained Rotation settings to choose Silent or Camera and how they turn.
+- Clutch and Block In now share the same turning as every other module, replacing Base Speed, Acceleration, Snap-back Duration and Rotation Speed.
+- Added an Outline option to ESP's 3D mode.
 - Added multi-select settings and collapsible setting sections.
 - ClickGUI now opens as an overlay on any screen, and search finds modules by other clients' names.
 - Auto Clicker can play back recorded click profiles, and its click timing is more human.
@@ -16,8 +19,10 @@
 - Weapons now uses two multi-select settings, Items and Enchantments. Existing settings carry over.
 - Fast Place's Smart mode falls back to regular fast place while bridging, and a new Bed Defense Guard option places at normal speed on your own bed defense.
 - AxolotlClient's Freelook now works on every server.
+- Backtrack can now show the target's real position with an ESP hitbox, which stays hidden from OBS.
 - Fixed Bridge Assist double-sneaking, and its forced sneak being dropped when another mod overrides the sneak key.
 - Fixed Backtrack and Blink replaying packets that another module like Velocity had canceled.
+- Fixed Auto Extinguish and Auto Lava sometimes leaving their liquid behind on servers with ping.
 - Fixed Fast Place and No Jump Delay not registering while the key was already held.
 - Fixed the Backtrack ghost disappearing before the target caught up.
 - Fixed module card and header text not being centered vertically.

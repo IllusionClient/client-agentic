@@ -9,6 +9,7 @@ import net.minecraft.entity.living.effect.StatusEffect;
 import net.minecraft.item.Items;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
+import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.HitResult;
 import org.codeberg.illusionclient.IllusionClient;
@@ -18,15 +19,14 @@ import org.codeberg.illusionclient.event.world.WorldLoadEvent;
 import org.codeberg.illusionclient.feature.config.api.Slider;
 import org.codeberg.illusionclient.feature.module.api.Category;
 import org.codeberg.illusionclient.feature.module.api.Description;
-import org.codeberg.illusionclient.feature.module.api.Module;
 import org.codeberg.illusionclient.feature.module.api.ModuleInfo;
+import org.codeberg.illusionclient.feature.module.api.RotatingModule;
 import org.codeberg.illusionclient.util.ItemUtils;
 import org.codeberg.illusionclient.util.RotationUtils;
-import org.codeberg.illusionclient.util.rotation.RotationManager;
 
 @ModuleInfo(name = "Auto Extinguish", category = Category.PLAYER)
 @Description("Places water under you when you're on fire, then picks it back up.")
-public class AutoExtinguish extends Module {
+public class AutoExtinguish extends RotatingModule {
 	private static final double BUCKET_REACH = 5.0D;
 	private static final int MAX_PICKUP_TRIES = 5;
 	private static final int MAX_WAIT_TICKS = 40;
@@ -40,18 +40,18 @@ public class AutoExtinguish extends Module {
 	@Slider(value = "Cooldown (ms)", min = 0.0F, max = 5000.0F)
 	public float cooldown = 500.0F;
 
-	private enum Stage { IDLE, PLACE, PLACED, PICKUP }
+	private enum Stage { IDLE, PLACE, PLACED, PICKUP, CONFIRM }
 
 	private Stage stage = Stage.IDLE;
 	private BlockPos cell;
 	private int previousSlot = -1;
 	private int timer;
-	private float yaw;
-	private float pitch;
+	private int confirmTicks;
 
 	@Override
 	public void onDisable() {
 		finish();
+		stopRotating();
 	}
 
 	@Listen
@@ -74,23 +74,42 @@ public class AutoExtinguish extends Module {
 					finish();
 					return;
 				}
-				use(player);
+				if (!aimed()) {
+					if (aimTimedOut()) finish();
+					return;
+				}
+				useHeldItem(player);
 				timer = 0;
 				stage = Stage.PLACED;
 			}
 			case PLACED -> {
-				if (++timer < MAX_WAIT_TICKS && (player.isOnFire() || timer < ticks(pickupDelay))) return;
+				if (++timer < MAX_WAIT_TICKS && (timer < Math.max(ticks(pickupDelay), serverTicks()) || player.isOnFire() && player.isInWater())) return;
 				timer = 0;
 				stage = Stage.PICKUP;
 				if (!waterSource(cell) || !aim(player, center(cell))) finish();
 			}
 			case PICKUP -> {
-				if (!waterSource(cell) || !ItemUtils.holding(player, Items.BUCKET) || ++timer > MAX_PICKUP_TRIES) {
+				if (!waterSource(cell) || !ItemUtils.holding(player, Items.BUCKET) || timer >= MAX_PICKUP_TRIES) {
 					finish();
 					return;
 				}
-				use(player);
-				aim(player, center(cell));
+				if (!aimed()) {
+					if (aimTimedOut()) finish();
+					return;
+				}
+				timer++;
+				useHeldItem(player);
+				release();
+				confirmTicks = serverTicks();
+				stage = Stage.CONFIRM;
+			}
+			case CONFIRM -> {
+				if (--confirmTicks > 0) return;
+				if (!waterSource(cell) || !aim(player, center(cell))) {
+					finish();
+					return;
+				}
+				stage = Stage.PICKUP;
 			}
 		}
 	}
@@ -128,27 +147,16 @@ public class AutoExtinguish extends Module {
 		Vec3d eye = player.getEyePosition(1.0F);
 		if (eye.distanceTo(point) > BUCKET_REACH) return false;
 
-		float[] rotation = RotationUtils.rotationTo(eye, point);
-		IllusionClient.ROTATION.rotate(rotation[0], rotation[1], RotationManager.Strafe.SILENT);
-		yaw = IllusionClient.ROTATION.yaw(rotation[0]);
-		pitch = IllusionClient.ROTATION.pitch(rotation[1]);
+		boolean above = MathHelper.floor(player.x) == cell.getX() && MathHelper.floor(player.z) == cell.getZ();
+		aim(above ? new float[]{aimYaw(), 90.0F} : RotationUtils.rotationTo(eye, point));
 		return true;
-	}
-
-	private void use(LocalClientPlayerEntity player) {
-		float realYaw = player.yaw;
-		float realPitch = player.pitch;
-		player.yaw = yaw;
-		player.pitch = pitch;
-		minecraft.interactionManager.useItem(player, minecraft.world, player.inventory.getSelectedItem());
-		player.yaw = realYaw;
-		player.pitch = realPitch;
 	}
 
 	private void finish() {
 		if (previousSlot != -1 && minecraft.player != null) minecraft.player.inventory.selectedSlot = previousSlot;
 		if (stage != Stage.IDLE) timer = ticks(cooldown);
 		IllusionClient.MODULES.releaseSlot(this);
+		release();
 		previousSlot = -1;
 		cell = null;
 		stage = Stage.IDLE;

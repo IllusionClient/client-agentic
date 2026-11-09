@@ -23,16 +23,15 @@ import org.codeberg.illusionclient.feature.config.api.Check;
 import org.codeberg.illusionclient.feature.config.api.Slider;
 import org.codeberg.illusionclient.feature.module.api.Category;
 import org.codeberg.illusionclient.feature.module.api.Description;
-import org.codeberg.illusionclient.feature.module.api.Module;
 import org.codeberg.illusionclient.feature.module.api.ModuleInfo;
+import org.codeberg.illusionclient.feature.module.api.RotatingModule;
 import org.codeberg.illusionclient.util.CombatUtils;
 import org.codeberg.illusionclient.util.ItemUtils;
 import org.codeberg.illusionclient.util.RotationUtils;
-import org.codeberg.illusionclient.util.rotation.RotationManager;
 
 @ModuleInfo(name = "Liquid Steal", category = Category.PLAYER)
 @Description("Picks up water and lava your opponents place with an empty bucket from your hotbar.")
-public class LiquidSteal extends Module {
+public class LiquidSteal extends RotatingModule {
 	private static final double BUCKET_REACH = 5.0D;
 	private static final double OWNER_RANGE = 6.0D;
 	private static final long FORGET_MS = 10_000L;
@@ -56,13 +55,12 @@ public class LiquidSteal extends Module {
 	private int previousSlot = -1;
 	private int tries;
 	private int ownUseTick = -1;
-	private float yaw;
-	private float pitch;
 
 	@Override
 	public void onDisable() {
 		finish();
 		placed.clear();
+		stopRotating();
 	}
 
 	@Listen
@@ -97,11 +95,16 @@ public class LiquidSteal extends Module {
 			return;
 		}
 
-		if (!stealable(minecraft.world.getBlockState(cell)) || !ItemUtils.holding(player, Items.BUCKET) || ++tries > MAX_PICKUP_TRIES) {
+		if (!stealable(minecraft.world.getBlockState(cell)) || !ItemUtils.holding(player, Items.BUCKET) || tries >= MAX_PICKUP_TRIES) {
 			finish();
 			return;
 		}
-		use(player);
+		if (!aimed()) {
+			if (aimTimedOut()) finish();
+			return;
+		}
+		tries++;
+		useHeldItem(player);
 		aim(player, center(cell));
 	}
 
@@ -140,25 +143,13 @@ public class LiquidSteal extends Module {
 	}
 
 	private void aim(LocalClientPlayerEntity player, Vec3d point) {
-		float[] rotation = RotationUtils.rotationTo(player.getEyePosition(1.0F), point);
-		IllusionClient.ROTATION.rotate(rotation[0], rotation[1], RotationManager.Strafe.SILENT);
-		yaw = IllusionClient.ROTATION.yaw(rotation[0]);
-		pitch = IllusionClient.ROTATION.pitch(rotation[1]);
-	}
-
-	private void use(LocalClientPlayerEntity player) {
-		float realYaw = player.yaw;
-		float realPitch = player.pitch;
-		player.yaw = yaw;
-		player.pitch = pitch;
-		minecraft.interactionManager.useItem(player, minecraft.world, player.inventory.getSelectedItem());
-		player.yaw = realYaw;
-		player.pitch = realPitch;
+		aim(RotationUtils.rotationTo(player.getEyePosition(1.0F), point));
 	}
 
 	private void finish() {
 		if (previousSlot != -1 && minecraft.player != null) minecraft.player.inventory.selectedSlot = previousSlot;
 		IllusionClient.MODULES.releaseSlot(this);
+		release();
 		if (cell != null) placed.removeLong(cell);
 		previousSlot = -1;
 		cell = null;

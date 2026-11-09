@@ -1,10 +1,14 @@
 package org.codeberg.illusionclient.feature.module.combat;
 
 import org.codeberg.illusionclient.event.api.Listen;
+import org.codeberg.illusionclient.event.input.InputEvent;
+import org.codeberg.illusionclient.event.player.PickEvent;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.living.player.LocalClientPlayerEntity;
 import net.minecraft.entity.living.player.PlayerEntity;
 import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.HitResult;
 import org.codeberg.illusionclient.IllusionClient;
 import org.codeberg.illusionclient.event.render.Render3DEvent;
 import org.codeberg.illusionclient.event.world.WorldLoadEvent;
@@ -20,6 +24,7 @@ import org.codeberg.illusionclient.feature.module.api.ModuleInfo;
 import org.codeberg.illusionclient.feature.module.client.Weapons;
 import org.codeberg.illusionclient.util.CombatUtils;
 import org.codeberg.illusionclient.util.RotationUtils;
+import org.codeberg.illusionclient.util.rotation.Rotator;
 
 @ModuleInfo(name = "Aim Assist", category = Category.COMBAT)
 @Description("Moves your crosshair onto players.")
@@ -29,7 +34,18 @@ public class AimAssist extends Module {
 	private static final float RESIST_DECAY = 30.0F;
 	private static final long RESIST_COOLDOWN = 1000L;
 	private static final double TARGETING_MARGIN = 0.1D;
+	private static final double ATTACK_REACH = 3.0D;
 	private final Minecraft minecraft = Minecraft.getInstance();
+	private final Rotator rotator = new Rotator();
+
+	@Description("Camera turns your view, Silent only turns what the server sees.")
+	@Combo(value = "Rotations", options = {"Camera", "Silent"})
+	public String rotations = "Camera";
+
+	@Description("How your movement follows the rotation. Silent keeps you moving where you look, Strict moves you along the rotation like vanilla, Off ignores it.")
+	@Requires(value = "rotations", is = "Silent")
+	@Combo(value = "Rotation Strafe", options = {"Silent", "Strict", "Off"})
+	public String strafe = "Silent";
 
 	@Description("Regular eases in, Linear is steady, Lock-on snaps.")
 	@Combo(value = "Mode", options = {"Regular", "Linear", "Lock-on"})
@@ -103,10 +119,12 @@ public class AimAssist extends Module {
 	public float clickWindow = 500.0F;
 
 	@Description("Only aims while you move your mouse, and never further than you do.")
+	@Requires(value = "rotations", is = "Camera")
 	@Check("Mouse Moved")
 	public boolean mouseMoved = true;
 
 	@Description("Drops the target briefly when you aim away.")
+	@Requires(value = "rotations", is = "Camera")
 	@Check("Stop When Resisting")
 	public boolean resisting = true;
 
@@ -131,6 +149,7 @@ public class AimAssist extends Module {
 	private float yawRemainder;
 	private float pitchRemainder;
 	private double noiseSeed;
+	private boolean rotating;
 
 	private static float shrink(float diff, float deadzone) {
 		return Math.copySign(Math.max(0.0F, Math.abs(diff) - deadzone), diff);
@@ -153,11 +172,49 @@ public class AimAssist extends Module {
 	@Override
 	public void onDisable() {
 		target = null;
+		rotating = false;
 	}
 
 	@Listen
 	public void onWorldLoad(WorldLoadEvent event) {
 		target = null;
+		rotating = false;
+	}
+
+	@Listen
+	public void onInput(InputEvent event) {
+		LocalClientPlayerEntity player = minecraft.player;
+		if (player == null || !silent()) return;
+
+		float[] goal = findTarget(player.yaw, player.pitch) == null ? null : silentGoal();
+		if (goal == null && !rotating || IllusionClient.ROTATION.active()) return;
+
+		rotating = rotator.turnSilently(goal, horizontalSpeed, verticalSpeed, mode, strafe);
+		noiseSeed += rotator.turned() * RotationUtils.NOISE_PER_DEGREE;
+	}
+
+	private float[] silentGoal() {
+		float yaw = IllusionClient.ROTATION.sentYaw();
+		float pitch = IllusionClient.ROTATION.sentPitch();
+		float[] goal = RotationUtils.rotationTo(RotationUtils.aimPoint(target,
+			CombatUtils.predictedShape(target, 1.0F, predict / 100.0F * PREDICT_TICKS),
+			horizontalMultipoint, verticalMultipoint, randomization, noiseSeed));
+		return new float[]{
+			yaw + shrink(MathHelper.wrapDegrees(goal[0] - yaw), fov[0] / 2.0F),
+			pitch + shrink(goal[1] - pitch, fov[0] / 2.0F)
+		};
+	}
+
+	@Listen
+	public void onPick(PickEvent event) {
+		if (minecraft.player == null || target == null || !silent()) return;
+
+		Vec3d look = RotationUtils.look(IllusionClient.ROTATION.sentYaw(), IllusionClient.ROTATION.sentPitch());
+		if (CombatUtils.isHovered(target, look, ATTACK_REACH, TARGETING_MARGIN)) minecraft.crosshairTarget = new HitResult(target);
+	}
+
+	private boolean silent() {
+		return rotations.equals("Silent");
 	}
 
 	@Listen
@@ -167,6 +224,7 @@ public class AimAssist extends Module {
 		lastFrame = now;
 
 		if (IllusionClient.INPUT.held(minecraft.options.attackKey)) lastClick = System.currentTimeMillis();
+		if (silent()) return;
 
 		LocalClientPlayerEntity player = minecraft.player;
 		PlayerEntity previous = target;
@@ -197,19 +255,14 @@ public class AimAssist extends Module {
 		pitchDiff = shrink(pitchDiff, fov[0] / 2.0F);
 		if (yawDiff == 0.0F && pitchDiff == 0.0F) return;
 
-		boolean lockOn = mode.equals("Lock-on");
-		if (!lockOn) pitchDiff = RotationUtils.easePitch(pitchDiff, yawDiff);
-
-		float[] steps = RotationUtils.aimSteps(yawDiff, pitchDiff, horizontalSpeed, verticalSpeed, delta, mode);
-		float pitchStep = steps[1] * yield;
+		float[] steps = rotator.steps(yawDiff, pitchDiff, horizontalSpeed, verticalSpeed, delta, mode);
 
 		float yawTotal = steps[0] * yield + yawRemainder;
 		yawRemainder = yawTotal % gcd;
 		int yawCounts = RotationUtils.mouseCounts(yawTotal, yawDiff, gcd);
 		if (mouseMoved) yawCounts = follow(yawCounts, mouseX);
 
-		if (!lockOn && yawCounts != 0) pitchStep += RotationUtils.pitchWobble(Math.abs(yawCounts) * gcd);
-		float pitchTotal = pitchStep + pitchRemainder;
+		float pitchTotal = steps[1] * yield + pitchRemainder;
 		pitchRemainder = pitchTotal % gcd;
 		int pitchCounts = RotationUtils.mouseCounts(pitchTotal, pitchDiff, gcd);
 		if (mouseMoved) pitchCounts = follow(pitchCounts, mouseY);

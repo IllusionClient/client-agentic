@@ -8,7 +8,6 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.HitResult;
 import org.codeberg.illusionclient.IllusionClient;
@@ -22,21 +21,19 @@ import org.codeberg.illusionclient.feature.config.api.Requires;
 import org.codeberg.illusionclient.feature.config.api.Slider;
 import org.codeberg.illusionclient.feature.module.api.Category;
 import org.codeberg.illusionclient.feature.module.api.Description;
-import org.codeberg.illusionclient.feature.module.api.Module;
 import org.codeberg.illusionclient.feature.module.api.ModuleInfo;
+import org.codeberg.illusionclient.feature.module.api.RotatingModule;
 import org.codeberg.illusionclient.util.CombatUtils;
 import org.codeberg.illusionclient.util.ItemUtils;
 import org.codeberg.illusionclient.util.RotationUtils;
 import org.codeberg.illusionclient.util.SimulatedPlayer;
 import org.codeberg.illusionclient.util.input.InputState;
-import org.codeberg.illusionclient.util.rotation.RotationManager;
 
-import java.util.Locale;
 import java.util.Random;
 
 @ModuleInfo(name = "Block In", category = Category.PLAYER)
 @Description("Surrounds you with blocks and a roof, starting on the side facing your opponent.")
-public class BlockIn extends Module {
+public class BlockIn extends RotatingModule {
 	private static final double FACE_SPREAD = 0.35D;
 	private static final int MAX_JUMPS = 3;
 	private final Minecraft minecraft = Minecraft.getInstance();
@@ -55,11 +52,7 @@ public class BlockIn extends Module {
 	@RangeSlider(value = "Place Delay (ms)", min = 0.0F, max = 500.0F)
 	public float[] placeDelay = {50.0F, 100.0F};
 
-	@Description("Most degrees turned per tick.")
-	@Slider(value = "Rotation Speed", min = 10.0F, max = 180.0F)
-	public float rotationSpeed = 60.0F;
-
-	@Description("Varies turn speed and where on each face blocks are placed.")
+	@Description("Varies where on each face blocks are placed.")
 	@Check("Randomize")
 	public boolean randomize = true;
 
@@ -67,15 +60,8 @@ public class BlockIn extends Module {
 	@Check("Swap Back")
 	public boolean swapBack = true;
 
-	@Description("How your movement follows the rotation. Silent keeps you moving where you look, Strict moves you along the rotation like vanilla, Off ignores it.")
-	@Combo(value = "Rotation Strafe", options = {"Silent", "Strict", "Off"})
-	public String strafe = "Silent";
-
 	private boolean pending;
 	private boolean active;
-	private boolean rotating;
-	private float yaw;
-	private float pitch;
 	private int cooldown;
 	private int previousSlot = -1;
 	private Direction[] sides;
@@ -85,6 +71,12 @@ public class BlockIn extends Module {
 	private Vec3d aim;
 	private BlockPos origin;
 	private int jumps;
+
+	public BlockIn() {
+		turnMode = "Regular";
+		horizontalSpeed = 80.0F;
+		verticalSpeed = 80.0F;
+	}
 
 	@Override
 	public String details() {
@@ -99,7 +91,8 @@ public class BlockIn extends Module {
 	@Override
 	public void onDisable() {
 		if (active) stop();
-		pending = rotating = false;
+		pending = false;
+		stopRotating();
 	}
 
 	@Listen
@@ -117,12 +110,13 @@ public class BlockIn extends Module {
 		if (active) {
 			if (cooldown > 0) cooldown--;
 			boolean found = (pending || triggered(player)) && findPlacement(player, false) && holdBlocks(player);
-			HitResult hit = found && rotating && cooldown == 0 && minecraft.screen == null ? aimedHit(player) : null;
+			HitResult hit = found && rotating() && cooldown == 0 && minecraft.screen == null ? aimedHit() : null;
 			if (hits(hit, against, face) && place(player, hit.facePos)) found = findPlacement(player, false) && holdBlocks(player);
 			if (!found) stop();
 		}
-		turn(player);
-		if (mode.equals("Toggle") && !pending && !active && !rotating) setEnabled(false);
+		if (active) aim(RotationUtils.rotationTo(nextEye(player), aim));
+		else release();
+		if (mode.equals("Toggle") && !pending && !active && !rotating()) setEnabled(false);
 	}
 
 	private boolean triggered(LocalClientPlayerEntity player) {
@@ -235,19 +229,6 @@ public class BlockIn extends Module {
 		return hits(minecraft.world.rayTrace(eye, end), support, side);
 	}
 
-	private HitResult aimedHit(LocalClientPlayerEntity player) {
-		Vec3d eye = player.getEyePosition(1.0F);
-		double reach = minecraft.interactionManager.getReach();
-		float yawRadians = yaw * (float) Math.PI / 180.0F;
-		float pitchRadians = pitch * (float) Math.PI / 180.0F;
-		float horizontal = MathHelper.cos(pitchRadians);
-		Vec3d end = eye.add(
-			-MathHelper.sin(yawRadians) * horizontal * reach,
-			-MathHelper.sin(pitchRadians) * reach,
-			MathHelper.cos(yawRadians) * horizontal * reach);
-		return minecraft.world.rayTrace(eye, end);
-	}
-
 	private static boolean hits(HitResult hit, BlockPos pos, Direction side) {
 		return hit != null && hit.type == HitResult.Type.BLOCK && hit.face == side && hit.getPos().equals(pos);
 	}
@@ -263,30 +244,6 @@ public class BlockIn extends Module {
 		cooldown = ticks(delay);
 		target = null;
 		return true;
-	}
-
-	private void turn(LocalClientPlayerEntity player) {
-		if (!active && (!rotating || IllusionClient.ROTATION.active())) return;
-		if (!rotating) {
-			yaw = player.yaw;
-			pitch = player.pitch;
-			rotating = true;
-		}
-
-		float[] goal = active ? RotationUtils.rotationTo(nextEye(player), aim) : new float[]{player.yaw, player.pitch};
-		float yawDiff = MathHelper.wrapDegrees(goal[0] - yaw);
-		float pitchDiff = goal[1] - pitch;
-		float step = rotationSpeed * (randomize ? 0.7F + random.nextFloat() * 0.6F : 1.0F);
-		float distance = (float) Math.hypot(yawDiff, pitchDiff);
-		if (!active && distance <= step) {
-			rotating = false;
-			return;
-		}
-
-		float scale = distance <= step ? 1.0F : step / distance;
-		IllusionClient.ROTATION.rotate(yaw + yawDiff * scale, pitch + pitchDiff * scale, RotationManager.Strafe.valueOf(strafe.toUpperCase(Locale.ROOT)));
-		yaw = IllusionClient.ROTATION.yaw(yaw);
-		pitch = IllusionClient.ROTATION.pitch(pitch);
 	}
 
 	private Vec3d nextEye(LocalClientPlayerEntity player) {

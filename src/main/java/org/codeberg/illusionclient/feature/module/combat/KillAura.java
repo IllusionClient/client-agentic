@@ -30,26 +30,24 @@ import org.codeberg.illusionclient.feature.module.client.Weapons;
 import org.codeberg.illusionclient.util.ClickPattern;
 import org.codeberg.illusionclient.util.CombatUtils;
 import org.codeberg.illusionclient.util.RotationUtils;
-import org.codeberg.illusionclient.util.rotation.RotationManager;
+import org.codeberg.illusionclient.util.rotation.Rotator;
 
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Set;
 
 @ModuleInfo(name = "Kill Aura", category = Category.COMBAT, aliases = {"SilentAura", "MultiAura"})
-@Description("Aims at nearby targets without moving your camera and attacks them.")
+@Description("Aims at nearby targets and attacks them.")
 public class KillAura extends Module {
 	private static final float MAX_FRAME_MS = 100.0F;
-	private static final float SECONDS_PER_TICK = MS_PER_TICK / 1000.0F;
 	private static final float LEAD_TICKS = 1.0F;
 	private static final float FULL_CIRCLE = 360.0F;
-	private static final float RETURNED = 3.0F;
 	private static final double TARGETING_MARGIN = 0.1D;
 	private final Minecraft minecraft = Minecraft.getInstance();
 	private final ClickPattern pattern = new ClickPattern();
+	private final Rotator rotator = new Rotator();
 	private final Set<LivingEntity> visited = new HashSet<>();
 
 	@Section("Targeting")
@@ -91,6 +89,10 @@ public class KillAura extends Module {
 	public float fov = FULL_CIRCLE;
 
 	@Section("Aim")
+	@Description("Silent only turns what the server sees, Camera turns your view.")
+	@Combo(value = "Rotations", options = {"Silent", "Camera"})
+	public String rotations = "Silent";
+
 	@Description("Regular eases in, Linear is steady, Lock-on snaps.")
 	@Combo(value = "Mode", options = {"Regular", "Linear", "Lock-on"})
 	public String mode = "Regular";
@@ -116,6 +118,7 @@ public class KillAura extends Module {
 	public float randomization = 50.0F;
 
 	@Description("How your movement follows the rotation. Silent keeps you moving where you look, Strict moves you along the rotation like vanilla, Off ignores it.")
+	@Requires(value = "rotations", is = "Silent")
 	@Combo(value = "Rotation Strafe", options = {"Silent", "Strict", "Off"})
 	public String strafe = "Silent";
 
@@ -198,6 +201,7 @@ public class KillAura extends Module {
 		float delta = Math.min(MAX_FRAME_MS, (now - lastFrame) / 1.0E6F);
 		lastFrame = now;
 
+		if (minecraft.player != null && target != null && !silent()) turnCamera(event.partialTicks(), delta / 1000.0F);
 		if (minecraft.player == null || target == null || CombatUtils.distanceTo(target) > Math.max(attackRange, swingRange)) {
 			pattern.stop();
 			clicks = 0;
@@ -226,27 +230,33 @@ public class KillAura extends Module {
 		if (player == null || minecraft.world == null) return;
 
 		target = findTarget(player);
-		if (target == null && !rotating || IllusionClient.ROTATION.active()) return;
-
-		float yaw = IllusionClient.ROTATION.sentYaw();
-		float pitch = IllusionClient.ROTATION.sentPitch();
-		float[] goal = target == null ? new float[]{player.yaw, player.pitch} : RotationUtils.rotationTo(RotationUtils.aimPoint(target,
-			CombatUtils.predictedShape(target, 1.0F, LEAD_TICKS), horizontalMultipoint, verticalMultipoint, randomization, noiseSeed));
-		float yawDiff = MathHelper.wrapDegrees(goal[0] - yaw);
-		float pitchDiff = goal[1] - pitch;
-		if (target == null && Math.hypot(yawDiff, pitchDiff) <= RETURNED) {
+		if (!silent()) {
 			rotating = false;
 			return;
 		}
+		if (target == null && !rotating || IllusionClient.ROTATION.active()) return;
 
-		boolean lockOn = mode.equals("Lock-on");
-		if (!lockOn) pitchDiff = RotationUtils.easePitch(pitchDiff, yawDiff);
-		float[] steps = RotationUtils.aimSteps(yawDiff, pitchDiff, horizontalSpeed, verticalSpeed, SECONDS_PER_TICK, mode);
-		if (!lockOn) steps[1] += RotationUtils.pitchWobble(Math.abs(steps[0]));
+		rotating = rotator.turnSilently(target == null ? null : goal(1.0F), horizontalSpeed, verticalSpeed, mode, strafe);
+		noiseSeed += rotator.turned() * RotationUtils.NOISE_PER_DEGREE;
+	}
 
-		IllusionClient.ROTATION.rotate(yaw + steps[0], pitch + steps[1], RotationManager.Strafe.valueOf(strafe.toUpperCase(Locale.ROOT)));
-		rotating = true;
+	private void turnCamera(float partialTicks, float delta) {
+		LocalClientPlayerEntity player = minecraft.player;
+		float[] goal = goal(partialTicks);
+		float yawDiff = MathHelper.wrapDegrees(goal[0] - player.yaw);
+		float pitchDiff = goal[1] - player.pitch;
+		float[] steps = rotator.steps(yawDiff, pitchDiff, horizontalSpeed, verticalSpeed, delta, mode);
+		rotator.turnCamera(player, steps[0], steps[1], yawDiff, pitchDiff);
 		noiseSeed += (Math.abs(steps[0]) + Math.abs(steps[1])) * RotationUtils.NOISE_PER_DEGREE;
+	}
+
+	private float[] goal(float partialTicks) {
+		return RotationUtils.rotationTo(RotationUtils.aimPoint(target,
+			CombatUtils.predictedShape(target, partialTicks, LEAD_TICKS), horizontalMultipoint, verticalMultipoint, randomization, noiseSeed));
+	}
+
+	private boolean silent() {
+		return rotations.equals("Silent");
 	}
 
 	private boolean canHit(Vec3d look) {

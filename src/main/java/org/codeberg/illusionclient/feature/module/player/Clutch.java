@@ -17,29 +17,25 @@ import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.HitResult;
 import org.codeberg.illusionclient.IllusionClient;
 import org.codeberg.illusionclient.event.api.Listen;
-import org.codeberg.illusionclient.event.input.InputEvent;
 import org.codeberg.illusionclient.event.player.PickEvent;
-import org.codeberg.illusionclient.event.render.Render3DEvent;
 import org.codeberg.illusionclient.feature.config.api.Check;
 import org.codeberg.illusionclient.feature.config.api.Combo;
 import org.codeberg.illusionclient.feature.config.api.Section;
 import org.codeberg.illusionclient.feature.config.api.Slider;
 import org.codeberg.illusionclient.feature.module.api.Category;
 import org.codeberg.illusionclient.feature.module.api.Description;
-import org.codeberg.illusionclient.feature.module.api.Module;
 import org.codeberg.illusionclient.feature.module.api.ModuleInfo;
+import org.codeberg.illusionclient.feature.module.api.RotatingModule;
 import org.codeberg.illusionclient.util.ItemUtils;
-import org.codeberg.illusionclient.util.NoiseUtils;
 import org.codeberg.illusionclient.util.RotationUtils;
 import org.codeberg.illusionclient.util.SimulatedPlayer;
-import org.codeberg.illusionclient.util.input.InputState;
 
 import java.util.List;
 import java.util.Random;
 
 @ModuleInfo(name = "Clutch", category = Category.PLAYER)
 @Description("Places blocks under you when you're about to fall.")
-public class Clutch extends Module {
+public class Clutch extends RotatingModule {
 	private static final int PREDICT_TICKS = 2;
 	private static final double FACE_INSET = 0.05D;
 	private static final Direction[] HORIZONTAL = {Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.EAST};
@@ -64,7 +60,7 @@ public class Clutch extends Module {
 	@Slider(value = "Click Speed", min = 5.0F, max = 20.0F)
 	public float clickSpeed = 14.0F;
 
-	@Description("Varies aim point, turn speed and timing. More is less consistent.")
+	@Description("Varies aim point and timing. More is less consistent.")
 	@Slider(value = "Randomization", min = 0.0F, max = 100.0F)
 	public float randomization = 30.0F;
 
@@ -78,18 +74,6 @@ public class Clutch extends Module {
 	public boolean onlySideways = false;
 
 	@Section("Aim")
-	@Description("Steady turn speed in degrees per second.")
-	@Slider(value = "Base Speed", min = 90.0F, max = 1800.0F)
-	public float baseSpeed = 720.0F;
-
-	@Description("Turns faster the further there is to go.")
-	@Slider(value = "Acceleration", min = 0.0F, max = 100.0F)
-	public float acceleration = 50.0F;
-
-	@Description("How much Acceleration counts over Base Speed. 0 is only Base Speed.")
-	@Slider(value = "Acceleration Strength", min = 0.0F, max = 100.0F)
-	public float accelerationStrength = 0.0F;
-
 	@Description("Aims at the point on the block closest to your crosshair.")
 	@Check("Multipoint")
 	public boolean multipoint = false;
@@ -98,10 +82,6 @@ public class Clutch extends Module {
 	@Description("How long to wait after placing before turning back.")
 	@Slider(value = "Delay (ms)", min = 0.0F, max = 500.0F)
 	public float snapDelay = 100.0F;
-
-	@Description("How long turning back takes.")
-	@Slider(value = "Duration (ms)", min = 0.0F, max = 500.0F)
-	public float snapDuration = 150.0F;
 
 	@Description("Turns back instantly when you jump, so the jump goes where you were looking.")
 	@Check("Keep Jump Direction")
@@ -126,15 +106,10 @@ public class Clutch extends Module {
 
 	private boolean active;
 	private boolean damaged;
-	private float originYaw;
-	private float originPitch;
-	private float yawRemainder;
-	private float pitchRemainder;
 	private Plan plan;
 	private BlockPos aimedCell;
 	private float offsetU;
 	private float offsetV;
-	private long lastFrame;
 	private long plannedAt;
 	private long nextClickAt;
 	private int groundY = Integer.MAX_VALUE;
@@ -144,8 +119,16 @@ public class Clutch extends Module {
 	private record Plan(BlockPos cell, BlockPos support, Direction face, int depth, double angle) {
 	}
 
+	public Clutch() {
+		rotations = "Camera";
+		turnMode = "Linear";
+		horizontalSpeed = 100.0F;
+		verticalSpeed = 100.0F;
+	}
+
 	@Override
 	public void onDisable() {
+		stopRotating();
 		active = damaged = false;
 		groundY = Integer.MAX_VALUE;
 		plan = null;
@@ -161,6 +144,7 @@ public class Clutch extends Module {
 		if (player == null || minecraft.world == null || minecraft.screen != null || !player.isAlive()) {
 			active = false;
 			plan = null;
+			stopRotating();
 			return;
 		}
 		if (player.onGround) groundY = MathHelper.floor(player.y);
@@ -177,26 +161,27 @@ public class Clutch extends Module {
 		int targetY = Math.min(groundY, MathHelper.floor(predicted.y())) - 1;
 		boolean falling = falling(predicted, targetY);
 
-		if (!active && falling && conditionsMet(player)) {
-			active = true;
-			originYaw = player.yaw;
-			originPitch = player.pitch;
-			yawRemainder = pitchRemainder = 0.0F;
-		}
+		if (!active && falling && conditionsMet(player)) active = true;
 		selectBlocks(player.inventory);
 		if (!active) return;
 
 		if (keepJumpDirection && player.onGround && IllusionClient.INPUT.player.jump) {
-			snapBack(player);
+			snapBack();
+			finish();
 			plan = null;
 			plannedAt = 0L;
 			return;
 		}
 
 		plan = falling && ItemUtils.isBlock(player.inventory.getSelectedItem()) ? plan(player, path, targetY) : null;
-		if (plan == null) return;
-
 		long now = System.currentTimeMillis();
+		if (plan == null) {
+			if (now < plannedAt + (long) snapDelay) return;
+			release();
+			if (!rotating()) finish();
+			return;
+		}
+
 		plannedAt = now;
 		if (!plan.cell.equals(aimedCell)) {
 			aimedCell = plan.cell;
@@ -204,101 +189,24 @@ public class Clutch extends Module {
 			offsetV = random.nextFloat() * 2.0F - 1.0F;
 		}
 
-		HitResult target = minecraft.crosshairTarget;
-		if (now < nextClickAt || target == null || target.type != HitResult.Type.BLOCK) return;
-		if (!useful(player, target)) return;
+		HitResult target = aimedHit();
+		if (target == null || target.type != HitResult.Type.BLOCK || !useful(player, target)) {
+			aim(RotationUtils.rotationTo(aimPoint(plan, player)));
+			return;
+		}
+		if (rotating()) aim(new float[]{aimYaw(), aimPitch()});
+		if (now < nextClickAt) return;
 
+		minecraft.crosshairTarget = target;
 		KeyBinding.click(minecraft.options.useKey.getKeyCode());
 		float jitter = 1.0F + (random.nextFloat() - 0.5F) * randomization / 100.0F;
 		nextClickAt = now + (long) (1000.0F / clickSpeed * jitter);
-	}
-
-	@Listen
-	public void onInput(InputEvent event) {
-		LocalClientPlayerEntity player = minecraft.player;
-		if (!active || player == null) return;
-
-		InputState input = IllusionClient.INPUT.client;
-		float forward = input.forwardAxis();
-		float sideways = input.sidewaysAxis();
-		if (forward == 0.0F && sideways == 0.0F) return;
-
-		double radians = Math.toRadians(originYaw - player.yaw);
-		double cos = Math.cos(radians);
-		double sin = Math.sin(radians);
-		long newForward = Math.round(forward * cos + sideways * sin);
-		long newSideways = Math.round(sideways * cos - forward * sin);
-		input.forward = newForward > 0;
-		input.back = newForward < 0;
-		input.left = newSideways > 0;
-		input.right = newSideways < 0;
-	}
-
-	@Listen
-	public void onRender3D(Render3DEvent event) {
-		long now = System.nanoTime();
-		float delta = Math.min(0.1F, (now - lastFrame) / 1.0E9F);
-		lastFrame = now;
-		LocalClientPlayerEntity player = minecraft.player;
-		if (!active || player == null) return;
-
-		float gcd = RotationUtils.mouseScale() * 0.15F;
-		int mouseY = minecraft.options.invertMouseY ? -minecraft.mouse.y : minecraft.mouse.y;
-		originYaw += minecraft.mouse.x * gcd;
-		originPitch = Math.clamp(originPitch - mouseY * gcd, -90.0F, 90.0F);
-
-		long millis = System.currentTimeMillis();
-		long returnStart = plannedAt + (long) snapDelay;
-		if (plan == null && millis < returnStart) return;
-		HitResult target = minecraft.crosshairTarget;
-		if (plan != null && target != null && target.type == HitResult.Type.BLOCK && useful(player, target)) return;
-
-		float[] goal = plan == null ? new float[]{originYaw, originPitch} : RotationUtils.rotationTo(aimPoint(plan, player));
-		float yawDiff = MathHelper.wrapDegrees(goal[0] - player.yaw);
-		float pitchDiff = goal[1] - player.pitch;
-		float distance = (float) Math.hypot(yawDiff, pitchDiff);
-		float step;
-		if (plan != null) {
-			float base = baseSpeed * delta;
-			float accelerated = distance * (1.0F - (float) Math.pow(1.0F - acceleration / 100.0F * 0.99F, delta * 20.0F));
-			float spread = randomization / 100.0F * 0.3F;
-			step = (base + (accelerated - base) * accelerationStrength / 100.0F) * NoiseUtils.wander(1.0F - spread, 1.0F + spread, 0.5F, 0);
-		} else if (distance < gcd) {
-			finish();
-			return;
-		} else {
-			float left = (returnStart + snapDuration - millis) / 1000.0F;
-			step = left <= delta ? distance : distance * delta / left;
-		}
-		if (distance < 1.0E-4F) return;
-		float scale = Math.min(1.0F, step / distance);
-		turn(player, yawDiff * scale, pitchDiff * scale, yawDiff, pitchDiff);
 	}
 
 	private void finish() {
 		active = false;
 		aimedCell = null;
 		if (disableAfterwards) setEnabled(false);
-	}
-
-	private void snapBack(LocalClientPlayerEntity player) {
-		float yaw = MathHelper.wrapDegrees(originYaw - player.yaw);
-		float pitch = originPitch - player.pitch;
-		yawRemainder = pitchRemainder = 0.0F;
-		turn(player, yaw, pitch, yaw, pitch);
-		finish();
-	}
-
-	private void turn(LocalClientPlayerEntity player, float yawStep, float pitchStep, float yawLimit, float pitchLimit) {
-		float scale = RotationUtils.mouseScale();
-		float gcd = scale * 0.15F;
-		float yawTotal = yawStep + yawRemainder;
-		int yawCounts = RotationUtils.mouseCounts(yawTotal, yawLimit, gcd);
-		yawRemainder = yawTotal - yawCounts * gcd;
-		float pitchTotal = pitchStep + pitchRemainder;
-		int pitchCounts = RotationUtils.mouseCounts(pitchTotal, pitchLimit, gcd);
-		pitchRemainder = pitchTotal - pitchCounts * gcd;
-		if (yawCounts != 0 || pitchCounts != 0) player.updateLocalPlayerCamera(yawCounts * scale, -pitchCounts * scale);
 	}
 
 	private boolean conditionsMet(LocalClientPlayerEntity player) {
@@ -385,8 +293,8 @@ public class Clutch extends Module {
 		if (hit == null || hit.type != HitResult.Type.BLOCK || !hit.getPos().equals(support)) return null;
 
 		float[] rotation = RotationUtils.rotationTo(point);
-		if (angle(rotation, originYaw, originPitch) * 2.0D > fov) return null;
-		return new Plan(cell, support, face, depth, angle(rotation, player.yaw, player.pitch));
+		if (angle(rotation, originYaw(), originPitch()) * 2.0D > fov) return null;
+		return new Plan(cell, support, face, depth, angle(rotation, aimYaw(), aimPitch()));
 	}
 
 	private Vec3d aimPoint(Plan plan, LocalClientPlayerEntity player) {
@@ -396,7 +304,7 @@ public class Clutch extends Module {
 		Vec3d target = new Vec3d(face.getOffsetX() == 0 ? player.x : center.x, center.y, face.getOffsetZ() == 0 ? player.z : center.z);
 		if (multipoint) {
 			Vec3d eye = player.getEyePosition(1.0F);
-			Vec3d look = player.getRotationVector(1.0F);
+			Vec3d look = RotationUtils.look(aimYaw(), aimPitch());
 			double facing = look.x * face.getOffsetX() + look.y * face.getOffsetY() + look.z * face.getOffsetZ();
 			double t = ((center.x - eye.x) * face.getOffsetX() + (center.y - eye.y) * face.getOffsetY() + (center.z - eye.z) * face.getOffsetZ()) / facing;
 			if (facing < -1.0E-4D && t > 0.0D) target = eye.add(look.x * t, look.y * t, look.z * t);

@@ -48,6 +48,12 @@ public class Esp extends Module {
 	@Check("Team Color")
 	public boolean teamColor = false;
 
+	@Description("Draws the edges of the 3D box.")
+	@Requires("box")
+	@Requires(value = "mode", is = "3D")
+	@Check("Outline")
+	public boolean outline = false;
+
 	@Description("Draws an armor bar below the box.")
 	@Requires(value = "mode", is = "2D")
 	@Check("Armor Bar")
@@ -128,7 +134,11 @@ public class Esp extends Module {
 			Box box = new Box(x - radius, y - 0.1D, z - radius, x + radius, top, z + radius);
 
 			if (flat) renderer.add(player, box);
-			else if (this.box) renderer.box3D(box, teamColor ? teamColor(player, boxRgb) : boxRgb);
+			else if (this.box) {
+				int color = teamColor ? teamColor(player, boxRgb) : boxRgb;
+				renderer.box3D(box, color);
+				if (outline) renderer.outline3D(box, color, 2.0F);
+			}
 		}
 		renderer.end3D();
 	}

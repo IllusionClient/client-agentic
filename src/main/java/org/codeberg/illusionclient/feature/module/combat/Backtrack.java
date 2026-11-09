@@ -7,14 +7,17 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.living.player.PlayerEntity;
 import net.minecraft.network.packet.Packet;
 import net.minecraft.network.packet.s2c.play.EntityVelocityS2CPacket;
+import net.minecraft.util.math.Box;
 import org.codeberg.illusionclient.IllusionClient;
 import org.codeberg.illusionclient.event.network.PacketReceiveEvent;
 import org.codeberg.illusionclient.event.player.PlayerTickEvent;
 import org.codeberg.illusionclient.event.render.Render3DEvent;
 import org.codeberg.illusionclient.event.world.WorldLoadEvent;
 import org.codeberg.illusionclient.feature.config.api.Check;
+import org.codeberg.illusionclient.feature.config.api.ColorPicker;
 import org.codeberg.illusionclient.feature.config.api.RangeSlider;
 import org.codeberg.illusionclient.feature.config.api.Requires;
+import org.codeberg.illusionclient.feature.config.api.Section;
 import org.codeberg.illusionclient.feature.config.api.Slider;
 import org.codeberg.illusionclient.feature.module.api.Category;
 import org.codeberg.illusionclient.feature.module.api.Description;
@@ -24,6 +27,9 @@ import org.codeberg.illusionclient.feature.module.api.ObsHidden;
 import org.codeberg.illusionclient.util.CombatUtils;
 import org.codeberg.illusionclient.util.GhostPlayer;
 import org.codeberg.illusionclient.util.lag.LagManager;
+import org.codeberg.illusionclient.util.render.EspRenderer;
+
+import java.awt.Color;
 
 @ModuleInfo(name = "Backtrack", category = Category.COMBAT)
 @ObsHidden(value = ObsHidden.Level.PARTIAL, unless = "Show Ghost")
@@ -32,6 +38,7 @@ public class Backtrack extends Module {
 	private static final int GHOST_LINGER_TICKS = 4;
 	private final Minecraft minecraft = Minecraft.getInstance();
 	private final LagManager.Lag lag = IllusionClient.LAG.create();
+	private final EspRenderer<Void> renderer = new EspRenderer<>();
 
 	@Description("Only lags players within this distance.")
 	@RangeSlider(value = "Target Distance", min = 0.0F, max = 8.0F)
@@ -53,6 +60,7 @@ public class Backtrack extends Module {
 	@Check("Disable On Hit")
 	public boolean disableOnHit = false;
 
+	@Section("Real Position Indicator")
 	@Description("Shows the target's real server position.")
 	@Check("Show Ghost")
 	public boolean showGhost = true;
@@ -61,6 +69,25 @@ public class Backtrack extends Module {
 	@Requires("showGhost")
 	@Slider(value = "Ghost Opacity", min = 0.0F, max = 100.0F)
 	public float ghostOpacity = 50.0F;
+
+	@Description("Draws a hitbox at the target's real server position. Stays hidden from OBS while OBS Proof is on.")
+	@Check("Show ESP")
+	public boolean showEsp = false;
+
+	@Description("The color of the hitbox.")
+	@Requires("showEsp")
+	@ColorPicker("Color")
+	public Color color = new Color(0xFF5555);
+
+	@Description("How thick the outline is.")
+	@Requires("showEsp")
+	@Slider(value = "Line Width", min = 1.0F, max = 5.0F)
+	public float lineWidth = 2.0F;
+
+	@Description("Fills the hitbox instead of only drawing its outline.")
+	@Requires("showEsp")
+	@Check("Filled")
+	public boolean filled = false;
 
 	private PlayerEntity target;
 	private GhostPlayer ghost;
@@ -94,7 +121,11 @@ public class Backtrack extends Module {
 
 	@Listen
 	public void onRender3D(Render3DEvent event) {
-		if (showGhost && ghost != null) ghost.render(event.partialTicks(), ghostOpacity / 100.0F);
+		if (ghost == null) return;
+
+		float tickDelta = event.partialTicks();
+		if (showGhost) ghost.render(tickDelta, ghostOpacity / 100.0F);
+		if (showEsp) renderEsp(tickDelta);
 	}
 
 	@Listen
@@ -124,6 +155,17 @@ public class Backtrack extends Module {
 
 		ghost.tick();
 		if (--lingerTicks <= 0) ghost = null;
+	}
+
+	private void renderEsp(float tickDelta) {
+		Box box = ghost.getShape().moved(
+			(ghost.prevX - ghost.x) * (1.0F - tickDelta),
+			(ghost.prevY - ghost.y) * (1.0F - tickDelta),
+			(ghost.prevZ - ghost.z) * (1.0F - tickDelta));
+		renderer.begin();
+		if (filled) renderer.box3D(box, color.getRGB());
+		renderer.end3D();
+		renderer.outline3D(box, color.getRGB(), lineWidth);
 	}
 
 	private void stop() {

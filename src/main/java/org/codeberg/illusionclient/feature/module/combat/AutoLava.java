@@ -20,17 +20,16 @@ import org.codeberg.illusionclient.feature.config.api.Check;
 import org.codeberg.illusionclient.feature.config.api.Slider;
 import org.codeberg.illusionclient.feature.module.api.Category;
 import org.codeberg.illusionclient.feature.module.api.Description;
-import org.codeberg.illusionclient.feature.module.api.Module;
 import org.codeberg.illusionclient.feature.module.api.ModuleInfo;
+import org.codeberg.illusionclient.feature.module.api.RotatingModule;
 import org.codeberg.illusionclient.feature.module.client.Weapons;
 import org.codeberg.illusionclient.util.CombatUtils;
 import org.codeberg.illusionclient.util.ItemUtils;
 import org.codeberg.illusionclient.util.RotationUtils;
-import org.codeberg.illusionclient.util.rotation.RotationManager;
 
 @ModuleInfo(name = "Auto Lava", category = Category.COMBAT)
 @Description("Places lava from a bucket under opponents to burn and slow them, then picks it back up.")
-public class AutoLava extends Module {
+public class AutoLava extends RotatingModule {
 	private static final double BUCKET_REACH = 5.0D;
 	private static final int MAX_PICKUP_TRIES = 5;
 	private final Minecraft minecraft = Minecraft.getInstance();
@@ -59,18 +58,18 @@ public class AutoLava extends Module {
 	@Check("Weapons Only")
 	public boolean weaponsOnly = true;
 
-	private enum Stage { IDLE, PLACE, PLACED, PICKUP }
+	private enum Stage { IDLE, PLACE, PLACED, PICKUP, CONFIRM }
 
 	private Stage stage = Stage.IDLE;
 	private BlockPos cell;
 	private int previousSlot = -1;
 	private int timer;
-	private float yaw;
-	private float pitch;
+	private int confirmTicks;
 
 	@Override
 	public void onDisable() {
 		finish();
+		stopRotating();
 	}
 
 	@Listen
@@ -93,8 +92,12 @@ public class AutoLava extends Module {
 					finish();
 					return;
 				}
-				use(player);
-				timer = ticks(pickupDelay);
+				if (!aimed()) {
+					if (aimTimedOut()) finish();
+					return;
+				}
+				useHeldItem(player);
+				timer = Math.max(ticks(pickupDelay), serverTicks());
 				stage = Stage.PLACED;
 			}
 			case PLACED -> {
@@ -104,12 +107,27 @@ public class AutoLava extends Module {
 				if (!lavaSource(cell) || !aim(player, new Vec3d(cell.getX() + 0.5D, cell.getY() + 0.4D, cell.getZ() + 0.5D))) finish();
 			}
 			case PICKUP -> {
-				if (!lavaSource(cell) || !ItemUtils.holding(player, Items.BUCKET) || ++timer > MAX_PICKUP_TRIES) {
+				if (!lavaSource(cell) || !ItemUtils.holding(player, Items.BUCKET) || timer >= MAX_PICKUP_TRIES) {
 					finish();
 					return;
 				}
-				use(player);
-				aim(player, new Vec3d(cell.getX() + 0.5D, cell.getY() + 0.4D, cell.getZ() + 0.5D));
+				if (!aimed()) {
+					if (aimTimedOut()) finish();
+					return;
+				}
+				timer++;
+				useHeldItem(player);
+				release();
+				confirmTicks = serverTicks();
+				stage = Stage.CONFIRM;
+			}
+			case CONFIRM -> {
+				if (--confirmTicks > 0) return;
+				if (!lavaSource(cell) || !aim(player, new Vec3d(cell.getX() + 0.5D, cell.getY() + 0.4D, cell.getZ() + 0.5D))) {
+					finish();
+					return;
+				}
+				stage = Stage.PICKUP;
 			}
 		}
 	}
@@ -152,27 +170,15 @@ public class AutoLava extends Module {
 		Vec3d eye = player.getEyePosition(1.0F);
 		if (eye.distanceTo(point) > BUCKET_REACH) return false;
 
-		float[] rotation = RotationUtils.rotationTo(eye, point);
-		IllusionClient.ROTATION.rotate(rotation[0], rotation[1], RotationManager.Strafe.SILENT);
-		yaw = IllusionClient.ROTATION.yaw(rotation[0]);
-		pitch = IllusionClient.ROTATION.pitch(rotation[1]);
+		aim(RotationUtils.rotationTo(eye, point));
 		return true;
-	}
-
-	private void use(LocalClientPlayerEntity player) {
-		float realYaw = player.yaw;
-		float realPitch = player.pitch;
-		player.yaw = yaw;
-		player.pitch = pitch;
-		minecraft.interactionManager.useItem(player, minecraft.world, player.inventory.getSelectedItem());
-		player.yaw = realYaw;
-		player.pitch = realPitch;
 	}
 
 	private void finish() {
 		if (previousSlot != -1 && minecraft.player != null) minecraft.player.inventory.selectedSlot = previousSlot;
 		if (stage != Stage.IDLE) timer = ticks(cooldown);
 		IllusionClient.MODULES.releaseSlot(this);
+		release();
 		previousSlot = -1;
 		cell = null;
 		stage = Stage.IDLE;

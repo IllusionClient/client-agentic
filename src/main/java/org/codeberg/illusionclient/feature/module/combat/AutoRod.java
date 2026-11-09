@@ -17,16 +17,15 @@ import org.codeberg.illusionclient.feature.config.api.RangeSlider;
 import org.codeberg.illusionclient.feature.config.api.Slider;
 import org.codeberg.illusionclient.feature.module.api.Category;
 import org.codeberg.illusionclient.feature.module.api.Description;
-import org.codeberg.illusionclient.feature.module.api.Module;
 import org.codeberg.illusionclient.feature.module.api.ModuleInfo;
+import org.codeberg.illusionclient.feature.module.api.RotatingModule;
 import org.codeberg.illusionclient.feature.module.client.Weapons;
 import org.codeberg.illusionclient.util.CombatUtils;
 import org.codeberg.illusionclient.util.RotationUtils;
-import org.codeberg.illusionclient.util.rotation.RotationManager;
 
 @ModuleInfo(name = "Auto Rod", category = Category.COMBAT)
 @Description("Throws your fishing rod at opponents so it lands right as they can take damage again, then swaps back.")
-public class AutoRod extends Module {
+public class AutoRod extends RotatingModule {
 	private static final double SPEED = 1.5D;
 	private static final double DRAG = 0.92D;
 	private static final double GRAVITY = 0.04D;
@@ -68,6 +67,7 @@ public class AutoRod extends Module {
 	@Override
 	public void onDisable() {
 		finish();
+		stopRotating();
 	}
 
 	@Listen
@@ -91,7 +91,14 @@ public class AutoRod extends Module {
 					finish();
 					return;
 				}
+				if (!aimed()) {
+					float[] rotation = lead(player, target);
+					if (rotation == null || aimTimedOut()) finish();
+					else aim(rotation);
+					return;
+				}
 				minecraft.interactionManager.useItem(player, minecraft.world, held);
+				release();
 				timer = ticks(swapBackDelay);
 				stage = Stage.THROWN;
 			}
@@ -111,17 +118,17 @@ public class AutoRod extends Module {
 		PlayerEntity found = CombatUtils.best(other -> other.isAlive() && CombatUtils.isTarget(other)
 			&& CombatUtils.distanceTo(other) >= range[0] && CombatUtils.distanceTo(other) <= range[1]
 			&& RotationUtils.angleTo(other, player.yaw, player.pitch) <= fov, CombatUtils::distanceTo);
-		float[] rotation = found == null ? null : aim(player, found);
+		float[] rotation = found == null ? null : lead(player, found);
 		if (rotation == null || !IllusionClient.MODULES.claimSlot(this)) return;
 
-		IllusionClient.ROTATION.rotate(rotation[0], rotation[1], RotationManager.Strafe.SILENT);
+		aim(rotation);
 		target = found;
 		previousSlot = player.inventory.selectedSlot;
 		player.inventory.selectedSlot = slot;
 		stage = Stage.AIMED;
 	}
 
-	private float[] aim(LocalClientPlayerEntity player, PlayerEntity found) {
+	private float[] lead(LocalClientPlayerEntity player, PlayerEntity found) {
 		Vec3d eye = player.getEyePosition(1.0F);
 		double distance = Math.hypot(found.x - eye.x, found.z - eye.z);
 		double travelled = 0.0D;
@@ -150,6 +157,7 @@ public class AutoRod extends Module {
 		if (previousSlot != -1 && minecraft.player != null) minecraft.player.inventory.selectedSlot = previousSlot;
 		if (stage != Stage.IDLE) timer = ticks(cooldown);
 		IllusionClient.MODULES.releaseSlot(this);
+		release();
 		previousSlot = -1;
 		target = null;
 		stage = Stage.IDLE;

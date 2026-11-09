@@ -46,12 +46,14 @@ public abstract class Module {
 		this.toggleable = info.toggleable();
 		this.bind = info.bind();
 
-		for (Field field : getClass().getDeclaredFields()) {
-			Option option = Option.of(this, field);
-			if (option == null) continue;
+		for (Class<?> type = getClass(); type != Module.class; type = type.getSuperclass()) {
+			for (Field field : type.getDeclaredFields()) {
+				Option option = Option.of(this, field);
+				if (option == null) continue;
 
-			option.link(options);
-			options.add(option);
+				option.link(options);
+				options.add(option);
+			}
 		}
 	}
 
