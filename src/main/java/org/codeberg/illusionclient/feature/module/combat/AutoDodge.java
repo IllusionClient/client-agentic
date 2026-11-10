@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.List;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.living.player.LocalClientPlayerEntity;
+import net.minecraft.client.options.KeyBinding;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.FishingBobberEntity;
 import net.minecraft.entity.living.player.PlayerEntity;
@@ -13,13 +14,17 @@ import net.minecraft.entity.projectile.ExperienceBottleEntity;
 import net.minecraft.entity.projectile.PotionEntity;
 import net.minecraft.entity.projectile.ProjectileEntity;
 import net.minecraft.entity.projectile.ThrownEntity;
+import net.minecraft.item.ItemStack;
+import net.minecraft.item.SwordItem;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.HitResult;
 import org.codeberg.illusionclient.IllusionClient;
 import org.codeberg.illusionclient.event.api.Listen;
 import org.codeberg.illusionclient.event.input.InputEvent;
+import org.codeberg.illusionclient.event.world.WorldLoadEvent;
 import org.codeberg.illusionclient.feature.config.api.Check;
+import org.codeberg.illusionclient.feature.config.api.Requires;
 import org.codeberg.illusionclient.feature.config.api.Section;
 import org.codeberg.illusionclient.feature.config.api.Slider;
 import org.codeberg.illusionclient.feature.module.api.Category;
@@ -27,6 +32,8 @@ import org.codeberg.illusionclient.feature.module.api.Description;
 import org.codeberg.illusionclient.feature.module.api.Module;
 import org.codeberg.illusionclient.feature.module.api.ModuleInfo;
 import org.codeberg.illusionclient.util.CombatUtils;
+import org.codeberg.illusionclient.util.KeyboardUtils;
+import org.codeberg.illusionclient.util.MouseUtils;
 import org.codeberg.illusionclient.util.SimulatedPlayer;
 import org.codeberg.illusionclient.util.input.InputState;
 
@@ -66,6 +73,15 @@ public class AutoDodge extends Module {
 	@Check("Jump")
 	public boolean jump = true;
 
+	@Description("Blocks with your sword when an arrow or fireball can't be dodged.")
+	@Check("Block")
+	public boolean block = true;
+
+	@Description("Starts blocking this long plus your ping before the hit lands.")
+	@Requires("block")
+	@Slider(value = "Block Lead (ms)", min = 0.0F, max = 500.0F)
+	public float blockLead = 100.0F;
+
 	@Description("How far ahead projectiles and your movement are predicted.")
 	@Slider(value = "Prediction (ticks)", min = 5.0F, max = 40.0F, step = 1.0F)
 	public float prediction = 20.0F;
@@ -75,18 +91,43 @@ public class AutoDodge extends Module {
 	public float margin = 0.2F;
 
 	private int last;
+	private boolean blocking;
+
+	@Override
+	public void onDisable() {
+		setBlocking(false);
+	}
+
+	@Listen
+	public void onWorldLoad(WorldLoadEvent event) {
+		setBlocking(false);
+	}
 
 	@Listen
 	public void onInput(InputEvent event) {
 		LocalClientPlayerEntity player = minecraft.player;
-		if (player == null || minecraft.world == null || minecraft.screen != null || !player.isAlive()) return;
+		if (player == null || minecraft.world == null || minecraft.screen != null || !player.isAlive()) {
+			setBlocking(false);
+			return;
+		}
 
 		int ticks = Math.round(prediction);
-		List<Vec3d[]> paths = incoming(player, ticks);
+		List<Vec3d[]> damaging = new ArrayList<>();
+		List<Vec3d[]> paths = incoming(player, ticks, damaging);
 		InputState client = IllusionClient.INPUT.client;
 		int side = (int) client.sidewaysAxis();
-		if (paths.isEmpty() || safe(player, client, paths, ticks, side, client.jump, false)) return;
+		int hitIn = damaging.isEmpty() ? -1 : hitIn(player, client, damaging, ticks, side, client.jump, false);
+		boolean threatened = hitIn >= 0;
+		if (paths.isEmpty() || safe(player, client, paths, ticks, side, client.jump, false)
+			|| dodge(player, client, paths, ticks, side)
+			|| threatened && damaging.size() < paths.size() && dodge(player, client, damaging, ticks, side)) {
+			setBlocking(false);
+			return;
+		}
+		setBlocking(threatened && hitIn <= Math.ceil((IllusionClient.STATS.ping() + blockLead) / MS_PER_TICK) && canBlock(player));
+	}
 
+	private boolean dodge(LocalClientPlayerEntity player, InputState client, List<Vec3d[]> paths, int ticks, int side) {
 		for (int i = 0; i < DODGES.length; i++) {
 			int index = (last + i) % DODGES.length;
 			int dodgeSide = DODGES[index][0];
@@ -99,11 +140,33 @@ public class AutoDodge extends Module {
 			client.left = dodgeSide > 0;
 			client.right = dodgeSide < 0;
 			if (dodgeJump) client.jump = true;
-			return;
+			return true;
 		}
+		return false;
+	}
+
+	private boolean canBlock(LocalClientPlayerEntity player) {
+		if (!block || blocking) return block;
+		ItemStack held = player.getItemInHand();
+		return held != null && held.getItem() instanceof SwordItem && player.getItemInUse() == null
+			&& !IllusionClient.INPUT.held(minecraft.options.useKey);
+	}
+
+	private void setBlocking(boolean pressed) {
+		if (blocking == pressed) return;
+		blocking = pressed;
+		KeyBinding key = minecraft.options.useKey;
+		int code = key.getKeyCode();
+		if (code >= 0) KeyboardUtils.set(key, pressed || IllusionClient.INPUT.held(key));
+		else if (pressed) MouseUtils.toggle(code + 100);
+		else MouseUtils.resync(code + 100);
 	}
 
 	private boolean safe(LocalClientPlayerEntity player, InputState client, List<Vec3d[]> paths, int ticks, int side, boolean jumping, boolean careful) {
+		return hitIn(player, client, paths, ticks, side, jumping, careful) < 0;
+	}
+
+	private int hitIn(LocalClientPlayerEntity player, InputState client, List<Vec3d[]> paths, int ticks, int side, boolean jumping, boolean careful) {
 		float scale = client.sneak ? 0.3F : 1.0F;
 		SimulatedPlayer self = SimulatedPlayer.of(player);
 		self.forward = client.forwardAxis() * scale;
@@ -114,17 +177,17 @@ public class AutoDodge extends Module {
 		double grow = HIT_MARGIN + margin;
 		for (int tick = 0; tick < ticks; tick++) {
 			self.tick();
-			if (careful && self.y() < floor) return false;
+			if (careful && self.y() < floor) return tick + 1;
 
 			Box box = self.shape.grown(grow, grow, grow);
 			for (Vec3d[] path : paths) {
-				if (tick + 1 < path.length && box.clip(path[tick], path[tick + 1]) != null) return false;
+				if (tick + 1 < path.length && box.clip(path[tick], path[tick + 1]) != null) return tick + 1;
 			}
 		}
-		return true;
+		return -1;
 	}
 
-	private List<Vec3d[]> incoming(LocalClientPlayerEntity player, int ticks) {
+	private List<Vec3d[]> incoming(LocalClientPlayerEntity player, int ticks, List<Vec3d[]> damaging) {
 		List<Vec3d[]> paths = new ArrayList<>();
 		for (Entity entity : minecraft.world.entities) {
 			double drag;
@@ -168,7 +231,9 @@ public class AutoDodge extends Module {
 			double reach = Math.sqrt(vx * vx + vy * vy + vz * vz) * ticks + REACH_PADDING;
 			if (dx * dx + dy * dy + dz * dz > reach * reach) continue;
 
-			paths.add(path(entity, vx, vy, vz, drag, gravity, ticks));
+			Vec3d[] path = path(entity, vx, vy, vz, drag, gravity, ticks);
+			paths.add(path);
+			if (entity instanceof ArrowEntity || entity instanceof ProjectileEntity) damaging.add(path);
 		}
 		return paths;
 	}
