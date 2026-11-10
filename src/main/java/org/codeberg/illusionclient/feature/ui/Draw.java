@@ -465,6 +465,14 @@ public final class Draw {
 		font().draw(text, x, y, opaque(color), weight);
 	}
 
+	public static void text(String text, float x, float y, int color, Font font) {
+		font.draw(text, x, y, opaque(color), Weight.MEDIUM);
+	}
+
+	public static int width(String text, Font font) {
+		return font.width(text, Weight.MEDIUM);
+	}
+
 	static void vanillaText(String text, float x, float y, int color) {
 		TextRenderer renderer = Minecraft.getInstance().textRenderer;
 		if (!batchable(renderer, text)) {

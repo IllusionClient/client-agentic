@@ -7,7 +7,9 @@ import org.codeberg.illusionclient.IllusionClient;
 import org.codeberg.illusionclient.event.render.Render2DEvent;
 import org.codeberg.illusionclient.feature.config.api.Check;
 import org.codeberg.illusionclient.feature.config.api.ColorPicker;
+import org.codeberg.illusionclient.feature.config.api.Combo;
 import org.codeberg.illusionclient.feature.config.api.Requires;
+import org.codeberg.illusionclient.feature.config.api.Section;
 import org.codeberg.illusionclient.feature.config.api.Slider;
 import org.codeberg.illusionclient.feature.module.api.Category;
 import org.codeberg.illusionclient.feature.module.api.Description;
@@ -31,21 +33,14 @@ public class ModOverlay extends Module {
 	private final List<Row> rows = new ObjectArrayList<>();
 	private Row[] all;
 
+	@Section("Text")
+	@Description("The font of the list.")
+	@Combo(value = "Font", options = {"Minecraft", "Inter"})
+	public String font = "Inter";
+
 	@Description("How large the text is.")
 	@Slider(value = "Text Size", min = 0.5F, max = 3.0F)
 	public float textSize = 1.0F;
-
-	@Description("Space to the left and right of each name.")
-	@Slider(value = "Padding X", min = 0.0F, max = 10.0F)
-	public float paddingX = 3.0F;
-
-	@Description("Space above and below each name.")
-	@Slider(value = "Padding Y", min = 0.0F, max = 10.0F)
-	public float paddingY = 2.0F;
-
-	@Description("How rounded the background corners are.")
-	@Slider(value = "Rounding", min = 0.0F, max = 10.0F)
-	public float rounding = 3.0F;
 
 	@Description("The color of module names.")
 	@ColorPicker("Text Color")
@@ -64,13 +59,32 @@ public class ModOverlay extends Module {
 	@Check("Lowercase")
 	public boolean lowercase = true;
 
+	@Section("Background")
+	@Description("The color behind the list.")
+	@ColorPicker(value = "Background Color", alpha = true)
+	public Color backgroundColor = new Color(Draw.HUD_BACKGROUND, true);
+
+	@Description("Space to the left and right of each name.")
+	@Slider(value = "Padding X", min = 0.0F, max = 10.0F)
+	public float paddingX = 3.0F;
+
+	@Description("Space above and below each name.")
+	@Slider(value = "Padding Y", min = 0.0F, max = 10.0F)
+	public float paddingY = 2.0F;
+
+	@Description("How rounded the background corners are.")
+	@Slider(value = "Rounding", min = 0.0F, max = 10.0F)
+	public float rounding = 3.0F;
+
+	@Section("Filter")
 	@Description("Only lists modules that have a keybind.")
 	@Check("Only Bound Modules")
 	public boolean onlyBoundModules = false;
 
 	@Listen
 	public void onRender2D(Render2DEvent.Post event) {
-		int gap = Draw.width(" ");
+		Font font = this.font.equals("Inter") ? Font.INTER : Font.MINECRAFT;
+		int gap = Draw.width(" ", font);
 
 		if (all == null) {
 			all = IllusionClient.MODULES.modules.stream()
@@ -85,19 +99,19 @@ public class ModOverlay extends Module {
 			if (!module.isEnabled()) continue;
 			if (onlyBoundModules && module.getBind() == 0) continue;
 
-			boolean restyled = row.lowercase != lowercase || row.font != Draw.font();
+			boolean restyled = row.lowercase != lowercase || row.font != font;
 			if (restyled) {
 				row.lowercase = lowercase;
-				row.font = Draw.font();
+				row.font = font;
 				row.name = style(module.name);
-				row.nameWidth = Draw.width(row.name);
+				row.nameWidth = Draw.width(row.name, font);
 			}
 			if (restyled || row.showDetails != showDetails || row.detailsVersion != module.detailsVersion()) {
 				row.showDetails = showDetails;
 				row.detailsVersion = module.detailsVersion();
 				String details = showDetails ? module.details() : null;
 				row.details = details == null ? null : style(details);
-				row.detailsWidth = details == null ? 0 : Draw.width(row.details);
+				row.detailsWidth = details == null ? 0 : Draw.width(row.details, font);
 			}
 			float textWidth = row.nameWidth + (row.details == null ? 0 : gap + row.detailsWidth);
 			row.width = Math.round(textWidth * textSize + paddingX * 2.0F);
@@ -114,7 +128,7 @@ public class ModOverlay extends Module {
 			Row row = rows.get(i);
 			float radius = i + 1 < rows.size() ? Math.min(rounding, row.width - rows.get(i + 1).width) : rounding;
 			int overhang = (int) Math.ceil(radius);
-			Draw.rounded(right - row.width, i * height, row.width + overhang, height, 0.0F, radius, Draw.HUD_BACKGROUND);
+			Draw.rounded(right - row.width, i * height, row.width + overhang, height, 0.0F, radius, backgroundColor.getRGB());
 		}
 		Draw.flush();
 
@@ -125,8 +139,8 @@ public class ModOverlay extends Module {
 			float x = (right - row.width + paddingX) / textSize;
 			float y = (i * height + paddingY) / textSize + 0.5F;
 
-			Draw.text(row.name, x, y, textColor.getRGB());
-			if (row.details != null) Draw.text(row.details, x + row.nameWidth + gap, y, detailsColor.getRGB());
+			Draw.text(row.name, x, y, textColor.getRGB(), font);
+			if (row.details != null) Draw.text(row.details, x + row.nameWidth + gap, y, detailsColor.getRGB(), font);
 		}
 		Draw.flush();
 		GlStateManager.popMatrix();
