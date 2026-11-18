@@ -16,10 +16,11 @@ import java.util.Set;
 @ModuleInfo(name = "Profile", category = Category.PROFILES)
 public class ProfileModule extends Module {
 	public static final String NO_TAG = "None";
+	public static final String BINDS = "Binds";
 
-	@Description("Settings from these categories carry over from your current profile instead of being loaded from this one.")
-	@MultiSelect(value = "Keep", options = {"Client", "Combat", "Movement", "Player", "Visual"})
-	public Set<String> keep = Set.of("Client", "Visual");
+	@Description("Settings from these categories carry over from your current profile instead of being loaded from this one. Binds keeps your current keybinds.")
+	@MultiSelect(value = "Keep", options = {"Client", "Combat", "Movement", "Player", "Visual", BINDS})
+	public Set<String> keep = Set.of("Client", "Visual", BINDS);
 
 	@Description("How risky this profile is to play with.")
 	@Combo(value = "Tag", options = {NO_TAG, "Closet", "Semi", "Blatant"})

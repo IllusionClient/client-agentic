@@ -54,7 +54,8 @@ public final class ConfigManager {
 		ConfigManager::autoSoupAsAutoHeal,
 		ConfigManager::noSlowOldNcp,
 		ConfigManager::pingFixAsModule,
-		ConfigManager::pauseDurationAsAttackDelay
+		ConfigManager::pauseDurationAsAttackDelay,
+		ConfigManager::keepBinds
 	);
 	private static final int VERSION = MIGRATIONS.size();
 
@@ -137,6 +138,15 @@ public final class ConfigManager {
 		attackSettings.add("delay", delay);
 		attackDelay.add("settings", attackSettings);
 		root.add("AttackDelay", attackDelay);
+	}
+
+	private static void keepBinds(JsonObject root) {
+		if (!(root.get(PROFILES_KEY) instanceof JsonObject entries)) return;
+		JsonPrimitive binds = new JsonPrimitive(ProfileModule.BINDS);
+		for (JsonElement entry : entries.asMap().values()) {
+			if (entry instanceof JsonObject profile && profile.get("settings") instanceof JsonObject settings
+				&& settings.get("keep") instanceof JsonArray keep && !keep.contains(binds)) keep.add(binds);
+		}
 	}
 
 	private static void autoSoupAsAutoHeal(JsonObject root) {
@@ -316,8 +326,13 @@ public final class ConfigManager {
 			for (Module module : IllusionClient.MODULES.modules) {
 				if (module instanceof ProfileModule || keep.contains(module.category.title())) continue;
 
-				JsonElement entry = root.get(module.key);
-				if (entry != null && entry.isJsonObject()) load(module, entry.getAsJsonObject());
+				if (!(root.get(module.key) instanceof JsonObject entry)) continue;
+				if (keep.contains(ProfileModule.BINDS)) {
+					entry = entry.deepCopy();
+					entry.remove("bind");
+					entry.remove("hold");
+				}
+				load(module, entry);
 			}
 		} finally {
 			loading = false;
