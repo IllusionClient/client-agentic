@@ -11,6 +11,7 @@ import org.codeberg.illusionclient.IllusionClient;
 import org.codeberg.illusionclient.feature.module.api.Category;
 import org.codeberg.illusionclient.feature.module.api.Module;
 import org.codeberg.illusionclient.feature.module.client.ClickGuiModule;
+import org.codeberg.illusionclient.feature.module.profiles.ProfileModule;
 import org.codeberg.illusionclient.feature.ui.component.Component;
 import org.codeberg.illusionclient.feature.ui.component.KeybindComponent;
 import org.codeberg.illusionclient.feature.ui.component.ModuleComponent;
@@ -48,6 +49,7 @@ public class PanelGui extends ClickGui {
 	private static final int FORWARD_BUTTON = 4;
 	private static final float RADIUS = 8.0F;
 	private static final Category[] CATEGORIES = Category.values();
+	private static final int BOTTOM_FROM = Category.PROFILES.ordinal();
 	private static final String[] STAT_NAMES = {"Playtime", "Auto clicks", "Best combo", "Most toggled", "Modules on", "FPS", "Ping"};
 
 	private final Reference2ObjectMap<Module, List<Component>> components = new Reference2ObjectOpenHashMap<>();
@@ -170,12 +172,17 @@ public class PanelGui extends ClickGui {
 		renderSearch(mouseX, mouseY);
 
 		boolean browsing = search.isEmpty();
-		int rowY = listTop();
-		entry(Icon.HOME, "Home", browsing && category == null, mouseX, mouseY, rowY);
-		for (Category entry : CATEGORIES) {
-			rowY += ENTRY;
-			entry(Icon.of(entry), entry.title(), browsing && category == entry, mouseX, mouseY, rowY);
+		entry(Icon.HOME, "Home", browsing && category == null, mouseX, mouseY, entryTop(0));
+		for (int i = 0; i < CATEGORIES.length; i++) {
+			Category entry = CATEGORIES[i];
+			entry(Icon.of(entry), entry.title(), browsing && category == entry, mouseX, mouseY, entryTop(i + 1));
 		}
+	}
+
+	private int entryTop(int index) {
+		if (index <= BOTTOM_FROM) return listTop() + index * ENTRY;
+		int bottom = y + panelHeight - 6 - (CATEGORIES.length + 1 - index) * ENTRY;
+		return Math.max(bottom, listTop() + index * ENTRY);
 	}
 
 	private void renderSearch(int mouseX, int mouseY) {
@@ -319,6 +326,11 @@ public class PanelGui extends ClickGui {
 				ModuleComponent.drawKey(holdX, top + KEY_Y, ModuleComponent.HOLD, false, entry.isHold(), holdHovered);
 				textRight = holdX - PADDING;
 			}
+		}
+		if (entry instanceof ProfileModule profile && !profile.tag.equals(ProfileModule.NO_TAG)) {
+			int tagX = textRight + PADDING - 6 - ModuleComponent.keyWidth(profile.tag);
+			ModuleComponent.drawTag(tagX, top + KEY_Y, profile.tag);
+			textRight = tagX - PADDING;
 		}
 
 		int textX = left + PADDING;
@@ -467,10 +479,11 @@ public class PanelGui extends ClickGui {
 			return;
 		}
 
-		if (within(mouseX, mouseY, x, listTop(), SIDEBAR, ENTRY * (CATEGORIES.length + 1))) {
-			int index = (mouseY - listTop()) / ENTRY;
-			show(index == 0 ? null : CATEGORIES[index - 1]);
-			return;
+		for (int i = 0; i <= CATEGORIES.length; i++) {
+			if (within(mouseX, mouseY, x, entryTop(i), SIDEBAR, ENTRY)) {
+				show(i == 0 ? null : CATEGORIES[i - 1]);
+				return;
+			}
 		}
 
 		if (!within(mouseX, mouseY, contentLeft(), contentTop(), contentWidth(), contentViewport())) return;

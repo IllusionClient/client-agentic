@@ -74,6 +74,16 @@ public class ModuleComponent extends Group {
 		Draw.text(label, x + 5, Draw.textY(y, KEY_HEIGHT), color);
 	}
 
+	public static void drawTag(int x, int y, String tag) {
+		boolean partial = tag.equals("Semi");
+		Draw.rounded(x, y, keyWidth(tag), KEY_HEIGHT, 4.0F, switch (tag) {
+			case "Closet" -> OBS_HIDDEN;
+			case "Semi" -> OBS_PARTIAL;
+			default -> OBS_VISIBLE;
+		});
+		Draw.text(tag, x + 5, Draw.textY(y, KEY_HEIGHT), partial ? OBS_PARTIAL_TEXT : OBS_TEXT);
+	}
+
 	public static int obsMarkerSpace(Module module, int gap) {
 		return module.obsHidden == null || !SwapHook.SUPPORTED || !IllusionClient.MODULES.get(ObsProof.class).isEnabled() ? 0 : keyWidth(OBS) + gap;
 	}
