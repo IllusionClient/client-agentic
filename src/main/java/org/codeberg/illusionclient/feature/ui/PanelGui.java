@@ -278,7 +278,7 @@ public class PanelGui extends ClickGui {
 
 		int left = contentLeft();
 		Draw.text("No modules match \"" + search.text() + "\".", left, top + 2, Draw.TEXT);
-		Draw.text("Check the spelling, or try part of the name.", left, top + 14, Draw.MUTED, Draw.Weight.REGULAR);
+		Draw.text("Check the spelling, or try a few letters of the name.", left, top + 14, Draw.MUTED, Draw.Weight.REGULAR);
 		return 22;
 	}
 
@@ -670,7 +670,7 @@ public class PanelGui extends ClickGui {
 		matchedVersion = IllusionClient.MODULES.version;
 		String needle = normalize(matchedQuery);
 		matched = IllusionClient.MODULES.modules.stream()
-			.filter(entry -> rank(entry, needle) < 4)
+			.filter(entry -> rank(entry, needle) < 5)
 			.sorted(Comparator.comparingInt(entry -> rank(entry, needle)))
 			.toList();
 		return matched;
@@ -682,7 +682,16 @@ public class PanelGui extends ClickGui {
 		if (name.contains(needle)) return 1;
 		if (entry.aliases.stream().anyMatch(alias -> normalize(alias).contains(needle))) return 2;
 		if (entry.description != null && normalize(entry.description.value()).contains(needle)) return 3;
-		return 4;
+		if (subsequence(needle, name)) return 4;
+		return 5;
+	}
+
+	private static boolean subsequence(String needle, String text) {
+		int found = 0;
+		for (int i = 0; i < text.length() && found < needle.length(); i++) {
+			if (text.charAt(i) == needle.charAt(found)) found++;
+		}
+		return found == needle.length();
 	}
 
 	private List<Component> options(Module module) {

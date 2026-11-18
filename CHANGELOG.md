@@ -20,6 +20,7 @@
 - Added Attack Delay, a client module that sets the time between attacks for Hit Select, Criticals and Sprint Reset. It replaces Hit Select's Pause Duration, and your setting carries over.
 - Profiles now keep your current keybinds by default when you switch. Untick Binds in a profile's Keep setting to load its binds again.
 - Added an Open button for the config folder in ClickGui's settings.
+- ClickGUI search now also finds modules from letters in order, so "kla" finds Kill Aura.
 - Fast Place's Smart mode falls back to regular fast place while bridging, and a new Bed Defense Guard option places at normal speed on your own bed defense.
 - AxolotlClient's Freelook now works on every server.
 - Backtrack can now show the target's real position with an ESP hitbox, which stays hidden from OBS.
