@@ -532,6 +532,17 @@ public final class ConfigManager {
 		save();
 	}
 
+	public void openFolder() {
+		Path folder = file.getParent();
+		try {
+			Files.createDirectories(folder);
+			Desktop.getDesktop().open(folder.toFile());
+		} catch (IOException | RuntimeException e) {
+			LOGGER.error("Failed to open {}", folder, e);
+			Notifications.post("Couldn't open the config folder. It's at " + folder);
+		}
+	}
+
 	public JsonObject defaults() {
 		return defaults.deepCopy();
 	}

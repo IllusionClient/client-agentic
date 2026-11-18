@@ -125,6 +125,7 @@ public class ModuleComponent extends Group {
 		}
 		if (module instanceof ClickGuiModule gui) {
 			components.add(new ButtonComponent("Positions", "Reset", gui::resetPositions));
+			components.add(new ButtonComponent("Config Folder", "Open", IllusionClient.CONFIG::openFolder));
 		}
 		if (module instanceof CreateProfile) {
 			TextInputComponent name = new TextInputComponent("Name", "Optional", IllusionClient.CONFIG::createNamedProfile);
