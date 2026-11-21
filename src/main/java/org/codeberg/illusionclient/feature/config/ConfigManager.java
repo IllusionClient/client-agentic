@@ -55,7 +55,8 @@ public final class ConfigManager {
 		ConfigManager::noSlowOldNcp,
 		ConfigManager::pingFixAsModule,
 		ConfigManager::pauseDurationAsAttackDelay,
-		ConfigManager::keepBinds
+		ConfigManager::keepBinds,
+		ConfigManager::aimAssistAcceleration
 	);
 	private static final int VERSION = MIGRATIONS.size();
 
@@ -138,6 +139,16 @@ public final class ConfigManager {
 		attackSettings.add("delay", delay);
 		attackDelay.add("settings", attackSettings);
 		root.add("AttackDelay", attackDelay);
+	}
+
+	private static void aimAssistAcceleration(JsonObject root) {
+		if (!(root.get("AimAssist") instanceof JsonObject entry) || !(entry.get("settings") instanceof JsonObject settings)
+			|| !(settings.get("mode") instanceof JsonPrimitive mode)) return;
+
+		String old = mode.getAsString();
+		if (!old.equals("Regular") && !old.equals("Linear")) return;
+		settings.addProperty("mode", "Smooth");
+		settings.addProperty("acceleration", old.equals("Linear") ? 0.0F : 100.0F);
 	}
 
 	private static void keepBinds(JsonObject root) {
@@ -561,6 +572,7 @@ public final class ConfigManager {
 			try (Reader reader = Files.newBufferedReader(profiles.resolve(name + ".json"), StandardCharsets.UTF_8)) {
 				JsonObject settings = JsonParser.parseReader(reader).getAsJsonObject();
 				autoSoupAsAutoHeal(settings);
+				aimAssistAcceleration(settings);
 				loadModules(settings, keep);
 			} catch (IOException | RuntimeException e) {
 				LOGGER.error("Failed to load profile {}", name, e);

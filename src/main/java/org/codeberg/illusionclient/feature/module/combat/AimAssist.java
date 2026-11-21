@@ -47,9 +47,14 @@ public class AimAssist extends Module {
 	@Combo(value = "Rotation Strafe", options = {"Silent", "Strict", "Off"})
 	public String strafe = "Silent";
 
-	@Description("Regular eases in, Linear is steady, Lock-on snaps.")
-	@Combo(value = "Mode", options = {"Regular", "Linear", "Lock-on"})
-	public String mode = "Regular";
+	@Description("Smooth turns at your speed, Lock-on snaps.")
+	@Combo(value = "Mode", options = {"Smooth", "Lock-on"})
+	public String mode = "Smooth";
+
+	@Description("How much the turn eases in. 0 is steady, 100 slows down as it reaches the target.")
+	@Requires(value = "mode", is = "Smooth")
+	@Slider(value = "Acceleration", min = 0.0F, max = 100.0F)
+	public float acceleration = 100.0F;
 
 	@Description("Horizontal turn speed.")
 	@Slider(value = "Horizontal Speed", min = 0.0F, max = 100.0F)
@@ -189,7 +194,7 @@ public class AimAssist extends Module {
 		float[] goal = findTarget(player.yaw, player.pitch) == null ? null : silentGoal();
 		if (goal == null && !rotating || IllusionClient.ROTATION.active()) return;
 
-		rotating = rotator.turnSilently(goal, horizontalSpeed, verticalSpeed, mode, strafe);
+		rotating = rotator.turnSilently(goal, horizontalSpeed, verticalSpeed, lockOn(), acceleration / 100.0F, strafe);
 		noiseSeed += rotator.turned() * RotationUtils.NOISE_PER_DEGREE;
 	}
 
@@ -211,6 +216,10 @@ public class AimAssist extends Module {
 
 		Vec3d look = RotationUtils.look(IllusionClient.ROTATION.sentYaw(), IllusionClient.ROTATION.sentPitch());
 		if (CombatUtils.isHovered(target, look, ATTACK_REACH, TARGETING_MARGIN)) minecraft.crosshairTarget = new HitResult(target);
+	}
+
+	private boolean lockOn() {
+		return mode.equals("Lock-on");
 	}
 
 	private boolean silent() {
@@ -255,7 +264,7 @@ public class AimAssist extends Module {
 		pitchDiff = shrink(pitchDiff, fov[0] / 2.0F);
 		if (yawDiff == 0.0F && pitchDiff == 0.0F) return;
 
-		float[] steps = rotator.steps(yawDiff, pitchDiff, horizontalSpeed, verticalSpeed, delta, mode);
+		float[] steps = rotator.steps(yawDiff, pitchDiff, horizontalSpeed, verticalSpeed, delta, lockOn(), acceleration / 100.0F);
 
 		float yawTotal = steps[0] * yield + yawRemainder;
 		yawRemainder = yawTotal % gcd;

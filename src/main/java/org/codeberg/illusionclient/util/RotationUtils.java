@@ -64,10 +64,14 @@ public final class RotationUtils {
 	}
 
 	public static float[] aimSteps(float yawDiff, float pitchDiff, float horizontalSpeed, float verticalSpeed, float delta, String mode) {
+		return aimSteps(yawDiff, pitchDiff, horizontalSpeed, verticalSpeed, delta, mode.equals("Linear") ? 0.0F : 1.0F);
+	}
+
+	public static float[] aimSteps(float yawDiff, float pitchDiff, float horizontalSpeed, float verticalSpeed, float delta, float acceleration) {
 		float drift = NoiseUtils.wander(0.95F, 1.05F, 60.0F, 1);
 		return new float[]{
-			step(yawDiff, horizontalSpeed * drift * NoiseUtils.wander(0.9F, 1.1F, 1.0F, 2), delta, mode),
-			step(pitchDiff, verticalSpeed * drift * NoiseUtils.wander(0.9F, 1.1F, 1.0F, 3), delta, mode)
+			step(yawDiff, horizontalSpeed * drift * NoiseUtils.wander(0.9F, 1.1F, 1.0F, 2), delta, acceleration),
+			step(pitchDiff, verticalSpeed * drift * NoiseUtils.wander(0.9F, 1.1F, 1.0F, 3), delta, acceleration)
 		};
 	}
 
@@ -75,14 +79,11 @@ public final class RotationUtils {
 		return yawDegrees * NoiseUtils.wander(-0.1F, 0.1F, 1.0F, 4);
 	}
 
-	private static float step(float diff, float speed, float delta, String mode) {
-		return switch (mode) {
-			case "Linear" -> {
-				float limit = speed * 6.0F * delta * Math.min(1.0F, 0.4F + Math.abs(diff) / 15.0F);
-				yield Math.clamp(diff, -limit, limit);
-			}
-			default -> diff * (1.0F - (float) Math.pow(1.0F - Math.min(1.0F, speed / 100.0F), delta * 20.0F));
-		};
+	private static float step(float diff, float speed, float delta, float acceleration) {
+		float limit = speed * 6.0F * delta * Math.min(1.0F, 0.4F + Math.abs(diff) / 15.0F);
+		float linear = Math.clamp(diff, -limit, limit);
+		float eased = diff * (1.0F - (float) Math.pow(1.0F - Math.min(1.0F, speed / 100.0F), delta * 20.0F));
+		return linear + (eased - linear) * acceleration;
 	}
 
 	private static double axis(double eye, double center, double min, double max, float multipoint, float spread, float noise) {

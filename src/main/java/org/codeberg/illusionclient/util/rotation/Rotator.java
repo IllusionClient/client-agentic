@@ -17,15 +17,23 @@ public final class Rotator {
 	private float turned;
 
 	public float[] steps(float yawDiff, float pitchDiff, float horizontalSpeed, float verticalSpeed, float delta, String mode) {
-		if (mode.equals("Lock-on")) return new float[]{yawDiff, pitchDiff};
+		return steps(yawDiff, pitchDiff, horizontalSpeed, verticalSpeed, delta, mode.equals("Lock-on"), mode.equals("Linear") ? 0.0F : 1.0F);
+	}
+
+	public float[] steps(float yawDiff, float pitchDiff, float horizontalSpeed, float verticalSpeed, float delta, boolean lockOn, float acceleration) {
+		if (lockOn) return new float[]{yawDiff, pitchDiff};
 
 		float eased = RotationUtils.easePitch(pitchDiff, yawDiff);
-		float[] steps = RotationUtils.aimSteps(yawDiff, eased, horizontalSpeed, verticalSpeed, delta, mode);
+		float[] steps = RotationUtils.aimSteps(yawDiff, eased, horizontalSpeed, verticalSpeed, delta, acceleration);
 		steps[1] += RotationUtils.pitchWobble(Math.abs(steps[0]));
 		return steps;
 	}
 
 	public boolean turnSilently(float[] goal, float horizontalSpeed, float verticalSpeed, String mode, String strafe) {
+		return turnSilently(goal, horizontalSpeed, verticalSpeed, mode.equals("Lock-on"), mode.equals("Linear") ? 0.0F : 1.0F, strafe);
+	}
+
+	public boolean turnSilently(float[] goal, float horizontalSpeed, float verticalSpeed, boolean lockOn, float acceleration, String strafe) {
 		LocalClientPlayerEntity player = Minecraft.getInstance().player;
 		float yaw = IllusionClient.ROTATION.sentYaw();
 		float pitch = IllusionClient.ROTATION.sentPitch();
@@ -34,7 +42,7 @@ public final class Rotator {
 		turned = 0.0F;
 		if (goal == null && Math.hypot(yawDiff, pitchDiff) <= RETURNED) return false;
 
-		float[] steps = steps(yawDiff, pitchDiff, horizontalSpeed, verticalSpeed, SECONDS_PER_TICK, mode);
+		float[] steps = steps(yawDiff, pitchDiff, horizontalSpeed, verticalSpeed, SECONDS_PER_TICK, lockOn, acceleration);
 		IllusionClient.ROTATION.rotate(yaw + steps[0], pitch + steps[1], RotationManager.Strafe.valueOf(strafe.toUpperCase(Locale.ROOT)));
 		turned = Math.abs(steps[0]) + Math.abs(steps[1]);
 		return true;

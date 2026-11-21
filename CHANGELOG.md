@@ -19,6 +19,7 @@
 - Weapons now uses two multi-select settings, Items and Enchantments. Existing settings carry over.
 - Added Attack Delay, a client module that sets the time between attacks for Hit Select, Criticals and Sprint Reset. It replaces Hit Select's Pause Duration, and your setting carries over.
 - Profiles now keep your current keybinds by default when you switch. Untick Binds in a profile's Keep setting to load its binds again.
+- Aim Assist's Regular and Linear modes are now one Smooth mode with an Acceleration slider.
 - Added an Open button for the config folder in ClickGui's settings.
 - ClickGUI search now also finds modules from letters in order, so "kla" finds Kill Aura.
 - The Panel ClickGUI moves Profiles and Tags to the bottom of the sidebar and shows each profile's tag (Closet, Semi, Blatant) on its card.
