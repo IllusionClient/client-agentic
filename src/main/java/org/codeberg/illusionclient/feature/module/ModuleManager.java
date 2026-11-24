@@ -61,7 +61,7 @@ import org.codeberg.illusionclient.feature.module.profiles.GenerateProfile;
 import org.codeberg.illusionclient.feature.module.visual.AntiDebuff;
 import org.codeberg.illusionclient.feature.module.visual.Bedplates;
 import org.codeberg.illusionclient.feature.module.visual.Chams;
-import org.codeberg.illusionclient.feature.module.visual.ChestEsp;
+import org.codeberg.illusionclient.feature.module.visual.ContainerESP;
 import org.codeberg.illusionclient.feature.module.visual.Esp;
 import org.codeberg.illusionclient.feature.module.visual.Indicators;
 import org.codeberg.illusionclient.feature.module.visual.ItemEsp;
@@ -140,7 +140,7 @@ public final class ModuleManager {
 			new AntiDebuff(),
 			new Bedplates(),
 			new Chams(),
-			new ChestEsp(),
+			new ContainerESP(),
 			new Esp(),
 			new Indicators(),
 			new ItemEsp(),
