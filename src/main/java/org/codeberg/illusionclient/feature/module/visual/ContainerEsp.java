@@ -25,7 +25,7 @@ import java.util.List;
 @Description("Draws boxes around containers.")
 @ObsHidden
 @ModuleInfo(name = "Container ESP", category = Category.VISUAL)
-public class ContainerESP extends Module {
+public class ContainerEsp extends Module {
 	private final EspRenderer<BlockEntity> renderer = new EspRenderer<>();
 
 	@Description("2D draws flat boxes on screen, 3D draws boxes in the world.")
