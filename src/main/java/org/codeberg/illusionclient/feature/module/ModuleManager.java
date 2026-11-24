@@ -59,6 +59,7 @@ import org.codeberg.illusionclient.feature.module.player.Refill;
 import org.codeberg.illusionclient.feature.module.profiles.CreateProfile;
 import org.codeberg.illusionclient.feature.module.profiles.GenerateProfile;
 import org.codeberg.illusionclient.feature.module.visual.AntiDebuff;
+import org.codeberg.illusionclient.feature.module.visual.BedEsp;
 import org.codeberg.illusionclient.feature.module.visual.Bedplates;
 import org.codeberg.illusionclient.feature.module.visual.Chams;
 import org.codeberg.illusionclient.feature.module.visual.ChestEsp;
@@ -138,6 +139,7 @@ public final class ModuleManager {
 			new LiquidSteal(),
 			new Refill(),
 			new AntiDebuff(),
+			new BedEsp(),
 			new Bedplates(),
 			new Chams(),
 			new ChestEsp(),
