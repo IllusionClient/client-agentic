@@ -37,11 +37,25 @@ public class ChestEsp extends Module {
 	@Combo(value = "Mode", options = {"2D", "3D"})
 	public String mode = "2D";
 
+	@Description("Draws chests.")
+	@Check("Chests")
+	public boolean chests = true;
+
 	@Description("The color of chest boxes.")
+	@Requires("chests")
 	@ColorPicker("Chest Color")
 	public Color chestColor = new Color(0xFFB74D);
 
-	@Description("Also draws ender chests.")
+	@Description("Draws trapped chests.")
+	@Check("Trapped Chests")
+	public boolean trappedChests = true;
+
+	@Description("The color of trapped chest boxes.")
+	@Requires("trappedChests")
+	@ColorPicker("Trapped Chest Color")
+	public Color trappedColor = new Color(0x875100);
+
+	@Description("Draws ender chests.")
 	@Check("Ender Chests")
 	public boolean enderChests = true;
 
@@ -73,6 +87,7 @@ public class ChestEsp extends Module {
 		List<BlockEntity> blockEntities = minecraft.world.blockEntities;
 		for (int i = 0; i < blockEntities.size(); i++) {
 			BlockEntity blockEntity = blockEntities.get(i);
+			if (!shouldRender(blockEntity)) continue;
 			Box box = box(blockEntity);
 			if (box == null) continue;
 
@@ -106,6 +121,20 @@ public class ChestEsp extends Module {
 	}
 
 	private int color(BlockEntity blockEntity) {
-		return (blockEntity instanceof EnderChestBlockEntity ? enderColor : chestColor).getRGB();
+		if (blockEntity instanceof EnderChestBlockEntity) return enderColor.getRGB();
+		if (blockEntity instanceof ChestBlockEntity chest && chest.getChestType() == 1) return trappedColor.getRGB();
+		return chestColor.getRGB();
+	}
+
+	private boolean shouldRender(BlockEntity blockEntity) {
+		if (blockEntity instanceof EnderChestBlockEntity) return enderChests;
+		if (blockEntity instanceof ChestBlockEntity chest) {
+			return switch (chest.getChestType()) {
+				case 0 -> chests;
+				case 1 -> trappedChests;
+				default -> false;
+			};
+		}
+		return false;
 	}
 }
