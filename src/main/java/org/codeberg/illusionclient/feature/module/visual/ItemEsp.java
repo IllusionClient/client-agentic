@@ -41,6 +41,21 @@ public class ItemEsp extends Module {
 	@Combo(value = "Mode", options = {"2D", "3D"})
 	public String mode = "2D";
 
+	@Description("Draws the faces of the 3D box.")
+	@Requires(value = "mode", is = "3D")
+	@Check("Faces")
+	public boolean faces = true;
+
+	@Description("Draws the edges of the 3D box.")
+	@Requires(value = "mode", is = "3D")
+	@Check("Outline")
+	public boolean outline = false;
+
+	@Description("Thickness of the edges of the 3D box.")
+	@Requires(value = "mode", is = "3D")
+	@Slider(value = "Outline Width", min = 1.0F, max = 10.0F)
+	public float outlineWidth = 2.0F;
+
 	@Description("How far away dropped items are drawn.")
 	@Slider(value = "Range", min = 4.0F, max = 128.0F, step = 1.0F)
 	public float range = 64.0F;
@@ -147,7 +162,10 @@ public class ItemEsp extends Module {
 			Box box = new Box(x - RADIUS, y, z - RADIUS, x + RADIUS, y + HEIGHT, z + RADIUS);
 
 			if (flat || showCount && item.getItem().size > 1) renderer.add(item, box);
-			if (!flat) renderer.box3D(box, color);
+			if (!flat) {
+				if (faces) renderer.box3D(box, color);
+				if (outline) renderer.outline3D(box, color, outlineWidth);
+			}
 		}
 		renderer.end3D();
 	}

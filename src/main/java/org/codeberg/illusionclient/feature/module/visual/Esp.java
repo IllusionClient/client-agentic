@@ -8,10 +8,7 @@ import net.minecraft.util.math.Box;
 import org.codeberg.illusionclient.event.render.Render2DEvent;
 import org.codeberg.illusionclient.event.render.Render3DEvent;
 import org.codeberg.illusionclient.event.world.WorldLoadEvent;
-import org.codeberg.illusionclient.feature.config.api.Check;
-import org.codeberg.illusionclient.feature.config.api.ColorPicker;
-import org.codeberg.illusionclient.feature.config.api.Combo;
-import org.codeberg.illusionclient.feature.config.api.Requires;
+import org.codeberg.illusionclient.feature.config.api.*;
 import org.codeberg.illusionclient.feature.module.api.Category;
 import org.codeberg.illusionclient.feature.module.api.Description;
 import org.codeberg.illusionclient.feature.module.api.Module;
@@ -48,11 +45,23 @@ public class Esp extends Module {
 	@Check("Team Color")
 	public boolean teamColor = false;
 
+	@Description("Draws the faces of the 3D box.")
+	@Requires("box")
+	@Requires(value = "mode", is = "3D")
+	@Check("Faces")
+	public boolean faces = true;
+
 	@Description("Draws the edges of the 3D box.")
 	@Requires("box")
 	@Requires(value = "mode", is = "3D")
 	@Check("Outline")
 	public boolean outline = false;
+
+	@Description("Thickness of the edges of the 3D box.")
+	@Requires("box")
+	@Requires(value = "mode", is = "3D")
+	@Slider(value = "Outline Width", min = 1.0F, max = 10.0F)
+	public float outlineWidth = 2.0F;
 
 	@Description("Draws an armor bar below the box.")
 	@Requires(value = "mode", is = "2D")
@@ -136,8 +145,8 @@ public class Esp extends Module {
 			if (flat) renderer.add(player, box);
 			else if (this.box) {
 				int color = teamColor ? teamColor(player, boxRgb) : boxRgb;
-				renderer.box3D(box, color);
-				if (outline) renderer.outline3D(box, color, 2.0F);
+				if (faces) renderer.box3D(box, color);
+				if (outline) renderer.outline3D(box, color, outlineWidth);
 			}
 		}
 		renderer.end3D();

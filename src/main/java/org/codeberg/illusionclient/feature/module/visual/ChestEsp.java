@@ -10,10 +10,7 @@ import net.minecraft.util.math.Box;
 import org.codeberg.illusionclient.event.render.Render2DEvent;
 import org.codeberg.illusionclient.event.render.Render3DEvent;
 import org.codeberg.illusionclient.event.world.WorldLoadEvent;
-import org.codeberg.illusionclient.feature.config.api.Check;
-import org.codeberg.illusionclient.feature.config.api.ColorPicker;
-import org.codeberg.illusionclient.feature.config.api.Combo;
-import org.codeberg.illusionclient.feature.config.api.Requires;
+import org.codeberg.illusionclient.feature.config.api.*;
 import org.codeberg.illusionclient.feature.module.api.Category;
 import org.codeberg.illusionclient.feature.module.api.Description;
 import org.codeberg.illusionclient.feature.module.api.Module;
@@ -36,6 +33,21 @@ public class ChestEsp extends Module {
 	@Description("2D draws flat boxes on screen, 3D draws boxes in the world.")
 	@Combo(value = "Mode", options = {"2D", "3D"})
 	public String mode = "2D";
+
+	@Description("Draws the faces of the 3D box.")
+	@Requires(value = "mode", is = "3D")
+	@Check("Faces")
+	public boolean faces = true;
+
+	@Description("Draws the edges of the 3D box.")
+	@Requires(value = "mode", is = "3D")
+	@Check("Outline")
+	public boolean outline = false;
+
+	@Description("Thickness of the edges of the 3D box.")
+	@Requires(value = "mode", is = "3D")
+	@Slider(value = "Outline Width", min = 1.0F, max = 10.0F)
+	public float outlineWidth = 2.0F;
 
 	@Description("The color of chest boxes.")
 	@ColorPicker("Chest Color")
@@ -76,8 +88,12 @@ public class ChestEsp extends Module {
 			Box box = box(blockEntity);
 			if (box == null) continue;
 
-			if (flat) renderer.add(blockEntity, box);
-			else renderer.box3D(box, color(blockEntity));
+			if (!flat) {
+				if (faces) renderer.box3D(box, color(blockEntity));
+				if (outline) renderer.outline3D(box, color(blockEntity), outlineWidth);
+			} else {
+				renderer.add(blockEntity, box);
+			}
 		}
 		renderer.end3D();
 	}
